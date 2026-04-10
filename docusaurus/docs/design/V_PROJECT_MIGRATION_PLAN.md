@@ -110,8 +110,8 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 ### 1-1. Base 클래스 독립 추출
 
 ```
-현재: backend/app/models/__init__.py 에 Base 정의 (모든 모델이 참조)
-목표: backend/app/models/base.py 로 분리 → 나중에 v-platform으로 이동 용이
+현재: apps/v-channel-bridge/backend/app/models/__init__.py 에 Base 정의 (모든 모델이 참조)
+목표: apps/v-channel-bridge/backend/app/models/base.py 로 분리 → 나중에 v-platform으로 이동 용이
 ```
 
 ### 1-2. 순환 의존성 분석 및 제거
@@ -207,7 +207,7 @@ class PlatformApp:
 ### 2-4. 앱 main.py 리팩토링
 
 ```python
-# backend/app/main.py (v-channel-bridge 진입점)
+# apps/v-channel-bridge/apps/v-channel-bridge/backend/app/main.py (v-channel-bridge 진입점)
 from v_platform import PlatformApp, PlatformConfig
 
 config = PlatformConfig(
@@ -294,7 +294,7 @@ export function PlatformProvider({ config, children }) {
 ### 3-4. 앱 App.tsx 리팩토링
 
 ```tsx
-// frontend/src/App.tsx (v-channel-bridge)
+// apps/v-channel-bridge/frontend/src/App.tsx (v-channel-bridge)
 import { PlatformProvider, ProtectedRoute, Layout } from '@v-platform/core';
 import { Channels } from './pages/Channels';
 import { Messages } from './pages/Messages';

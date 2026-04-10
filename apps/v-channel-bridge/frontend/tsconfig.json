@@ -24,8 +24,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@v-platform/core": ["../platform/frontend/v-platform-core/src/index.ts"],
-      "@v-platform/core/*": ["../platform/frontend/v-platform-core/src/*"]
+      "@v-platform/core": ["../../../platform/frontend/v-platform-core/src/index.ts"],
+      "@v-platform/core/*": ["../../../platform/frontend/v-platform-core/src/*"]
     }
   },
   "include": ["src"],

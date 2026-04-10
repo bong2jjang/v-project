@@ -70,14 +70,14 @@ services:
   # Backend API 서비스 (v-platform + v-channel-bridge)
   backend:
     build:
-      context: ./backend
+      context: ./apps/v-channel-bridge/backend
       dockerfile: Dockerfile
     container_name: v-project-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./apps/v-channel-bridge/backend:/app
       - ./platform/backend:/platform/backend
       - backend_data:/app/data
     environment:
@@ -141,7 +141,7 @@ services:
   # Frontend UI 서비스
   frontend:
     build:
-      context: ./frontend
+      context: ./apps/v-channel-bridge/frontend
       dockerfile: Dockerfile.dev
       args:
         BUILDKIT_INLINE_CACHE: 1
@@ -150,7 +150,7 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
+      - ./apps/v-channel-bridge/frontend:/app
       - ./platform/frontend:/platform/frontend
       - /app/node_modules
       - /app/.vite

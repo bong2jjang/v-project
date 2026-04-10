@@ -374,7 +374,7 @@ add_route_rule "slack" "general" "teams" "General"   # ✗ 잘못됨
 ## Web UI 통합 (선택사항)
 
 ```typescript
-// frontend/src/components/settings/RouteRuleManager.tsx
+// apps/v-channel-bridge/frontend/src/components/settings/RouteRuleManager.tsx
 
 async function addRouteRule(
   sourcePlatform: 'slack' | 'teams',

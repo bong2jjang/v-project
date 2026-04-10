@@ -20,7 +20,7 @@ color: green
 **예시**:
 ```bash
 # Provider 파일들 찾기
-Glob: backend/app/adapters/*.py
+Glob: apps/v-channel-bridge/backend/app/adapters/*.py
 
 # 설정 파일들 찾기
 Glob: *.toml, *.json, *.yml
@@ -65,7 +65,7 @@ Bash: docker logs v-project-frontend --tail 50 | grep -i warn
 Read: docker-compose.dev.yml
 
 # 함수 일부만 읽기 (토큰 절약)
-Read: backend/app/main.py offset=50 limit=30
+Read: apps/v-channel-bridge/backend/app/main.py offset=50 limit=30
 ```
 
 ## 작업 원칙

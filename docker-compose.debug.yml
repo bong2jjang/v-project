@@ -10,7 +10,7 @@ services:
   # Backend API (디버그 모드 - debugpy 활성화)
   backend:
     build:
-      context: ./backend
+      context: ./apps/v-channel-bridge/backend
       dockerfile: Dockerfile.dev
     container_name: v-project-backend-debug
     restart: unless-stopped
@@ -18,7 +18,7 @@ services:
       - "8000:8000"
       - "5678:5678"   # debugpy 원격 디버거 포트
     volumes:
-      - ./backend:/app
+      - ./apps/v-channel-bridge/backend:/app
       - backend_pip_cache:/root/.cache/pip
     environment:
       - PYTHONUNBUFFERED=1
@@ -40,14 +40,14 @@ services:
   # Frontend UI (개발 모드 - Vite HMR)
   frontend:
     build:
-      context: ./frontend
+      context: ./apps/v-channel-bridge/frontend
       dockerfile: Dockerfile.dev
     container_name: v-project-frontend-debug
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./apps/v-channel-bridge/frontend:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development

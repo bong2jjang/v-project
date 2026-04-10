@@ -6,15 +6,15 @@ v-project(v-platform + v-channel-bridge) 컴포넌트 현황과 Provider 연결 
 
 ```bash
 # 핵심 파일 존재 여부
-ls -la backend/app/schemas/common_message.py && echo "✅ Common Schema" || echo "❌ Common Schema"
-ls -la backend/app/adapters/base.py && echo "✅ Provider Interface" || echo "❌ Provider Interface"
-ls -la backend/app/adapters/slack_provider.py && echo "✅ Slack Provider" || echo "❌ Slack Provider"
-ls -la backend/app/adapters/teams_provider.py && echo "✅ Teams Provider" || echo "❌ Teams Provider"
-ls -la backend/app/services/route_manager.py && echo "✅ Route Manager" || echo "❌ Route Manager"
-ls -la backend/app/services/websocket_bridge.py && echo "✅ WebSocket Bridge" || echo "❌ WebSocket Bridge"
-ls -la backend/app/api/teams_webhook.py && echo "✅ Teams Webhook" || echo "❌ Teams Webhook"
-ls -la backend/app/api/bridge.py && echo "✅ Bridge API" || echo "❌ Bridge API"
-ls -la frontend/src/lib/api/bridge.ts && echo "✅ Frontend Bridge API" || echo "❌ Frontend Bridge API"
+ls -la apps/v-channel-bridge/backend/app/schemas/common_message.py && echo "✅ Common Schema" || echo "❌ Common Schema"
+ls -la apps/v-channel-bridge/backend/app/adapters/base.py && echo "✅ Provider Interface" || echo "❌ Provider Interface"
+ls -la apps/v-channel-bridge/backend/app/adapters/slack_provider.py && echo "✅ Slack Provider" || echo "❌ Slack Provider"
+ls -la apps/v-channel-bridge/backend/app/adapters/teams_provider.py && echo "✅ Teams Provider" || echo "❌ Teams Provider"
+ls -la apps/v-channel-bridge/backend/app/services/route_manager.py && echo "✅ Route Manager" || echo "❌ Route Manager"
+ls -la apps/v-channel-bridge/backend/app/services/websocket_bridge.py && echo "✅ WebSocket Bridge" || echo "❌ WebSocket Bridge"
+ls -la apps/v-channel-bridge/backend/app/api/teams_webhook.py && echo "✅ Teams Webhook" || echo "❌ Teams Webhook"
+ls -la apps/v-channel-bridge/backend/app/api/bridge.py && echo "✅ Bridge API" || echo "❌ Bridge API"
+ls -la apps/v-channel-bridge/frontend/src/lib/api/bridge.ts && echo "✅ Frontend Bridge API" || echo "❌ Frontend Bridge API"
 ```
 
 ## Docker 서비스 상태

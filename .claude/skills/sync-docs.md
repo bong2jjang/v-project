@@ -67,7 +67,7 @@ description: 코드 변경 기반 증분 문서 갱신 — git diff로 변경분
 {
   "mappings": [
     {
-      "source_pattern": "backend/app/adapters/**",
+      "source_pattern": "apps/v-channel-bridge/backend/app/adapters/**",
       "docs": ["developer-guide/ARCHITECTURE.md", "admin-guide/TEAMS_SETUP.md"],
       "description": "Provider 어댑터 변경"
     }

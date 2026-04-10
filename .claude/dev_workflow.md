@@ -53,13 +53,13 @@ docker exec -it v-project-postgres psql -U vmsuser v_project
 ### 코드 수정 후 필수 단계
 
 ```bash
-cd backend && python -m ruff check --fix . && python -m ruff format .
+cd apps/v-channel-bridge/backend && python -m ruff check --fix . && python -m ruff format .
 ```
 
 ### 타입 체크
 
 ```bash
-cd backend && python -m mypy app/
+cd apps/v-channel-bridge/backend && python -m mypy app/
 ```
 
 ### 테스트
@@ -90,16 +90,16 @@ docker exec v-project-backend python -m pytest tests/ --cov=app --cov-report=htm
 
 ```bash
 # 1. 타입 체크
-cd frontend && npx tsc --noEmit
+cd apps/v-channel-bridge/frontend && npx tsc --noEmit
 
 # 2. 린트 + 포맷
-cd frontend && npm run lint:fix && npm run format
+cd apps/v-channel-bridge/frontend && npm run lint:fix && npm run format
 
 # 3. 테스트
-cd frontend && npx vitest --run
+cd apps/v-channel-bridge/frontend && npx vitest --run
 
 # 4. 빌드 확인 (선택적)
-cd frontend && npm run build
+cd apps/v-channel-bridge/frontend && npm run build
 ```
 
 ---
@@ -112,7 +112,7 @@ cd frontend && npm run build
 
 ```bash
 # 1. Provider 파일 생성
-touch backend/app/adapters/new_platform_provider.py
+touch apps/v-channel-bridge/backend/app/adapters/new_platform_provider.py
 
 # 2. BasePlatformProvider 상속 구현
 #    - connect() / disconnect()
@@ -123,11 +123,11 @@ touch backend/app/adapters/new_platform_provider.py
 # 3. adapters/__init__.py에 export 추가
 # 4. main.py에서 Provider 초기화 로직 추가
 # 5. 단위 테스트 작성
-touch backend/tests/adapters/test_new_platform_provider.py
+touch apps/v-channel-bridge/backend/tests/adapters/test_new_platform_provider.py
 
 # 6. Lint 후 커밋
-cd backend && python -m ruff check --fix . && python -m ruff format .
-git add backend/app/adapters/ backend/tests/adapters/
+cd apps/v-channel-bridge/backend && python -m ruff check --fix . && python -m ruff format .
+git add apps/v-channel-bridge/backend/app/adapters/ apps/v-channel-bridge/backend/tests/adapters/
 git commit -m "feat(adapters): NewPlatform Provider 구현"
 ```
 

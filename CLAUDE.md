@@ -40,18 +40,18 @@ docker compose up -d --build
 
 # 백엔드만 재빌드
 docker stop v-project-backend && docker rm v-project-backend
-docker build -t v-project-backend -f backend/Dockerfile backend/
+docker build -t v-project-backend -f apps/v-channel-bridge/backend/Dockerfile apps/v-channel-bridge/backend/
 docker run -d --name v-project-backend \
   --network v-project-network \
   --network-alias backend \
-  -p 8000:8000 -v $(pwd)/backend:/app v-project-backend
+  -p 8000:8000 -v $(pwd)/apps/v-channel-bridge/backend:/app v-project-backend
 
 # 프론트엔드만 재빌드
 docker stop v-project-frontend && docker rm v-project-frontend
-docker build -t v-project-frontend -f frontend/Dockerfile.dev frontend/
+docker build -t v-project-frontend -f apps/v-channel-bridge/frontend/Dockerfile.dev apps/v-channel-bridge/frontend/
 docker run -d --name v-project-frontend \
   --network v-project-network \
-  -p 5173:5173 -v $(pwd)/frontend:/app -v /app/node_modules v-project-frontend
+  -p 5173:5173 -v $(pwd)/apps/v-channel-bridge/frontend:/app -v /app/node_modules v-project-frontend
 ```
 
 **이유**: 로컬 Node.js v24 vs Docker v18 버전 불일치, npm 충돌 방지.
@@ -98,18 +98,18 @@ platform/
             ├── components/layout/ # Sidebar, TopBar, ContentHeader...
             └── index.ts           # 패키지 진입점
 
-backend/app/                       # v-channel-bridge (앱)
-├── adapters/                      # Slack, Teams Provider
-├── api/                           # bridge, messages, accounts, teams_webhook
-├── models/                        # Message, Account (+ 플랫폼 re-export shim)
-├── services/                      # websocket_bridge, route_manager, message_queue...
-└── main.py                        # PlatformApp + register_app_routers()
-
-frontend/src/                      # v-channel-bridge (앱)
-├── pages/                         # Channels, Messages, Statistics...
-├── components/                    # dashboard, channels, messages, providers...
-├── store/                         # routes, bridge, providers (+ 플랫폼 re-export shim)
-└── App.tsx
+apps/v-channel-bridge/             # 앱: Slack ↔ Teams 메시지 브리지
+├── backend/app/
+│   ├── adapters/                  # Slack, Teams Provider
+│   ├── api/                       # bridge, messages, accounts, teams_webhook
+│   ├── models/                    # Message, Account (+ 플랫폼 re-export shim)
+│   ├── services/                  # websocket_bridge, route_manager, message_queue...
+│   └── main.py                    # PlatformApp + register_app_routers()
+└── frontend/src/
+    ├── pages/                     # Channels, Messages, Statistics...
+    ├── components/                # dashboard, channels, messages, providers...
+    ├── store/                     # routes, bridge, providers (+ 플랫폼 re-export shim)
+    └── App.tsx
 ```
 
 ---
@@ -119,13 +119,13 @@ frontend/src/                      # v-channel-bridge (앱)
 ### Python 파일 수정 후
 
 ```bash
-cd backend && python -m ruff check --fix . && python -m ruff format .
+cd apps/v-channel-bridge/backend && python -m ruff check --fix . && python -m ruff format .
 ```
 
 ### TypeScript 파일 수정 후
 
 ```bash
-cd frontend && npm run lint:fix && npm run format
+cd apps/v-channel-bridge/frontend && npm run lint:fix && npm run format
 ```
 
 ### 테스트 실행
@@ -135,7 +135,7 @@ cd frontend && npm run lint:fix && npm run format
 docker exec v-project-backend python -m pytest tests/ -v
 
 # Frontend
-cd frontend && npx vitest --run
+cd apps/v-channel-bridge/frontend && npx vitest --run
 ```
 
 ---

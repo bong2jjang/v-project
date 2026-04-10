@@ -233,7 +233,7 @@ const MyPage = () => (
 #### Provider 구현 규칙
 
 ```python
-# backend/app/adapters/base.py
+# apps/v-channel-bridge/backend/app/adapters/base.py
 from abc import ABC, abstractmethod
 from typing import AsyncIterator
 from app.schemas.common_message import CommonMessage
@@ -270,7 +270,7 @@ class BasePlatformProvider(ABC):
 #### 예시: Slack Provider
 
 ```python
-# backend/app/adapters/slack_provider.py
+# apps/v-channel-bridge/backend/app/adapters/slack_provider.py
 from slack_bolt.async_app import AsyncApp
 from app.adapters.base import BasePlatformProvider
 from app.schemas.common_message import CommonMessage, Platform, MessageType
@@ -315,7 +315,7 @@ class SlackProvider(BasePlatformProvider):
 #### Common Schema 규칙
 
 ```python
-# backend/app/schemas/common_message.py
+# apps/v-channel-bridge/backend/app/schemas/common_message.py
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -356,7 +356,7 @@ class CommonMessage(BaseModel):
 #### Command Processor 규칙
 
 ```python
-# backend/app/services/command_processor.py
+# apps/v-channel-bridge/backend/app/services/command_processor.py
 class CommandProcessor:
     """커맨드 처리기"""
 
@@ -397,7 +397,7 @@ Redis를 사용하여 재시작 없이 라우팅 룰을 변경합니다.
 #### Dynamic Routing 규칙
 
 ```python
-# backend/app/services/route_manager.py
+# apps/v-channel-bridge/backend/app/services/route_manager.py
 import redis.asyncio as redis
 
 class RouteManager:

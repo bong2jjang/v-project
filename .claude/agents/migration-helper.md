@@ -68,11 +68,11 @@ Teams 채널 ID 형식: `{teamId}:{channelId}` (예: `TEAM123:19:abc@thread.tacv
 
 ### 새 Provider 추가 시
 
-1. `backend/app/adapters/new_provider.py` 생성
+1. `apps/v-channel-bridge/backend/app/adapters/new_provider.py` 생성
 2. `BasePlatformProvider` 상속 및 모든 메서드 구현
-3. `backend/app/adapters/__init__.py`에 export 추가
-4. `backend/app/main.py`의 `init_bridge()`에 초기화 로직 추가
-5. `backend/tests/adapters/test_new_provider.py` 작성
+3. `apps/v-channel-bridge/backend/app/adapters/__init__.py`에 export 추가
+4. `apps/v-channel-bridge/backend/app/main.py`의 `init_bridge()`에 초기화 로직 추가
+5. `apps/v-channel-bridge/backend/tests/adapters/test_new_provider.py` 작성
 
 ### 라우팅 문제 디버깅 시
 
@@ -94,4 +94,4 @@ docker compose -f docker-compose.dev.yml logs backend | grep -i "route\|forward\
 - 비동기: 모든 I/O는 `async/await`
 - 로깅: `structlog` 사용
 - 에러 처리: Provider 내부 에러는 독립 처리, 상위 전파 금지
-- Lint: 작업 후 `cd backend && python -m ruff check --fix . && python -m ruff format .`
+- Lint: 작업 후 `cd apps/v-channel-bridge/backend && python -m ruff check --fix . && python -m ruff format .`

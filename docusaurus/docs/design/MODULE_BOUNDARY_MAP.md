@@ -9,12 +9,12 @@
 ## 범례
 
 - **[P]** = v-platform (플랫폼 → `platform/backend/v_platform/`으로 이동)
-- **[A]** = v-channel-bridge (앱 → `backend/app/`에 잔류)
+- **[A]** = v-channel-bridge (앱 → `apps/v-channel-bridge/backend/app/`에 잔류)
 - **[S]** = 공유 (Shared — 양쪽 모두 사용, `models/base.py` 등)
 
 ---
 
-## Backend: Models (`backend/app/models/`)
+## Backend: Models (`apps/v-channel-bridge/backend/app/models/`)
 
 | 파일 | 분류 | 모델 | 비고 |
 |------|------|------|------|
@@ -37,7 +37,7 @@
 
 ---
 
-## Backend: API (`backend/app/api/`)
+## Backend: API (`apps/v-channel-bridge/backend/app/api/`)
 
 | 파일 | 분류 | 주요 엔드포인트 | 비고 |
 |------|------|---------------|------|
@@ -68,7 +68,7 @@
 
 ---
 
-## Backend: Services (`backend/app/services/`)
+## Backend: Services (`apps/v-channel-bridge/backend/app/services/`)
 
 | 파일 | 분류 | 클래스/함수 | 비고 |
 |------|------|-----------|------|

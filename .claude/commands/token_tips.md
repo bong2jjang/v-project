@@ -45,7 +45,7 @@ description: 현재 세션의 토큰 사용 현황과 최적화 팁 제공
 
 ### 2. 파일 읽기 최적화
 반복 읽은 파일:
-- `backend/app/main.py` (3회) → offset/limit 활용 권장
+- `apps/v-channel-bridge/backend/app/main.py` (3회) → offset/limit 활용 권장
 
 ### 3. 세션 관리
 - 현재 상태: 계속 작업 가능

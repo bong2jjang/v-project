@@ -23,17 +23,17 @@
 
 ```bash
 # Provider 구현 파일 확인
-ls -la backend/app/adapters/*_provider.py
+ls -la apps/v-channel-bridge/backend/app/adapters/*_provider.py
 
 # 테스트 파일 확인
-ls -la backend/tests/providers/
+ls -la apps/v-channel-bridge/backend/tests/providers/
 ```
 
 ### 2. Slack Provider 테스트
 
 ```bash
 # 단위 테스트 실행
-cd backend && pytest tests/providers/test_slack_provider.py -v
+cd apps/v-channel-bridge/backend && pytest tests/providers/test_slack_provider.py -v
 
 # 테스트 항목:
 # - Provider 초기화
@@ -47,7 +47,7 @@ cd backend && pytest tests/providers/test_slack_provider.py -v
 
 ```bash
 # 단위 테스트 실행
-cd backend && pytest tests/providers/test_teams_provider.py -v
+cd apps/v-channel-bridge/backend && pytest tests/providers/test_teams_provider.py -v
 
 # 테스트 항목:
 # - Provider 초기화
@@ -62,7 +62,7 @@ cd backend && pytest tests/providers/test_teams_provider.py -v
 
 ```bash
 # 변환 로직 테스트
-cd backend && pytest tests/schemas/test_common_message.py -v
+cd apps/v-channel-bridge/backend && pytest tests/schemas/test_common_message.py -v
 
 # 테스트 항목:
 # - Slack 메시지 → CommonMessage
@@ -78,7 +78,7 @@ cd backend && pytest tests/schemas/test_common_message.py -v
 
 ```bash
 # 전체 메시지 흐름 테스트
-cd backend && pytest tests/integration/test_message_flow.py -v
+cd apps/v-channel-bridge/backend && pytest tests/integration/test_message_flow.py -v
 
 # 테스트 시나리오:
 # 1. Slack 메시지 발송
@@ -138,7 +138,7 @@ cd backend && pytest tests/integration/test_message_flow.py -v
 ✅ test_graph_api_auth
 ❌ test_receive_message
   - 오류: KeyError: 'channelIdentity'
-  - 파일: backend/app/adapters/teams_provider.py:127
+  - 파일: apps/v-channel-bridge/backend/app/adapters/teams_provider.py:127
   - 원인: Teams Webhook 페이로드 구조 변경
   - 조치: transform_to_common() 메서드 업데이트 필요
 
@@ -172,7 +172,7 @@ REDIS_URL=redis://:redispassword@redis:6379/1
 EOF
 
 # 테스트 실행 시 환境 변수 로드
-cd backend && pytest --envfile=.env.test
+cd apps/v-channel-bridge/backend && pytest --envfile=.env.test
 ```
 
 ### Mock 데이터 준비
@@ -180,7 +180,7 @@ cd backend && pytest --envfile=.env.test
 **원인: 샘플 메시지 데이터 부족**
 ```bash
 # Mock 데이터 생성
-cat > backend/tests/fixtures/slack_message.json <<EOF
+cat > apps/v-channel-bridge/backend/tests/fixtures/slack_message.json <<EOF
 {
   "type": "message",
   "channel": "C12345678",
@@ -200,7 +200,7 @@ EOF
 **원인: 테스트 라이브러리 누락**
 ```bash
 # 테스트 의존성 설치
-cd backend && pip install pytest pytest-asyncio pytest-mock pytest-cov
+cd apps/v-channel-bridge/backend && pip install pytest pytest-asyncio pytest-mock pytest-cov
 
 # requirements.txt에 추가
 cat >> backend/requirements.txt <<EOF
@@ -217,7 +217,7 @@ EOF
 ### Slack Provider 테스트 템플릿
 
 ```python
-# backend/tests/providers/test_slack_provider.py
+# apps/v-channel-bridge/backend/tests/providers/test_slack_provider.py
 
 import pytest
 from app.adapters.slack_provider import SlackProvider
@@ -290,7 +290,7 @@ async def test_send_message(slack_provider, mocker):
 ### Teams Provider 테스트 템플릿
 
 ```python
-# backend/tests/providers/test_teams_provider.py
+# apps/v-channel-bridge/backend/tests/providers/test_teams_provider.py
 
 import pytest
 from app.adapters.teams_provider import TeamsProvider
@@ -361,7 +361,7 @@ async def test_transform_to_common(teams_provider):
 
 ```bash
 # 테스트 커버리지 측정
-cd backend && pytest --cov=app/adapters --cov-report=html tests/providers/
+cd apps/v-channel-bridge/backend && pytest --cov=app/adapters --cov-report=html tests/providers/
 
 # 결과 확인
 open backend/htmlcov/index.html

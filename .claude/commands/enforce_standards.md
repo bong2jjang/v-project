@@ -8,12 +8,12 @@
 
 **백엔드 (Python 파일 변경 시):**
 ```bash
-cd backend && python -m ruff check --fix . && python -m ruff format .
+cd apps/v-channel-bridge/backend && python -m ruff check --fix . && python -m ruff format .
 ```
 
 **프론트엔드 (TypeScript 파일 변경 시):**
 ```bash
-cd frontend && npm run lint:fix && npm run format
+cd apps/v-channel-bridge/frontend && npm run lint:fix && npm run format
 ```
 
 ### Step 2: Code Standards Enforcer Agent 실행

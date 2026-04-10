@@ -15,18 +15,18 @@ Provider 기본 구조를 자동으로 생성합니다. SlackProvider, TeamsProv
 ## 생성되는 파일
 
 ```
-backend/app/adapters/
+apps/v-channel-bridge/backend/app/adapters/
 ├── {provider_name.lower()}_provider.py  # Provider 구현
-backend/tests/providers/
+apps/v-channel-bridge/backend/tests/providers/
 ├── test_{provider_name.lower()}_provider.py  # 단위 테스트
-backend/tests/fixtures/
+apps/v-channel-bridge/backend/tests/fixtures/
 ├── {provider_name.lower()}_message.json  # Mock 데이터
 ```
 
 ## Provider 템플릿 구조
 
 ```python
-# backend/app/adapters/{provider_name.lower()}_provider.py
+# apps/v-channel-bridge/backend/app/adapters/{provider_name.lower()}_provider.py
 
 from abc import ABC
 from typing import Optional, Dict, Any
@@ -224,7 +224,7 @@ class {provider_name}Provider(BasePlatformProvider):
 ## 테스트 템플릿 구조
 
 ```python
-# backend/tests/providers/test_{provider_name.lower()}_provider.py
+# apps/v-channel-bridge/backend/tests/providers/test_{provider_name.lower()}_provider.py
 
 import pytest
 from datetime import datetime
@@ -372,7 +372,7 @@ class Test{provider_name}ProviderHealthCheck:
 ## Mock 데이터 템플릿
 
 ```json
-// backend/tests/fixtures/{provider_name.lower()}_message.json
+// apps/v-channel-bridge/backend/tests/fixtures/{provider_name.lower()}_message.json
 {
   "id": "msg-123",
   "timestamp": "2024-01-01T00:00:00Z",

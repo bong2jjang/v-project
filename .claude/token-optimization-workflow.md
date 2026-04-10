@@ -68,26 +68,26 @@ Task tool → subagent_type="Explore" → thoroughness="quick|medium|very thorou
 #### ❌ 비효율적 패턴
 ```python
 # 같은 파일 반복 읽기
-Read("backend/app/main.py")  # 전체 408줄
+Read("apps/v-channel-bridge/backend/app/main.py")  # 전체 408줄
 # ... 작업 ...
-Read("backend/app/main.py")  # 또 전체 읽기
+Read("apps/v-channel-bridge/backend/app/main.py")  # 또 전체 읽기
 
 # 불필요하게 큰 파일 전체 읽기
-Read("backend/app/services/websocket_bridge.py")  # 500줄+
+Read("apps/v-channel-bridge/backend/app/services/websocket_bridge.py")  # 500줄+
 ```
 
 #### ✅ 효율적 패턴
 ```python
 # 1. Grep으로 위치 먼저 찾기
-Grep("def init_bridge", path="backend/app/main.py", output_mode="content", -n=True)
+Grep("def init_bridge", path="apps/v-channel-bridge/backend/app/main.py", output_mode="content", -n=True)
 # 결과: 123번 줄에 있음
 
 # 2. 해당 부분만 읽기
-Read("backend/app/main.py", offset=120, limit=50)
+Read("apps/v-channel-bridge/backend/app/main.py", offset=120, limit=50)
 
 # 3. 여러 파일 병렬 읽기
-Read("backend/app/api/bridge.py")
-Read("backend/app/services/websocket_bridge.py", offset=100, limit=80)
+Read("apps/v-channel-bridge/backend/app/api/bridge.py")
+Read("apps/v-channel-bridge/backend/app/services/websocket_bridge.py", offset=100, limit=80)
 ```
 
 ### 4. 세션 관리 전략
@@ -105,9 +105,9 @@ Read("backend/app/services/websocket_bridge.py", offset=100, limit=80)
 - 다음 작업: Phase 2 - Gateway 관리 UI
 
 ## 주요 코드 위치
-- Provider API: backend/app/api/accounts_crud.py
-- Provider Store: frontend/src/store/providers.ts
-- Provider UI: frontend/src/components/providers/
+- Provider API: apps/v-channel-bridge/backend/app/api/accounts_crud.py
+- Provider Store: apps/v-channel-bridge/frontend/src/store/providers.ts
+- Provider UI: apps/v-channel-bridge/frontend/src/components/providers/
 ```
 
 ### 5. 커맨드 활용
@@ -155,7 +155,7 @@ Read("backend/app/services/websocket_bridge.py", offset=100, limit=80)
 
 2. [Sonnet - 메인 세션]
    - Read(".env")  # 설정 확인
-   - Edit("backend/app/main.py")  # 수정
+   - Edit("apps/v-channel-bridge/backend/app/main.py")  # 수정
 ```
 
 **예상 토큰 절약**: 20%

@@ -26,7 +26,7 @@ color: yellow
 ### 설정 파일
 - `docker-compose*.yml` - 서비스 오케스트레이션
 - `.env` - 환경 변수 (Slack/Teams 자격증명, JWT 시크릿, BRIDGE_TYPE=native)
-- `backend/Dockerfile.dev` / `frontend/Dockerfile.dev` - 개발 이미지
+- `apps/v-channel-bridge/backend/Dockerfile.dev` / `apps/v-channel-bridge/frontend/Dockerfile.dev` - 개발 이미지
 
 ## 3가지 운영 모드
 

@@ -121,7 +121,7 @@ services:
   # Backend API (프로덕션 모드)
   backend:
     build:
-      context: ./backend
+      context: ./apps/v-channel-bridge/backend
       dockerfile: Dockerfile
       args:
         - ENV=production
@@ -178,7 +178,7 @@ services:
   # Frontend UI (프로덕션 모드 - Nginx)
   frontend:
     build:
-      context: ./frontend
+      context: ./apps/v-channel-bridge/frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=
