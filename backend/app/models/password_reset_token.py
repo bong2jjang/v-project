@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.models.message import Base
+from app.models.base import Base
 
 
 class PasswordResetToken(Base):

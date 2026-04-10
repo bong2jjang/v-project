@@ -7,7 +7,7 @@ Company Model
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
-from app.db.database import Base
+from app.models.base import Base
 
 
 class Company(Base):

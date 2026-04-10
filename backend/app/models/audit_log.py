@@ -9,7 +9,7 @@ from enum import Enum
 from sqlalchemy import Column, Index, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-from app.db.database import Base
+from app.models.base import Base
 
 
 class AuditAction(str, Enum):

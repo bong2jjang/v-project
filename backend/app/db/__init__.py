@@ -2,7 +2,7 @@
 Database Package
 """
 
-from app.models.message import Base
+from app.models.base import Base
 from .database import (
     engine,
     SessionLocal,

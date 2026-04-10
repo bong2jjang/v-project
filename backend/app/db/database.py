@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 import logging
 
-from app.models.message import Base
+from app.models.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,10 @@ def _run_migrations():
     if not migrations_dir.is_dir():
         return
 
-    files = sorted(glob_mod.glob(str(migrations_dir / "[0-9]*.py")))
+    # Platform migrations (p*) first, then App migrations (a*)
+    p_files = sorted(glob_mod.glob(str(migrations_dir / "p[0-9]*.py")))
+    a_files = sorted(glob_mod.glob(str(migrations_dir / "a[0-9]*.py")))
+    files = p_files + a_files
     for fpath in files:
         name = pathlib.Path(fpath).stem
         try:

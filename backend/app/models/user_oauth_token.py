@@ -21,7 +21,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.models.message import Base
+from app.models.base import Base
 from app.utils.encryption import decrypt, encrypt, is_encrypted
 
 

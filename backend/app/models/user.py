@@ -16,7 +16,7 @@ from sqlalchemy import (
     Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
-from app.models.message import Base
+from app.models.base import Base
 
 
 class UserRole(str, Enum):

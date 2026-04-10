@@ -5,7 +5,7 @@
 
 from sqlalchemy import Boolean, Column, Integer, String
 
-from app.models.message import Base
+from app.models.base import Base
 
 
 class SystemSettings(Base):

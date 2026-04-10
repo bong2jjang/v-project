@@ -15,7 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
-from app.models.message import Base
+from app.models.base import Base
 
 
 class AccessLevel(str, Enum):

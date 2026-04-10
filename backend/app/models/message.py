@@ -15,9 +15,7 @@ from sqlalchemy import (
     Index,
     JSON,
 )
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from app.models.base import Base
 
 
 class Message(Base):

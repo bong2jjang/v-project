@@ -21,7 +21,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.db.database import Base, get_db_session
+from app.models.base import Base
+from app.db.database import get_db_session
 from app.main import app
 from app.models.user import User
 from app.schemas.user import UserRole

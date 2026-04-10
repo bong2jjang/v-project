@@ -7,7 +7,7 @@ Refresh Token 관리를 위한 데이터베이스 모델
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.models.message import Base
+from app.models.base import Base
 
 
 class RefreshToken(Base):
