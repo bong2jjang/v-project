@@ -1,7 +1,4 @@
-"""
-Shared DeclarativeBase for all models (v-platform + v-channel-bridge)
-"""
+"""Compatibility shim — re-exports Base from v_platform"""
+from v_platform.models.base import Base  # noqa: F401
 
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+__all__ = ["Base"]
