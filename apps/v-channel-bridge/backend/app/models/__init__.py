@@ -11,6 +11,9 @@ from v_platform.models.system_settings import SystemSettings  # noqa: F401
 from v_platform.models.user_oauth_token import UserOAuthToken  # noqa: F401
 from v_platform.models.menu_item import MenuItem  # noqa: F401
 from v_platform.models.user_permission import UserPermission, AccessLevel  # noqa: F401
+from v_platform.models.permission_group import PermissionGroup  # noqa: F401
+from v_platform.models.company import Company  # noqa: F401
+from v_platform.models.department import Department  # noqa: F401
 
 # App models (v-channel-bridge)
 from .message import Message, MessageStats  # noqa: F401
