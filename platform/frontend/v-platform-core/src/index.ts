@@ -4,6 +4,10 @@
  * Re-exports all platform components, hooks, stores, and utilities.
  */
 
+// ── Provider ──
+export { PlatformProvider, usePlatformConfig } from './providers/PlatformProvider';
+export type { PlatformConfig } from './providers/PlatformProvider';
+
 // ── Components ──
 export { default as ProtectedRoute } from './components/ProtectedRoute';
 export { default as RoleBasedRoute } from './components/RoleBasedRoute';
