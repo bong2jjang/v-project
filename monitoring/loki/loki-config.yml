@@ -1,0 +1,73 @@
+# Loki 설정 - VMS Chat Ops 로그 저장소
+# 인증 비활성화 (개발 환경)
+auth_enabled: false
+
+# HTTP/gRPC 서버 설정
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+# 공통 설정 (단일 노드 모드)
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory   # 단일 인스턴스이므로 inmemory 사용
+
+# 쿼리 결과 캐시 설정
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+# 스키마 설정 - TSDB 기반 v13
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+# 스토리지 설정
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
+    cache_ttl: 24h
+  filesystem:
+    directory: /loki/chunks
+
+# 컴팩터 설정 - 오래된 로그 자동 삭제
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
+
+# 제한 설정
+limits_config:
+  retention_period: 720h          # 로그 보관 기간: 30일
+  reject_old_samples: true        # 오래된 샘플 거부
+  reject_old_samples_max_age: 168h  # 거부 기준: 7일
+  max_cache_freshness_per_query: 10m
+  split_queries_by_interval: 15m  # 쿼리 분할 간격
+  ingestion_rate_mb: 4            # 초당 수집 속도 제한 (MB)
+  ingestion_burst_size_mb: 6      # 버스트 허용량 (MB)
+
+# ruler 섹션: alertmanager 미사용으로 URL 설정 제거
+# (alertmanager 연동 필요 시 아래 주석 해제)
+# ruler:
+#   alertmanager_url: http://alertmanager:9093

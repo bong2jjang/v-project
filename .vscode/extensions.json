@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    // Python
+    "ms-python.python",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",
+
+    // TypeScript / React
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+
+    // Docker
+    "ms-azuretools.vscode-docker",
+
+    // 기타
+    "tamasfe.even-better-toml",
+    "bradlc.vscode-tailwindcss"
+  ]
+}

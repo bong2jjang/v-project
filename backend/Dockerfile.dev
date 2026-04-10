@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 시스템 패키지 설치 (curl: 헬스체크, git: 개발용)
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 의존성 설치
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 디버거 설치
+RUN pip install debugpy
+
+# 소스 코드는 볼륨 마운트로 제공됨 (COPY 불필요)
+
+EXPOSE 8000
+EXPOSE 5678
+
+# 개발 모드: uvicorn --reload
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]

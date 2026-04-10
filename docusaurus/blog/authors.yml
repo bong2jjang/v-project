@@ -1,0 +1,9 @@
+vms-team:
+  name: VMS Cloud Infra Team
+  title: Cloud Infrastructure & DevOps
+  url: https://github.com/vmsCloudInfra
+
+claude-code:
+  name: Claude Code
+  title: AI Pair Programming Assistant
+  url: https://claude.ai/claude-code

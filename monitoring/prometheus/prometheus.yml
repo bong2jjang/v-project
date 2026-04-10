@@ -1,0 +1,42 @@
+# Prometheus 글로벌 설정
+global:
+  scrape_interval: 15s       # 메트릭 수집 주기
+  evaluation_interval: 15s   # 알림 규칙 평가 주기
+  external_labels:
+    project: 'vms-chat-ops'
+    environment: 'development'
+
+# 알림 규칙 파일
+rule_files:
+  - '/etc/prometheus/alerts.yml'
+
+# Alertmanager 연동 (현재 미사용 - 필요 시 활성화)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# 메트릭 수집 대상
+scrape_configs:
+  # Prometheus 자체 모니터링
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # VMS Chat Ops Backend API 메트릭
+  # 메트릭: http_requests_total, http_request_duration_seconds,
+  #         websocket_connections, message_count_total
+  - job_name: 'vms-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/metrics'
+
+  # cAdvisor - 컨테이너 리소스 메트릭
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Node Exporter - 호스트 시스템 메트릭
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['node_exporter:9100']

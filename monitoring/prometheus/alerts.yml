@@ -1,0 +1,128 @@
+groups:
+  # ──────────────────────────────────────────────────────────────
+  # VMS Chat Ops 서비스 알림
+  # 대상: backend API (job="vms-backend")
+  # ──────────────────────────────────────────────────────────────
+  - name: vms_service_alerts
+    interval: 30s
+    rules:
+      # 백엔드 다운 감지
+      - alert: VMSBackendDown
+        expr: up{job="vms-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "VMS 백엔드 다운"
+          description: "VMS Chat Ops 백엔드가 다운되었습니다. (1분 이상 응답 없음)"
+
+      # API 5xx 에러율 초과
+      - alert: VMSHighErrorRate
+        expr: >
+          sum(rate(http_requests_total{job="vms-backend",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="vms-backend"}[5m]))
+          * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "VMS 백엔드 API 에러율 초과"
+          description: "API 에러율이 5%를 초과했습니다 (현재: {{ $value | printf \"%.1f\" }}%)"
+
+      # P95 응답시간 지연
+      - alert: VMSSlowResponse
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="vms-backend"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "VMS 백엔드 응답시간 지연"
+          description: "API P95 응답시간이 2초를 초과했습니다"
+
+      # 메시지 브리지 처리 오류 증가
+      - alert: VMSBridgeHighMessageFailure
+        expr: >
+          sum(rate(http_requests_total{job="vms-backend",endpoint=~"/api/messages.*",status=~"5.."}[5m]))
+          > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: bridge
+        annotations:
+          summary: "VMS 메시지 브리지 오류 증가"
+          description: "메시지 처리 에러가 증가하고 있습니다 (현재: {{ $value | printf \"%.2f\" }}/s)"
+
+  # ──────────────────────────────────────────────────────────────
+  # 컨테이너 리소스 알림
+  # 대상: vms-chatops.* 컨테이너 (cAdvisor)
+  # ──────────────────────────────────────────────────────────────
+  - name: container_resource_alerts
+    interval: 1m
+    rules:
+      # 컨테이너 CPU 80% 초과
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name=~"vms-chatops.*"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "컨테이너 CPU 사용률 높음: {{ $labels.name }}"
+          description: "{{ $labels.name }} 컨테이너의 CPU 사용률이 80%를 초과했습니다 (현재: {{ $value | printf \"%.1f\" }}%)"
+
+      # 컨테이너 메모리 512MB 초과
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name=~"vms-chatops.*"} / 1024 / 1024 > 512
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "컨테이너 메모리 사용량 높음: {{ $labels.name }}"
+          description: "{{ $labels.name }} 컨테이너의 메모리 사용량이 512MB를 초과했습니다 (현재: {{ $value | printf \"%.0f\" }}MB)"
+
+      # 컨테이너 빈번한 재시작 (1시간 내 3회 초과)
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds{name=~"vms-chatops.*"}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "컨테이너 빈번한 재시작: {{ $labels.name }}"
+          description: "{{ $labels.name }} 컨테이너가 지난 1시간 동안 3회 이상 재시작되었습니다"
+
+  # ──────────────────────────────────────────────────────────────
+  # 호스트 시스템 알림
+  # 대상: 호스트 머신 (Node Exporter)
+  # ──────────────────────────────────────────────────────────────
+  - name: host_alerts
+    interval: 1m
+    rules:
+      # 루트 디스크 여유 공간 10% 미만
+      - alert: HostDiskSpaceLow
+        expr: >
+          (node_filesystem_avail_bytes{mountpoint="/"}
+          /
+          node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "호스트 디스크 공간 부족"
+          description: "루트 파일시스템의 여유 공간이 10% 미만입니다 (현재: {{ $value | printf \"%.1f\" }}%)"
+
+      # 호스트 CPU 85% 초과
+      - alert: HostHighCPU
+        expr: >
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "호스트 CPU 사용률 높음"
+          description: "호스트 CPU 사용률이 85%를 초과했습니다 (현재: {{ $value | printf \"%.1f\" }}%)"

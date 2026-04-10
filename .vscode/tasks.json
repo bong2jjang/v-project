@@ -1,0 +1,188 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ── Docker Compose 실행 ─────────────────────────────
+    {
+      "label": "docker-dev-up",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml up -d --build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-dev-down",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml down",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-debug-up",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.debug.yml up -d --build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-debug-down",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.debug.yml down",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-prod-up",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.prod.yml up -d --build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-prod-down",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.prod.yml down",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+
+    // ── 로그 확인 ───────────────────────────────────────
+    {
+      "label": "docker-logs-all",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml logs -f",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-logs-backend",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml logs -f backend",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-logs-frontend",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml logs -f frontend",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+
+    // ── 백엔드 코드 품질 ────────────────────────────────
+    {
+      "label": "backend-lint",
+      "type": "shell",
+      "command": "cd backend && python -m ruff check --fix . && python -m ruff format .",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "backend-typecheck",
+      "type": "shell",
+      "command": "cd backend && python -m mypy app/",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "backend-test",
+      "type": "shell",
+      "command": "cd backend && pytest tests/ -v --tb=short",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+
+    // ── 프론트엔드 코드 품질 ────────────────────────────
+    {
+      "label": "frontend-lint",
+      "type": "shell",
+      "command": "cd frontend && npm run lint:fix && npm run format",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "frontend-typecheck",
+      "type": "shell",
+      "command": "cd frontend && npx tsc --noEmit",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "frontend-test",
+      "type": "shell",
+      "command": "cd frontend && npm test -- --run",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend-build",
+      "type": "shell",
+      "command": "cd frontend && npm run build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

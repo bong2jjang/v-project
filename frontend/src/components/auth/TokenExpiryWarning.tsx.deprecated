@@ -1,0 +1,113 @@
+/**
+ * Token Expiry Warning Component
+ *
+ * 토큰 만료 5분 전에 경고를 표시하고 세션 연장 옵션 제공
+ */
+
+import { useEffect, useState } from "react";
+import { useAuthStore } from "../../store/auth";
+import { Button } from "../ui/Button";
+import { AlertTriangle, X } from "lucide-react";
+
+export function TokenExpiryWarning() {
+  const { tokenExpiresAt, refreshToken } = useAuthStore();
+  const [showWarning, setShowWarning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    if (!tokenExpiresAt) {
+      setShowWarning(false);
+      return;
+    }
+
+    // 1초마다 남은 시간 확인
+    const checkExpiry = () => {
+      const now = Date.now();
+      const expiresAtMs = tokenExpiresAt.getTime();
+      const remaining = expiresAtMs - now;
+
+      // 5분 전부터 경고 표시
+      const warningThreshold = 5 * 60 * 1000; // 5분
+
+      if (remaining > 0 && remaining <= warningThreshold) {
+        setShowWarning(true);
+        setTimeLeft(Math.floor(remaining / 1000)); // 초 단위
+      } else {
+        setShowWarning(false);
+        setTimeLeft(0);
+      }
+    };
+
+    // 즉시 실행
+    checkExpiry();
+
+    // 1초마다 체크
+    const interval = setInterval(checkExpiry, 1000);
+
+    return () => clearInterval(interval);
+  }, [tokenExpiresAt]);
+
+  const handleExtendSession = async () => {
+    try {
+      await refreshToken();
+      setShowWarning(false);
+    } catch (error) {
+      console.error("Failed to extend session:", error);
+    }
+  };
+
+  const handleDismiss = () => {
+    setShowWarning(false);
+  };
+
+  if (!showWarning || timeLeft <= 0) {
+    return null;
+  }
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+
+  return (
+    <div
+      className="fixed bottom-4 right-4 max-w-md bg-surface-card border border-line rounded-card shadow-modal p-4 z-50"
+      role="alert"
+    >
+      <div className="flex items-start gap-3">
+        {/* 경고 아이콘 */}
+        <div className="flex-shrink-0">
+          <AlertTriangle className="w-5 h-5 text-status-warning" />
+        </div>
+
+        {/* 내용 */}
+        <div className="flex-1 min-w-0">
+          <p className="text-body-base font-medium text-content-primary">
+            세션 만료 예정
+          </p>
+          <p className="text-body-sm text-content-secondary mt-1">
+            {minutes > 0 && `${minutes}분 `}
+            {seconds}초 후 자동 로그아웃됩니다.
+          </p>
+
+          {/* 버튼 */}
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" onClick={handleExtendSession}>
+              세션 연장
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleDismiss}>
+              닫기
+            </Button>
+          </div>
+        </div>
+
+        {/* 닫기 버튼 */}
+        <button
+          onClick={handleDismiss}
+          className="flex-shrink-0 text-content-tertiary hover:text-content-primary transition-colors"
+          aria-label="닫기"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}

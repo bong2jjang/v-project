@@ -1,0 +1,45 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+htmlcov/
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+
+# Cache
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Docker volumes
+matterbridge_data/
+backend/data/
+
+# Logs & temp
+*.log
+*.tmp
+
+# IDE
+.idea/
+.vscode/
+
+# Docusaurus (large)
+docusaurus/node_modules/
+docusaurus/build/
+docusaurus/.docusaurus/
+
+# Git
+.git/
+
+# Lock files (large, token waste)
+frontend/package-lock.json
+docusaurus/pnpm-lock.yaml
+
+# Env
+.env
+.env.*

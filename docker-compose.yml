@@ -1,0 +1,231 @@
+services:
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:16-alpine
+    container_name: vms-chatops-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=vms_chat_ops
+      - POSTGRES_USER=vmsuser
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vmspassword}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vmsuser -d vms_chat_ops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - vms-chat-ops-network
+
+  # Redis 캐시 및 라우팅 룰 스토어
+  redis:
+    image: redis:7-alpine
+    container_name: vms-chatops-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispassword}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - vms-chat-ops-network
+
+  # MailHog 개발용 메일 서버
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: vms-chatops-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP 포트
+      - "8025:8025"  # Web UI 포트
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - vms-chat-ops-network
+
+  # Backend API 서비스 (Light-Zowe Architecture)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vms-chatops-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
+    environment:
+      # Light-Zowe 설정
+      - BRIDGE_TYPE=native  # Matterbridge 대신 자체 브리지 사용
+      - PYTHONUNBUFFERED=1
+      # Database
+      - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops}
+      - DATABASE_DIR=/app/data
+      # Redis (동적 라우팅 룰 저장)
+      - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      # Security
+      - SECRET_KEY=${SECRET_KEY:-vms-chatops-secret-key-change-in-production-12345}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # Email
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@vms-chatops.com}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-VMS Chat Ops}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      # Slack Provider (Socket Mode)
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      # Teams Provider (Graph API)
+      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
+      - TEAMS_APP_ID=${TEAMS_APP_ID}
+      - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
+      - TEAMS_TEAM_ID=${TEAMS_TEAM_ID}
+      # Microsoft OAuth (Delegated Auth)
+      - MS_OAUTH_REDIRECT_URI=${MS_OAUTH_REDIRECT_URI:-}
+      # Graph API Change Notifications
+      - BACKEND_URL=${BACKEND_URL:-https://w9hz7vqx-8000.jpe1.devtunnels.ms}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://w9hz7vqx-8000.jpe1.devtunnels.ms}
+      - TEAMS_NOTIFICATION_URL=${TEAMS_NOTIFICATION_URL:-}
+      # SSO: TEAMS_* 환경변수를 재사용 (별도 SSO 변수 불필요)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - vms-chat-ops-network
+
+  # Frontend UI 서비스
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: vms-chatops-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.vite
+      - frontend-pnpm-store:/root/.local/share/pnpm/store
+    environment:
+      - DOCKER_ENV=true
+      - VITE_API_URL=
+      - NODE_OPTIONS=--max-old-space-size=4096
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 2G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5173 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - vms-chat-ops-network
+
+  # Docusaurus 문서 사이트
+  docusaurus:
+    build:
+      context: ./docusaurus
+      dockerfile: Dockerfile.dev
+    container_name: vms-chatops-docusaurus
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docusaurus:/app
+      - /app/node_modules
+      - /app/.docusaurus
+      - docusaurus-pnpm-store:/root/.local/share/pnpm/store
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 420s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - vms-chat-ops-network
+
+# 네트워크 정의
+networks:
+  vms-chat-ops-network:
+    driver: bridge
+
+# 볼륨 정의
+volumes:
+  backend_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  frontend-pnpm-store:
+    driver: local
+  docusaurus-pnpm-store:
+    driver: local

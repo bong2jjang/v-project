@@ -1,0 +1,29 @@
+services:
+  # Docusaurus Development Server
+  docusaurus:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: vms-docs
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - ../.git:/app/.git:ro
+      - /app/node_modules
+      - /app/.docusaurus
+      - pnpm-store:/root/.local/share/pnpm/store
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+    networks:
+      - docs-network
+
+volumes:
+  pnpm-store:
+
+networks:
+  docs-network:
+    driver: bridge

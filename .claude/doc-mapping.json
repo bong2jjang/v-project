@@ -1,0 +1,155 @@
+{
+  "$comment": "소스 경로 패턴 → Docusaurus 문서 매핑. update-docs 스킬이 사용합니다.",
+  "mappings": [
+    {
+      "source_pattern": "backend/app/adapters/**",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md",
+        "admin-guide/SLACK_SETUP.md",
+        "admin-guide/TEAMS_SETUP.md",
+        "tech-portfolio/TECHNICAL_ARCHITECTURE.md"
+      ],
+      "description": "Provider 어댑터 (Slack/Teams/기타 플랫폼)"
+    },
+    {
+      "source_pattern": "backend/app/api/**",
+      "docs": [
+        "api/API.md",
+        "developer-guide/ARCHITECTURE.md"
+      ],
+      "description": "API 엔드포인트"
+    },
+    {
+      "source_pattern": "backend/app/models/**",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md",
+        "tech-portfolio/MODULE_DESIGN.md"
+      ],
+      "description": "데이터 모델"
+    },
+    {
+      "source_pattern": "backend/app/schemas/**",
+      "docs": [
+        "api/API.md",
+        "developer-guide/ARCHITECTURE.md"
+      ],
+      "description": "스키마 / CommonMessage"
+    },
+    {
+      "source_pattern": "backend/app/services/**",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md",
+        "tech-portfolio/TECHNICAL_ARCHITECTURE.md"
+      ],
+      "description": "핵심 서비스 (Route Manager, WebSocket Bridge 등)"
+    },
+    {
+      "source_pattern": "backend/app/sso/**",
+      "docs": [
+        "developer-guide/SSO_USAGE_AND_TESTING.md",
+        "admin-guide/ADMIN_GUIDE.md"
+      ],
+      "description": "SSO 인증 모듈"
+    },
+    {
+      "source_pattern": "backend/app/middleware/**",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md"
+      ],
+      "description": "미들웨어 (CSRF, 인증 등)"
+    },
+    {
+      "source_pattern": "backend/app/utils/**",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md"
+      ],
+      "description": "유틸리티 (auth, audit 등)"
+    },
+    {
+      "source_pattern": "backend/migrations/**",
+      "docs": [
+        "developer-guide/DEVELOPMENT.md",
+        "admin-guide/DEPLOYMENT.md"
+      ],
+      "description": "DB 마이그레이션"
+    },
+    {
+      "source_pattern": "backend/app/main.py",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md",
+        "admin-guide/DEPLOYMENT.md"
+      ],
+      "description": "앱 엔트리포인트"
+    },
+    {
+      "source_pattern": "backend/requirements.txt",
+      "docs": [
+        "developer-guide/DEVELOPMENT.md"
+      ],
+      "description": "Python 의존성"
+    },
+    {
+      "source_pattern": "frontend/src/pages/**",
+      "docs": [
+        "user-guide/USER_GUIDE.md",
+        "developer-guide/PAGE_LAYOUT_GUIDE.md"
+      ],
+      "description": "프론트엔드 페이지"
+    },
+    {
+      "source_pattern": "frontend/src/components/**",
+      "docs": [
+        "developer-guide/DESIGN_SYSTEM.md",
+        "user-guide/USER_GUIDE.md"
+      ],
+      "description": "프론트엔드 컴포넌트"
+    },
+    {
+      "source_pattern": "frontend/src/store/**",
+      "docs": [
+        "developer-guide/ARCHITECTURE.md"
+      ],
+      "description": "상태 관리 (Zustand)"
+    },
+    {
+      "source_pattern": "frontend/src/lib/api/**",
+      "docs": [
+        "api/API.md",
+        "developer-guide/ARCHITECTURE.md"
+      ],
+      "description": "API 클라이언트"
+    },
+    {
+      "source_pattern": "docker-compose.yml",
+      "docs": [
+        "developer-guide/DEVELOPMENT.md",
+        "admin-guide/DEPLOYMENT.md",
+        "tech-portfolio/TECHNICAL_ARCHITECTURE.md"
+      ],
+      "description": "Docker 인프라 설정"
+    },
+    {
+      "source_pattern": "backend/Dockerfile",
+      "docs": [
+        "developer-guide/DEVELOPMENT.md",
+        "admin-guide/DEPLOYMENT.md"
+      ],
+      "description": "백엔드 Dockerfile"
+    },
+    {
+      "source_pattern": "frontend/Dockerfile*",
+      "docs": [
+        "developer-guide/DEVELOPMENT.md"
+      ],
+      "description": "프론트엔드 Dockerfile"
+    },
+    {
+      "source_pattern": ".env.example",
+      "docs": [
+        "developer-guide/DEVELOPMENT.md",
+        "admin-guide/DEPLOYMENT.md"
+      ],
+      "description": "환경 변수 템플릿"
+    }
+  ]
+}

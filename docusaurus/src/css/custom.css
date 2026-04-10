@@ -1,0 +1,62 @@
+/**
+ * VMS Chat Ops 커스텀 스타일
+ */
+
+:root {
+  --ifm-color-primary: #0078d4;
+  --ifm-color-primary-dark: #006cbe;
+  --ifm-color-primary-darker: #0066b3;
+  --ifm-color-primary-darkest: #005493;
+  --ifm-color-primary-light: #0084ea;
+  --ifm-color-primary-lighter: #008af5;
+  --ifm-color-primary-lightest: #1a99ff;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #1a99ff;
+  --ifm-color-primary-dark: #0084ea;
+  --ifm-color-primary-darker: #007bd6;
+  --ifm-color-primary-darkest: #0066b3;
+  --ifm-color-primary-light: #33adff;
+  --ifm-color-primary-lighter: #4db6ff;
+  --ifm-color-primary-lightest: #80caff;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* 코드 블록 스타일 개선 */
+code {
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+}
+
+/* 테이블 스타일 개선 */
+table {
+  display: table;
+  width: 100%;
+}
+
+/* Admonition 스타일 개선 */
+.admonition {
+  margin-bottom: 1rem;
+  border-radius: 8px;
+}
+
+/* 문서 제목 스타일 */
+.markdown h1:first-child {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--ifm-color-primary);
+  padding-bottom: 0.5rem;
+}
+
+/* 사이드바 스타일 개선 */
+.menu__link--active {
+  font-weight: 600;
+  background-color: var(--ifm-color-primary-lightest);
+}
+
+[data-theme='dark'] .menu__link--active {
+  background-color: var(--ifm-color-primary-darkest);
+}

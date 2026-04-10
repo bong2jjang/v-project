@@ -1,0 +1,26 @@
+# Docusaurus Development Environment
+FROM node:20-alpine
+
+# Set development environment
+ENV NODE_ENV=development
+
+# Install git for git history features
+RUN apk add --no-cache git
+
+# Enable Corepack and activate pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy dependency files (cache layer)
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source files
+COPY . .
+
+EXPOSE 3000
+
+CMD ["pnpm", "exec", "docusaurus", "start", "--host", "0.0.0.0"]

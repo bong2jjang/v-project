@@ -1,0 +1,102 @@
+# 디버그 환경 Docker Compose
+# 사용법: docker compose -f docker-compose.debug.yml up -d
+#
+# 특징:
+# - Backend: debugpy 원격 디버거 (포트 5678) + uvicorn --reload
+# - Frontend: Vite dev server (HMR + source map)
+# - VSCode에서 "Attach to Backend (Docker)" 실행하여 디버거 연결
+
+services:
+  # Matterbridge 메인 서비스
+  matterbridge:
+    image: 42wim/matterbridge:stable
+    container_name: vms-chatops-matterbridge-debug
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./matterbridge.toml:/etc/matterbridge/matterbridge.toml:ro
+      - matterbridge_data:/var/lib/matterbridge
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
+      - TEAMS_APP_ID=${TEAMS_APP_ID}
+      - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
+      - TEAMS_CHANNEL_ID=${TEAMS_CHANNEL_ID}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vms-chat-ops-network
+
+  # Backend API (디버그 모드 - debugpy 활성화)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: vms-chatops-backend-debug
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "5678:5678"   # debugpy 원격 디버거 포트
+    volumes:
+      - ./backend:/app
+      - ./matterbridge.toml:/app/matterbridge.toml
+      - backend_pip_cache:/root/.cache/pip
+    environment:
+      - MATTERBRIDGE_CONFIG=/app/matterbridge.toml
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - ENV=development
+      - DEBUG=1
+    command: >
+      python -m debugpy
+      --listen 0.0.0.0:5678
+      --wait-for-client
+      -m uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app
+    depends_on:
+      matterbridge:
+        condition: service_started
+    networks:
+      - vms-chat-ops-network
+
+  # Frontend UI (개발 모드 - Vite HMR)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: vms-chatops-frontend-debug
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - vms-chat-ops-network
+
+networks:
+  vms-chat-ops-network:
+    driver: bridge
+
+volumes:
+  matterbridge_data:
+    driver: local
+  backend_pip_cache:
+    driver: local

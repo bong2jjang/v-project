@@ -1,0 +1,270 @@
+{
+  "title": "VMS Chat Ops - 로그 조회",
+  "uid": "vms-chat-ops-logs",
+  "description": "자주 사용하는 Loki 로그 쿼리 모음",
+  "tags": ["vms", "logs", "loki"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "container",
+        "label": "컨테이너",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "Loki" },
+        "query": "label_values(container)",
+        "includeAll": true,
+        "allValue": "vms-chatops.*",
+        "multi": false,
+        "current": { "text": "All", "value": "$__all" },
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "level",
+        "label": "로그 레벨",
+        "type": "custom",
+        "query": "all,error,warning,info,debug",
+        "includeAll": false,
+        "current": { "text": "all", "value": "all" },
+        "options": [
+          { "text": "전체", "value": "all" },
+          { "text": "error", "value": "error" },
+          { "text": "warning", "value": "warning" },
+          { "text": "info", "value": "info" },
+          { "text": "debug", "value": "debug" }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "logs",
+      "title": "전체 로그",
+      "description": "vms-chatops 컨테이너 전체 로그",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=~\"vms-chatops.*\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "에러 / 경고 로그",
+      "description": "error 또는 warning 레벨 로그만 필터",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=~\"vms-chatops.*\"} | json | level =~ \"error|warning\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "logs",
+      "title": "API 요청 로그",
+      "description": "HTTP GET/POST/PUT/DELETE/PATCH 요청",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |~ \"(GET|POST|PUT|DELETE|PATCH) /api\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "WebSocket 연결 로그",
+      "description": "WebSocket 연결/해제/에러 이벤트",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |= \"websocket\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "Slack 브리지 로그",
+      "description": "Slack 메시지 수신/전송 이벤트",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |~ \"slack\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Teams 브리지 로그",
+      "description": "Teams 메시지 수신/전송 이벤트",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |~ \"teams\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "logs",
+      "title": "인증 로그",
+      "description": "로그인/로그아웃/토큰 이벤트",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |~ \"auth|login|logout|token\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "DB / Redis 로그",
+      "description": "데이터베이스 및 캐시 관련 로그",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |~ \"database|redis|postgres|sqlalchemy\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "파일 전송 로그",
+      "description": "파일 업로드/다운로드/첨부 이벤트",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "x": 0, "y": 40, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=\"vms-chatops-backend\"} |~ \"file|upload|download|attachment\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
+    }
+  ]
+}

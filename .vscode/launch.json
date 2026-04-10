@@ -1,0 +1,79 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    // ── Docker 기반 디버깅 ──────────────────────────────
+    {
+      "name": "Debug: Backend (Docker Attach)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/backend",
+          "remoteRoot": "/app"
+        }
+      ],
+      "justMyCode": true,
+      "preLaunchTask": "docker-debug-up"
+    },
+    {
+      "name": "Debug: Frontend (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "sourceMapPathOverrides": {
+        "webpack:///./src/*": "${webRoot}/*"
+      },
+      "preLaunchTask": "docker-dev-up"
+    },
+
+    // ── 로컬 직접 실행 (Docker 없이) ────────────────────
+    {
+      "name": "Local: Backend (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "MATTERBRIDGE_CONFIG": "${workspaceFolder}/matterbridge.toml",
+        "ENV": "development"
+      },
+      "justMyCode": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Local: Backend Tests (pytest)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests/", "-v", "--tb=short"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "ENV": "test"
+      },
+      "justMyCode": true,
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug: Full Stack (Docker)",
+      "configurations": [
+        "Debug: Backend (Docker Attach)",
+        "Debug: Frontend (Chrome)"
+      ]
+    }
+  ]
+}

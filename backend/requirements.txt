@@ -1,0 +1,68 @@
+# FastAPI 및 웹 프레임워크
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# 데이터 검증 및 설정
+pydantic==2.5.3
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# TOML 파일 처리 (tomllib은 Python 3.11+ 내장)
+tomli_w==1.0.0  # TOML 쓰기 전용
+
+# WebSocket 지원
+websockets==12.0
+
+# CORS 지원 (FastAPI에 내장됨 - 별도 패키지 불필요)
+
+# 환경 변수 관리
+python-dotenv==1.0.0
+
+# 로깅
+structlog==24.1.0
+
+# 데이터베이스
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary==2.9.9  # PostgreSQL
+
+# 캐싱
+redis==5.0.1
+
+# 인증 및 보안
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.2  # passlib compatibility
+cryptography==42.0.5  # Token/Password 암호화 (Fernet)
+slowapi==0.1.9  # Rate limiting
+
+# 테스트
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+httpx==0.26.0
+
+# 코드 품질
+ruff==0.1.15
+mypy==1.8.0
+black==23.12.1
+
+# 유틸리티
+python-dateutil==2.8.2
+
+# 이메일 발송
+aiosmtplib==3.0.1  # 비동기 SMTP 클라이언트
+jinja2==3.1.3  # 이메일 템플릿 렌더링
+
+# 모니터링
+prometheus-client==0.19.0
+aiohttp>=3.9.0
+
+# 파일 처리
+aiofiles==24.1.0  # 비동기 파일 I/O
+
+# Platform Integrations (Light-Zowe)
+slack-bolt==1.20.1  # Slack Socket Mode (updated for Python 3.11)
+slack-sdk==3.33.4  # Slack Web API (updated for Python 3.11)
+botbuilder-core==4.16.0  # Microsoft Teams Bot Framework

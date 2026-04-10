@@ -1,0 +1,8 @@
+{
+  "label": "사용자 가이드",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "일반 사용자를 위한 VMS Chat Ops 사용 가이드"
+  }
+}
