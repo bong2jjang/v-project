@@ -1,8 +1,8 @@
 # v-project: Platform/App 분리 마이그레이션 계획서
 
-> **문서 버전**: 1.0  
+> **문서 버전**: 2.0  
 > **작성일**: 2026-04-11  
-> **상태**: 승인 대기  
+> **상태**: Phase 0~4 완료, Phase 5 진행 중  
 > **기반 문서**: `PLATFORM_APP_SEPARATION_ARCHITECTURE.md`  
 > **프로젝트 이름 매핑**:
 
@@ -21,12 +21,12 @@
 ## 전체 작업 로드맵
 
 ```
-Phase 0  컨텍스트 정비 (CLAUDE.md, .claude/)        ← 최우선
-Phase 1  경계 정의 + import 정리
-Phase 2  Backend 플랫폼 추출 (v-platform)
-Phase 3  Frontend 플랫폼 추출 (@v-platform/core)
-Phase 4  인프라 분리 (Docker, 마이그레이션, CI)
-Phase 5  검증 및 안정화
+Phase 0  컨텍스트 정비 (CLAUDE.md, .claude/)        ✅ 완료
+Phase 1  경계 정의 + import 정리                     ✅ 완료
+Phase 2  Backend 플랫폼 추출 (v-platform)            ✅ 완료
+Phase 3  Frontend 플랫폼 추출 (@v-platform/core)     ✅ 완료
+Phase 4  인프라 분리 (Docker, 마이그레이션, CI)       ✅ 완료
+Phase 5  검증 및 안정화                               🔄 진행 중
 ```
 
 ---

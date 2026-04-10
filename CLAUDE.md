@@ -23,7 +23,7 @@ v-project는 **v-platform**(재사용 가능한 플랫폼 프레임워크)과 **
 | WebSocket Bridge | ✅ 완성 | 메시지 라우팅, 파일 처리 |
 | Teams Webhook | ✅ 완성 | `POST /api/teams/webhook` |
 | Frontend | ✅ 완성 | Route 관리 UI (양방향 배지 포함) |
-| **Platform/App 분리** | 🔄 진행 중 | Phase 0 (컨텍스트 정비) |
+| **Platform/App 분리** | ✅ Phase 0~4 완료 | Backend + Frontend 물리적 분리 완료 |
 
 **마이그레이션 계획**: `docusaurus/docs/design/V_PROJECT_MIGRATION_PLAN.md`  
 **분리 아키텍처 설계**: `docusaurus/docs/design/PLATFORM_APP_SEPARATION_ARCHITECTURE.md`
@@ -73,51 +73,43 @@ docker run -d --name v-project-frontend \
 
 ## 프로젝트 구조
 
-### 현재 (모놀리스 — 분리 진행 중)
-
-```
-backend/
-├── app/
-│   ├── adapters/              # [v-channel-bridge] Provider Pattern
-│   │   ├── base.py            # BasePlatformProvider 인터페이스
-│   │   ├── slack_provider.py  # Slack Socket Mode
-│   │   └── teams_provider.py  # MS Graph API + Bot Framework
-│   ├── api/                   # [v-platform] 15개 + [v-channel-bridge] 8개 혼재
-│   ├── models/                # [v-platform] 10개 + [v-channel-bridge] 3개 혼재
-│   ├── services/              # [v-platform] 7개 + [v-channel-bridge] 10개 혼재
-│   ├── schemas/
-│   │   └── common_message.py  # [v-channel-bridge] CommonMessage
-│   └── main.py
-
-frontend/
-├── src/
-│   ├── pages/                 # 8개 페이지
-│   ├── components/
-│   │   ├── channels/          # [v-channel-bridge] RouteList, RouteModal
-│   │   ├── ui/                # [v-platform] 디자인 시스템
-│   │   └── ...
-│   ├── store/                 # Zustand (bridge.ts, routes.ts, auth.ts)
-│   └── lib/api/               # API 클라이언트
-```
-
-### 목표 (분리 완료 후)
-
 ```
 platform/
-├── backend/v_platform/        # Python 패키지: v_platform
-│   ├── core/                  # config, database, security
-│   ├── models/                # 플랫폼 모델 10개
-│   ├── api/                   # 플랫폼 라우터 15개
-│   ├── services/              # 플랫폼 서비스 7개
-│   └── ...
-└── frontend/v-platform-core/  # npm 패키지: @v-platform/core
-    └── src/
-        ├── components/ui/     # 디자인 시스템 17개
-        ├── stores/            # 인증/권한 스토어
-        └── ...
+├── backend/
+│   ├── v_platform/                # Python 패키지: v_platform
+│   │   ├── app.py                 # PlatformApp 클래스 (프레임워크 진입점)
+│   │   ├── core/                  # database, exceptions
+│   │   ├── models/                # 플랫폼 모델 11개 (User, RBAC, Org...)
+│   │   ├── api/                   # 플랫폼 라우터 15개 (auth, users, menus...)
+│   │   ├── services/              # 플랫폼 서비스 7개 (token, permission, email...)
+│   │   ├── middleware/            # CSRF, Prometheus metrics
+│   │   ├── sso/                   # Microsoft, Generic OIDC
+│   │   ├── utils/                 # auth, audit_logger, encryption
+│   │   ├── schemas/               # user, audit_log, system_settings
+│   │   └── migrations/            # p001~p014
+│   └── pyproject.toml
+└── frontend/
+    └── v-platform-core/           # npm 패키지: @v-platform/core
+        └── src/
+            ├── api/               # client, auth, users, permissions...
+            ├── stores/            # auth, permission, notification...
+            ├── hooks/             # useTheme, useTokenExpiry...
+            ├── components/ui/     # 디자인 시스템 24개
+            ├── components/layout/ # Sidebar, TopBar, ContentHeader...
+            └── index.ts           # 패키지 진입점
 
-backend/app/                   # v-channel-bridge (앱)
-frontend/src/                  # v-channel-bridge (앱)
+backend/app/                       # v-channel-bridge (앱)
+├── adapters/                      # Slack, Teams Provider
+├── api/                           # bridge, messages, accounts, teams_webhook
+├── models/                        # Message, Account (+ 플랫폼 re-export shim)
+├── services/                      # websocket_bridge, route_manager, message_queue...
+└── main.py                        # PlatformApp + register_app_routers()
+
+frontend/src/                      # v-channel-bridge (앱)
+├── pages/                         # Channels, Messages, Statistics...
+├── components/                    # dashboard, channels, messages, providers...
+├── store/                         # routes, bridge, providers (+ 플랫폼 re-export shim)
+└── App.tsx
 ```
 
 ---
@@ -285,5 +277,5 @@ Teams Provider 코드는 완성됐지만, 실제 동작을 위해 Azure에서 Bo
 
 ---
 
-**문서 버전**: 4.0 (v-project — Platform/App 분리 시작)
+**문서 버전**: 5.0 (v-project — Platform/App 분리 완료)
 **최종 업데이트**: 2026-04-11
