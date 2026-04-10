@@ -216,6 +216,37 @@ services:
     networks:
       - v-project-network
 
+  # Platform 독립 검증용 테스트 앱 (평소 비활성)
+  platform-test:
+    build:
+      context: .
+      dockerfile: apps/v-platform-test/Dockerfile
+    container_name: v-project-platform-test
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./platform/backend:/platform/backend
+      - ./apps/v-platform-test:/test-app
+    environment:
+      - PYTHONPATH=/test-app:/platform/backend
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
+      - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:-v-platform-test-key-32chars-minimum!!}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - FRONTEND_URL=http://localhost:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - test
+    networks:
+      - v-project-network
+
 # 네트워크 정의
 networks:
   v-project-network:

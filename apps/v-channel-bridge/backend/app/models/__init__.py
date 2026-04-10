@@ -19,6 +19,9 @@ from v_platform.models.department import Department  # noqa: F401
 from .message import Message, MessageStats  # noqa: F401
 from .account import Account  # noqa: F401
 
+# Configure cross-model relationships (Account ↔ UserOAuthToken)
+UserOAuthToken._configure_account_relationship()
+
 __all__ = [
     "Message",
     "MessageStats",
