@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@v-platform/core': path.resolve(__dirname, '../platform/frontend/v-platform-core/src'),
     },
   },
   optimizeDeps: {
