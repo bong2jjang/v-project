@@ -1,0 +1,24 @@
+# Vite Development Environment with pnpm
+FROM node:18-alpine
+
+# Enable Corepack and activate pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+WORKDIR /app
+
+# Copy dependency files (cache layer)
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies (allow lockfile update)
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --no-frozen-lockfile --prefer-offline
+
+# Copy source files
+COPY . .
+
+EXPOSE 5173
+
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]

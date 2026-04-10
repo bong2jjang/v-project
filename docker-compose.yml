@@ -216,6 +216,62 @@ services:
     networks:
       - v-project-network
 
+  # v-platform-template (포트 8002/5174)
+  template-backend:
+    build:
+      context: .
+      dockerfile: apps/v-platform-template/backend/Dockerfile
+    container_name: v-project-template-backend
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./apps/v-platform-template/backend:/app
+      - ./platform/backend:/platform/backend
+    environment:
+      - PYTHONPATH=/app:/platform/backend
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
+      - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:-v-platform-template-secret-key-32chars!!}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
+      - FRONTEND_URL=http://localhost:5174
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - template
+    networks:
+      - v-project-network
+
+  template-frontend:
+    build:
+      context: ./apps/v-platform-template/frontend
+      dockerfile: Dockerfile.dev
+    container_name: v-project-template-frontend
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./apps/v-platform-template/frontend:/app
+      - ./platform/frontend:/platform/frontend
+      - /app/node_modules
+      - /app/.vite
+    command: sh -c "ln -sf /app/node_modules /platform/frontend/v-platform-core/node_modules && pnpm run dev -- --host 0.0.0.0"
+    environment:
+      - DOCKER_ENV=true
+      - VITE_API_URL=http://localhost:8002
+      - NODE_OPTIONS=--max-old-space-size=4096
+    depends_on:
+      - template-backend
+    profiles:
+      - template
+    networks:
+      - v-project-network
+
   # Platform 독립 검증용 테스트 앱 (평소 비활성)
   platform-test:
     build:
