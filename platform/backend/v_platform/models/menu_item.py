@@ -39,6 +39,7 @@ class MenuItem(Base):
     parent_key = Column(String(100), nullable=True)  # 그룹핑용
     sort_order = Column(Integer, default=0)
     section = Column(String(20), default="custom")  # basic | admin | custom
+    app_id = Column(String(50), nullable=True, index=True)  # NULL = platform common, 'v-channel-bridge' = app-specific
     is_active = Column(Boolean, default=True, nullable=False)
 
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -74,6 +75,7 @@ class MenuItem(Base):
             "parent_key": self.parent_key,
             "sort_order": self.sort_order,
             "section": self.section,
+            "app_id": self.app_id,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

@@ -1,0 +1,54 @@
+{
+  "dashboard": {
+    "title": "v-platform Overview",
+    "uid": "v-platform-overview",
+    "tags": ["v-platform", "overview"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Requests per App",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (app)",
+            "legendFormat": "{{app}}"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate per App",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (app) / sum(rate(http_requests_total[5m])) by (app) * 100",
+            "legendFormat": "{{app}} error %"
+          }
+        ]
+      },
+      {
+        "title": "Response Time P95 per App",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, app))",
+            "legendFormat": "{{app}} P95"
+          }
+        ]
+      },
+      {
+        "title": "Service Health",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "up{job=\"v-platform-apps\"}",
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      }
+    ]
+  }
+}

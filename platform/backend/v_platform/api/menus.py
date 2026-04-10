@@ -7,6 +7,7 @@ Menu Management API
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from typing import Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from v_platform.core.database import get_db_session
@@ -81,23 +82,29 @@ class MenuReorderRequest(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────────
 @router.get("")
 async def get_my_menus(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
     """현재 사용자가 접근 가능한 메뉴 목록"""
     from v_platform.services.permission_service import PermissionService
 
-    menus = PermissionService.get_accessible_menus(db, current_user)
+    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+    menus = PermissionService.get_accessible_menus(db, current_user, app_id=app_id)
     return {"menus": menus}
 
 
 @router.get("/all")
 async def get_all_menus(
+    request: Request,
     current_user: User = Depends(require_admin_or_above()),
     db: Session = Depends(get_db_session),
 ):
     """전체 메뉴 목록 (관리용, system_admin + org_admin)"""
-    menus = db.query(MenuItem).order_by(MenuItem.sort_order).all()
+    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+    query = db.query(MenuItem)
+    query = query.filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
+    menus = query.order_by(MenuItem.sort_order).all()
     return {"menus": [m.to_dict() for m in menus]}
 
 

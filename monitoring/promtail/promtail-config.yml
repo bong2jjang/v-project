@@ -1,57 +1,49 @@
-# Promtail 설정 - v-channel-bridge Docker 컨테이너 로그 수집
+# Promtail 설정 - v-project 멀티앱 Docker 컨테이너 로그 수집
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
 
-# 로그 수집 위치 추적 파일
 positions:
   filename: /tmp/positions.yaml
 
-# Loki 전송 대상
 clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # v-channel-bridge Docker 컨테이너 로그 수집
-  # com.docker.compose.project=vms-chat-ops 레이블을 가진 컨테이너만 대상
-  - job_name: docker
+  # v-project 전체 앱 Docker 컨테이너 로그 수집
+  - job_name: v-project
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
         filters:
           - name: label
-            values: ["com.docker.compose.project=vms-chat-ops"]
+            values: ["com.docker.compose.project=v-project"]
     relabel_configs:
-      # 컨테이너 이름 레이블 추출 (앞의 / 제거)
       - source_labels: ['__meta_docker_container_name']
         regex: '/(.*)'
         target_label: 'container'
-      # 로그 스트림 (stdout/stderr)
       - source_labels: ['__meta_docker_container_log_stream']
         target_label: 'stream'
-      # Docker Compose 서비스 이름
       - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
         target_label: 'service'
     pipeline_stages:
-      # Docker JSON 로그 형식 파싱
       - docker: {}
 
-      # structlog JSON 형식 파싱
-      # FastAPI 백엔드는 structlog를 사용하며 {"level":"info","message":"...","event":"..."} 형식
+      # structlog JSON 파싱 (app 라벨 포함)
       - json:
           expressions:
             level: level
             message: message
             event: event
+            app: app
 
-      # 추출한 필드를 Loki 레이블로 등록
+      # 앱별 라벨 등록
       - labels:
           level:
           service:
           container:
+          app:
 
-      # 타임스탬프 파싱 (structlog RFC3339Nano 형식)
-      # 파싱 실패 시 현재 시간을 fallback으로 사용
       - timestamp:
           source: timestamp
           format: RFC3339Nano
@@ -60,7 +52,6 @@ scrape_configs:
             - "2006-01-02T15:04:05.999999999Z07:00"
           action_on_failure: skip
 
-      # 헬스체크 로그 제거 (/api/health 포함 라인 드롭)
       - drop:
           expression: '.*/api/health.*'
           drop_counter_reason: health_check_filtered

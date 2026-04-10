@@ -27,6 +27,8 @@ def create_audit_log(
     error_message: Optional[str] = None,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: Optional[str] = None,
+    request=None,
 ) -> AuditLog:
     """
     감사 로그 생성
@@ -54,6 +56,10 @@ def create_audit_log(
         user_id = user.id
         user_email = user.email
 
+    # Extract app_id from request if not explicitly provided
+    if app_id is None and request and hasattr(request, 'app') and hasattr(request.app, 'state'):
+        app_id = getattr(request.app.state, 'app_id', None)
+
     # details를 JSON 문자열로 변환
     details_json = None
     if details:
@@ -76,6 +82,7 @@ def create_audit_log(
         error_message=error_message,
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
     db.add(audit_log)

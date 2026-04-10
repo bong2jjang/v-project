@@ -1,7 +1,14 @@
-"""헬스 체크 API 엔드포인트"""
+"""헬스 체크 API 엔드포인트
 
+Apps register custom health checks via HealthRegistry instead of
+hard-coding service-specific imports.
+"""
+
+import inspect
+import logging
 import os
 import time
+from typing import Callable
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter
@@ -9,13 +16,15 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from v_platform.core.database import get_db_session
-try:
-    from app.services.websocket_bridge import get_bridge
-except ImportError:
-    get_bridge = lambda: None  # noqa: E731
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
 
 class ServiceHealth(BaseModel):
     """개별 서비스 상태"""
@@ -29,10 +38,66 @@ class HealthResponse(BaseModel):
     """헬스 체크 응답 모델"""
 
     status: str
-    bridge_running: bool
+    bridge_running: bool = False  # backward compat — apps override via registry
     version: str
     services: dict[str, ServiceHealth]
 
+
+# ---------------------------------------------------------------------------
+# HealthRegistry — apps register their own checks here
+# ---------------------------------------------------------------------------
+
+class HealthRegistry:
+    """Registry for health-check functions.
+
+    Platform defaults (database, redis) are registered automatically.
+    Apps can add their own via ``register()``.
+
+    Usage::
+
+        from v_platform.api.health import health_registry
+        health_registry.register("my_service", my_check_fn)
+
+    ``check_fn`` must return a ``ServiceHealth`` instance.  It may be sync
+    or async.
+    """
+
+    def __init__(self):
+        self._checks: dict[str, Callable[[], ServiceHealth]] = {}
+
+    def register(self, name: str, check_fn: Callable):
+        """Register a named health check.
+
+        Args:
+            name: Unique service name shown in the health response.
+            check_fn: Sync or async callable returning ``ServiceHealth``.
+        """
+        self._checks[name] = check_fn
+
+    async def run_all(self) -> dict[str, ServiceHealth]:
+        """Execute every registered check and return the results dict."""
+        results: dict[str, ServiceHealth] = {}
+        for name, fn in self._checks.items():
+            try:
+                result = fn()
+                if inspect.isawaitable(result):
+                    result = await result
+                results[name] = result
+            except Exception as exc:
+                logger.warning("Health check %s failed: %s", name, exc)
+                results[name] = ServiceHealth(
+                    status="unhealthy", error=str(exc)[:120]
+                )
+        return results
+
+
+# Module-level singleton
+health_registry = HealthRegistry()
+
+
+# ---------------------------------------------------------------------------
+# Platform default checks
+# ---------------------------------------------------------------------------
 
 async def _check_db() -> ServiceHealth:
     t = time.monotonic()
@@ -70,51 +135,28 @@ async def _check_redis() -> ServiceHealth:
         )
 
 
+# Register platform defaults
+health_registry.register("database", _check_db)
+health_registry.register("redis", _check_redis)
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """시스템 헬스 체크 — Backend / DB / Redis 상태 포함"""
-    bridge = get_bridge()
-    bridge_running = bridge.is_running if bridge else False
-
-    db_health, redis_health = await _check_db(), await _check_redis()
+    """시스템 헬스 체크 — 등록된 모든 서비스 상태 포함"""
+    services = await health_registry.run_all()
 
     overall = (
         "healthy"
-        if db_health.status == "healthy" and redis_health.status == "healthy"
+        if all(s.status == "healthy" for s in services.values())
         else "degraded"
     )
 
     return HealthResponse(
         status=overall,
-        bridge_running=bridge_running,
         version="1.0.0",
-        services={
-            "database": db_health,
-            "redis": redis_health,
-        },
+        services=services,
     )
-
-
-@router.get("/status")
-async def get_status() -> dict[str, str | bool | list[str]]:
-    """메시지 브리지 상태 조회"""
-    bridge = get_bridge()
-
-    if not bridge:
-        return {
-            "running": False,
-            "uptime": "N/A",
-            "connected_platforms": [],
-        }
-
-    connected_platforms = [
-        platform
-        for platform, provider in bridge.providers.items()
-        if provider.is_connected
-    ]
-
-    return {
-        "running": bridge.is_running,
-        "uptime": "N/A",
-        "connected_platforms": connected_platforms,
-    }

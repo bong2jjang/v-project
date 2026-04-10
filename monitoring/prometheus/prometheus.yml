@@ -1,20 +1,14 @@
 # Prometheus 글로벌 설정
 global:
-  scrape_interval: 15s       # 메트릭 수집 주기
-  evaluation_interval: 15s   # 알림 규칙 평가 주기
+  scrape_interval: 15s
+  evaluation_interval: 15s
   external_labels:
-    project: 'vms-chat-ops'
+    project: 'v-project'
     environment: 'development'
 
 # 알림 규칙 파일
 rule_files:
   - '/etc/prometheus/alerts.yml'
-
-# Alertmanager 연동 (현재 미사용 - 필요 시 활성화)
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets: ['alertmanager:9093']
 
 # 메트릭 수집 대상
 scrape_configs:
@@ -23,13 +17,15 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # v-channel-bridge Backend API 메트릭
-  # 메트릭: http_requests_total, http_request_duration_seconds,
-  #         websocket_connections, message_count_total
-  - job_name: 'vms-backend'
+  # v-platform 앱 메트릭 (멀티앱 지원)
+  - job_name: 'v-platform-apps'
     static_configs:
-      - targets: ['backend:8000']
+      - targets:
+          - 'backend:8000'            # v-channel-bridge
+          - 'template-backend:8000'   # v-platform-template
+          # 새 앱 추가 시 여기에 target 추가
     metrics_path: '/metrics'
+    scrape_interval: 15s
 
   # cAdvisor - 컨테이너 리소스 메트릭
   - job_name: 'cadvisor'

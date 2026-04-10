@@ -6,6 +6,7 @@ RBAC 권한 조회·부여·위임 검증 로직
 """
 
 import logging
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from v_platform.models.user import User, UserRole
@@ -95,17 +96,24 @@ class PermissionService:
         return result
 
     @staticmethod
-    def get_accessible_menus(db: Session, user: User) -> list[dict]:
+    def get_accessible_menus(db: Session, user: User, app_id: str | None = None) -> list[dict]:
         """
         사용자가 접근 가능한 메뉴 목록 (권한 필터링 + 정렬)
+
+        Args:
+            db: DB 세션
+            user: 사용자
+            app_id: 앱 ID (None이면 플랫폼 공통 메뉴만, 값이 있으면 공통 + 해당 앱 메뉴)
 
         Returns:
             메뉴 딕셔너리 리스트 (access_level 포함)
         """
+        app_filter = or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
+
         if user.role == UserRole.SYSTEM_ADMIN:
             menus = (
                 db.query(MenuItem)
-                .filter(MenuItem.is_active.is_(True))
+                .filter(MenuItem.is_active.is_(True), app_filter)
                 .order_by(MenuItem.sort_order)
                 .all()
             )
@@ -114,7 +122,7 @@ class PermissionService:
         effective = PermissionService.get_effective_permissions_for_user(db, user.id)
         menus = (
             db.query(MenuItem)
-            .filter(MenuItem.is_active.is_(True))
+            .filter(MenuItem.is_active.is_(True), app_filter)
             .order_by(MenuItem.sort_order)
             .all()
         )

@@ -3,7 +3,7 @@
 시스템 전역 설정 관리 API
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from v_platform.core.database import get_db_session
@@ -20,12 +20,14 @@ router = APIRouter(prefix="/api/system-settings", tags=["system-settings"])
 
 @router.get("/", response_model=SystemSettingsResponse)
 async def get_system_settings(
+    request: Request,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ) -> SystemSettings:
     """시스템 설정 조회 (모든 인증된 사용자)
 
     Args:
+        request: HTTP 요청
         db: 데이터베이스 세션
         current_user: 현재 사용자
 
@@ -35,7 +37,14 @@ async def get_system_settings(
     Raises:
         HTTPException: 설정 조회 실패 시
     """
-    settings = db.query(SystemSettings).first()
+    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+
+    # Try app-specific settings first, then fall back to global
+    settings = None
+    if app_id:
+        settings = db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
+    if not settings:
+        settings = db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
     if not settings:
         # 기본 설정 생성
         settings = SystemSettings(
@@ -49,6 +58,7 @@ async def get_system_settings(
 
 @router.put("/", response_model=SystemSettingsResponse)
 async def update_system_settings(
+    request: Request,
     update: SystemSettingsUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_permission("settings", "write")),
@@ -56,6 +66,7 @@ async def update_system_settings(
     """시스템 설정 업데이트 (settings write 권한 필요)
 
     Args:
+        request: HTTP 요청
         update: 업데이트할 설정
         db: 데이터베이스 세션
         current_user: 현재 사용자
@@ -66,7 +77,14 @@ async def update_system_settings(
     Raises:
         HTTPException: 권한 없음 (403) 또는 잘못된 URL 형식 (400)
     """
-    settings = db.query(SystemSettings).first()
+    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+
+    # Try app-specific settings first, then fall back to global
+    settings = None
+    if app_id:
+        settings = db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
+    if not settings:
+        settings = db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
     if not settings:
         settings = SystemSettings()
         db.add(settings)

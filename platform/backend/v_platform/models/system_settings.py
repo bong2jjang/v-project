@@ -30,3 +30,4 @@ class SystemSettings(Base):
     default_start_page = Column(
         String(255), default="/", nullable=False, server_default="/"
     )
+    app_id = Column(String(50), nullable=True)  # NULL = global, value = app-specific

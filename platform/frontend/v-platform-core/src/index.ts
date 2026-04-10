@@ -35,6 +35,10 @@ export { default as useIdleTimeout } from './hooks/useIdleTimeout';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useSidebar, SidebarProvider } from './hooks/useSidebar';
 export { useTabSync } from './hooks/useTabSync';
+export { useApiErrorHandler } from './hooks/useApiErrorHandler';
+export { useWebSocket } from './hooks/useWebSocket';
+export { useNotifications } from './hooks/useNotifications';
+export { useBrowserNotification } from './hooks/useBrowserNotification';
 
 // ── API ──
 export { default as apiClient } from './api/client';

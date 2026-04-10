@@ -17,6 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from v_platform.middleware.csrf import CSRFMiddleware
 from v_platform.middleware.metrics import MetricsMiddleware
 from v_platform.core.database import init_db
+from v_platform.core.logging import configure_platform_logging
 from v_platform.sso import init_sso_providers
 from v_platform.api import (
     auth,
@@ -51,12 +52,16 @@ class PlatformApp:
         self.app_name = app_name
         self.version = version
 
+        # Initialize structured logging before anything else
+        configure_platform_logging(app_name=app_name)
+
         self.fastapi = FastAPI(
             title=f"{app_name} API",
             description=description,
             version=version,
             lifespan=lifespan,
         )
+        self.fastapi.state.app_id = app_name
 
         self._setup_middleware(cors_origins)
         self._setup_rate_limiter()
