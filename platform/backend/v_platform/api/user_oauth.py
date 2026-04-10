@@ -15,9 +15,14 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from v_platform.core.database import get_db_session
-from v_platform.models.user import User; from v_platform.models.audit_log import AuditLog # Account, UserOAuthToken
 from v_platform.models.user import User
+from v_platform.models.user_oauth_token import UserOAuthToken
 from v_platform.utils.auth import get_current_user, require_permission
+
+try:
+    from app.models.account import Account
+except ImportError:
+    Account = None  # type: ignore
 
 router = APIRouter(tags=["user-oauth"])
 logger = logging.getLogger(__name__)

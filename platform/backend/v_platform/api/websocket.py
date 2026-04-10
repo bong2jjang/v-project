@@ -11,7 +11,11 @@ import logging
 import json
 
 from ..services.websocket_manager import manager
-from ..services.event_broadcaster import broadcaster
+
+try:
+    from app.services.event_broadcaster import broadcaster
+except ImportError:
+    broadcaster = None  # type: ignore
 from v_platform.models.user import User
 from v_platform.utils.auth import get_current_user, verify_token
 from v_platform.core.database import get_db_session

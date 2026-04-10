@@ -13,10 +13,12 @@ import redis.asyncio as aioredis
 
 from v_platform.app import PlatformApp
 from v_platform.services.websocket_manager import manager
-from v_platform.services.event_broadcaster import EventBroadcaster
-import v_platform.services.event_broadcaster as broadcaster_module
 from v_platform.core.database import init_db
 from v_platform.sso import init_sso_providers
+
+# App services
+from app.services.event_broadcaster import EventBroadcaster
+import app.services.event_broadcaster as broadcaster_module
 
 # App-specific imports (v-channel-bridge)
 from app.api import (
