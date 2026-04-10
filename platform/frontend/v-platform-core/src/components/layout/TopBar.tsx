@@ -20,7 +20,7 @@ import { useAuthStore } from "../../stores/auth";
 import { usePermissionStore } from "../../stores/permission";
 import { useSystemSettingsStore } from "../../stores/systemSettings";
 import { resolveStartPage } from "../../lib/resolveStartPage";
-import { apiClient } from "../../lib/api/client";
+import { apiClient } from "../../api/client";
 
 // 헬스 응답 타입
 interface HealthResponse {

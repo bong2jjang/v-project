@@ -10,8 +10,8 @@ import {
   systemSettingsApi,
   type SystemSettings,
   type SystemSettingsUpdate,
-} from "../lib/api/systemSettings";
-import { ApiClientError } from "../lib/api/client";
+} from "../api/systemSettings";
+import { ApiClientError } from "../api/client";
 
 interface SystemSettingsState {
   // 상태

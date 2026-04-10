@@ -19,7 +19,7 @@ import {
   ReactNode,
   createElement,
 } from "react";
-import { updateMe } from "../lib/api/users";
+import { updateMe } from "../api/users";
 import { useAuthStore } from "../stores/auth";
 
 type Theme = "light" | "dark" | "system";

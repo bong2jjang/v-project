@@ -1,6 +1,1 @@
-/**
- * Common Components Entry Point
- */
-
-export * from "./ConnectionStatus";
-export * from "./StatusDetailPopup";
+export * from '@v-platform/core/components/common';

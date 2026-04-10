@@ -8,7 +8,7 @@ import { useState, useMemo } from "react";
 import { Bell } from "lucide-react";
 import { useNotificationStore } from "../../stores/notification";
 import { useAuthStore } from "../../stores/auth";
-import { isAdminRole } from "../../lib/api/types";
+import { isAdminRole } from "../../api/types";
 import { NotificationPopover } from "./NotificationPopover";
 
 export function NotificationBell() {

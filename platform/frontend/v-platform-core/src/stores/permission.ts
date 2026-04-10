@@ -5,8 +5,8 @@
  */
 
 import { create } from "zustand";
-import type { AccessLevel, MenuItemResponse } from "../lib/api/types";
-import * as permissionApi from "../lib/api/permissions";
+import type { AccessLevel, MenuItemResponse } from "../api/types";
+import * as permissionApi from "../api/permissions";
 
 const ACCESS_ORDER: Record<string, number> = {
   none: 0,

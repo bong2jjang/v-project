@@ -5,8 +5,8 @@
  */
 
 import { create } from "zustand";
-import type { User } from "../lib/api/types";
-import * as authApi from "../lib/api/auth";
+import type { User } from "../api/types";
+import * as authApi from "../api/auth";
 import { authLogger } from "../lib/utils/authLogger";
 
 // 자동 갱신 타이머 참조 (전역)

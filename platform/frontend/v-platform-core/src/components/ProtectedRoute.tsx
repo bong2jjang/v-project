@@ -4,7 +4,7 @@ import { useAuthStore } from "../stores/auth";
 import { usePermissionStore } from "../stores/permission";
 import { useSystemSettingsStore } from "../stores/systemSettings";
 import { resolveStartPage } from "../lib/resolveStartPage";
-import { isAdminRole } from "../lib/api/types";
+import { isAdminRole } from "../api/types";
 import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {

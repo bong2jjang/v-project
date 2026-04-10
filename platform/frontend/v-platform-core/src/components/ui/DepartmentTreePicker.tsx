@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, FolderTree, X } from "lucide-react";
-import type { Department } from "../../lib/api/types";
+import type { Department } from "../../api/types";
 
 interface DepartmentTreePickerProps {
   departments: Department[];

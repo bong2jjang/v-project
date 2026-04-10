@@ -4,7 +4,7 @@
  * 플랫폼별 아이콘을 표시하는 컴포넌트
  */
 
-import type { Platform } from "../../lib/api/types";
+import type { Platform } from "../../api/types";
 import { PLATFORM_CONFIG } from "../../lib/utils/platform";
 
 interface PlatformIconProps {

@@ -6,7 +6,7 @@
  */
 
 import { KeyRound, Building2, Shield, LogIn } from "lucide-react";
-import type { SSOProviderInfo } from "../../lib/api/types";
+import type { SSOProviderInfo } from "../../api/types";
 
 interface SSOButtonProps {
   provider: SSOProviderInfo;

@@ -11,7 +11,7 @@ import {
   type NotificationSeverity,
 } from "../../stores/notification";
 import { useAuthStore } from "../../stores/auth";
-import { isAdminRole } from "../../lib/api/types";
+import { isAdminRole } from "../../api/types";
 import { NotificationItem } from "./NotificationItem";
 
 interface NotificationPopoverProps {
