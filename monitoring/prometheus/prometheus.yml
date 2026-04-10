@@ -23,7 +23,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # VMS Chat Ops Backend API 메트릭
+  # v-channel-bridge Backend API 메트릭
   # 메트릭: http_requests_total, http_request_duration_seconds,
   #         websocket_connections, message_count_total
   - job_name: 'vms-backend'

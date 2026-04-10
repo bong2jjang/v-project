@@ -24,7 +24,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Grafana - 시각화 및 대시보드
   grafana:
@@ -57,7 +57,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Loki - 로그 수집 및 저장
   loki:
@@ -77,7 +77,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Promtail - Docker 컨테이너 로그 수집 에이전트
   promtail:
@@ -99,7 +99,7 @@ services:
       start_period: 15s
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # cAdvisor - 컨테이너 리소스 메트릭 수집
   cadvisor:
@@ -124,7 +124,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Node Exporter - 호스트 시스템 메트릭 수집
   node_exporter:
@@ -149,7 +149,7 @@ services:
       start_period: 15s
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
 volumes:
   prometheus_data:
@@ -157,6 +157,6 @@ volumes:
   loki_data:
 
 networks:
-  vms-chat-ops-network:
-    name: vms-chat-ops_vms-chat-ops-network
+  v-project-network:
+    name: vms-chat-ops_v-project-network
     external: true

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # 개발/프로덕션 모두 PostgreSQL 권장
 # SQLite는 테스트 목적으로만 사용 가능 (DATABASE_URL 환경 변수로 설정)
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops"
+    "DATABASE_URL", "postgresql://vmsuser:vmspassword@postgres:5432/v_project"
 )
 
 # SQLite 지원을 위한 기본 디렉토리 (환경 변수로 SQLite URL 사용 시에만 활용)
@@ -82,21 +82,27 @@ def init_db():
 
 
 def _run_migrations():
-    """번호 순서대로 마이그레이션 실행 (각 마이그레이션은 idempotent)"""
+    """번호 순서대로 마이그레이션 실행: 플랫폼(p*) → 앱(a*) 순서"""
     import importlib.util
     import glob as glob_mod
     import pathlib
 
-    migrations_dir = (
-        pathlib.Path(__file__).resolve().parent.parent.parent / "migrations"
+    # 1) Platform migrations (v_platform/migrations/)
+    platform_dir = (
+        pathlib.Path(__file__).resolve().parent.parent / "migrations"
     )
-    if not migrations_dir.is_dir():
-        return
+    # 2) App migrations (backend/migrations/) — /app/migrations in Docker
+    app_dir = pathlib.Path("/app/migrations")
+    if not app_dir.is_dir():
+        # Fallback: relative to CWD
+        app_dir = pathlib.Path.cwd() / "migrations"
 
-    # Platform migrations (p*) first, then App migrations (a*)
-    p_files = sorted(glob_mod.glob(str(migrations_dir / "p[0-9]*.py")))
-    a_files = sorted(glob_mod.glob(str(migrations_dir / "a[0-9]*.py")))
-    files = p_files + a_files
+    files = []
+    if platform_dir.is_dir():
+        files += sorted(glob_mod.glob(str(platform_dir / "p[0-9]*.py")))
+    if app_dir.is_dir():
+        files += sorted(glob_mod.glob(str(app_dir / "a[0-9]*.py")))
+
     for fpath in files:
         name = pathlib.Path(fpath).stem
         try:

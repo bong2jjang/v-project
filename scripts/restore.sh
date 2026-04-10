@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# VMS Chat Ops Restore Script
+# v-channel-bridge Restore Script
 #
 # 이 스크립트는 backup.sh로 생성된 백업을 복원합니다.
 #
@@ -183,7 +183,7 @@ restore_postgresql() {
     log_step "PostgreSQL 데이터베이스 복원 중..."
 
     local pg_container="vms-postgres"
-    local db_name="vms_chat_ops"
+    local db_name="v_project"
     local db_user="vmsuser"
     local dump_file=$(find "${RESTORE_DIR}" -name "postgres_*.dump" | head -1)
 
@@ -350,7 +350,7 @@ cleanup() {
 # 메인 실행
 main() {
     echo "========================================"
-    echo "VMS Chat Ops Restore Script"
+    echo "v-channel-bridge Restore Script"
     echo "========================================"
     echo ""
 

@@ -1,6 +1,6 @@
 groups:
   # ──────────────────────────────────────────────────────────────
-  # VMS Chat Ops 서비스 알림
+  # v-channel-bridge 서비스 알림
   # 대상: backend API (job="vms-backend")
   # ──────────────────────────────────────────────────────────────
   - name: vms_service_alerts
@@ -15,7 +15,7 @@ groups:
           service: backend
         annotations:
           summary: "VMS 백엔드 다운"
-          description: "VMS Chat Ops 백엔드가 다운되었습니다. (1분 이상 응답 없음)"
+          description: "v-channel-bridge 백엔드가 다운되었습니다. (1분 이상 응답 없음)"
 
       # API 5xx 에러율 초과
       - alert: VMSHighErrorRate
@@ -61,14 +61,14 @@ groups:
 
   # ──────────────────────────────────────────────────────────────
   # 컨테이너 리소스 알림
-  # 대상: vms-chatops.* 컨테이너 (cAdvisor)
+  # 대상: v-project.* 컨테이너 (cAdvisor)
   # ──────────────────────────────────────────────────────────────
   - name: container_resource_alerts
     interval: 1m
     rules:
       # 컨테이너 CPU 80% 초과
       - alert: ContainerHighCPU
-        expr: rate(container_cpu_usage_seconds_total{name=~"vms-chatops.*"}[5m]) * 100 > 80
+        expr: rate(container_cpu_usage_seconds_total{name=~"v-project.*"}[5m]) * 100 > 80
         for: 5m
         labels:
           severity: warning
@@ -78,7 +78,7 @@ groups:
 
       # 컨테이너 메모리 512MB 초과
       - alert: ContainerHighMemory
-        expr: container_memory_usage_bytes{name=~"vms-chatops.*"} / 1024 / 1024 > 512
+        expr: container_memory_usage_bytes{name=~"v-project.*"} / 1024 / 1024 > 512
         for: 5m
         labels:
           severity: warning
@@ -88,7 +88,7 @@ groups:
 
       # 컨테이너 빈번한 재시작 (1시간 내 3회 초과)
       - alert: ContainerRestarting
-        expr: increase(container_start_time_seconds{name=~"vms-chatops.*"}[1h]) > 3
+        expr: increase(container_start_time_seconds{name=~"v-project.*"}[1h]) > 3
         for: 0m
         labels:
           severity: warning

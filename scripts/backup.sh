@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# VMS Chat Ops Backup Script
+# v-channel-bridge Backup Script
 #
 # 이 스크립트는 다음 항목들을 백업합니다:
 # - PostgreSQL 데이터베이스
@@ -58,7 +58,7 @@ backup_postgresql() {
     log_info "PostgreSQL 데이터베이스 백업 중..."
 
     local pg_container="vms-postgres"
-    local db_name="vms_chat_ops"
+    local db_name="v_project"
     local db_user="vmsuser"
     local backup_file="${BACKUP_DIR}/postgres_${TIMESTAMP}.dump"
 
@@ -196,7 +196,7 @@ create_metadata() {
     local metadata_file="${BACKUP_DIR}/metadata.txt"
 
     cat > "${metadata_file}" <<EOF
-VMS Chat Ops Backup Metadata
+v-channel-bridge Backup Metadata
 =================================
 
 Backup Time: $(date '+%Y-%m-%d %H:%M:%S')
@@ -256,7 +256,7 @@ verify_backup() {
 # 메인 실행
 main() {
     echo "========================================"
-    echo "VMS Chat Ops Backup Script"
+    echo "v-channel-bridge Backup Script"
     echo "========================================"
     echo ""
 

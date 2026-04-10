@@ -1,4 +1,4 @@
-# VMS Chat Ops - Production Docker Compose Configuration
+# v-channel-bridge - Production Docker Compose Configuration
 # 사용법: docker compose -f docker-compose.prod.yml up -d --build
 #
 # 특징:
@@ -41,12 +41,12 @@ services:
         max-size: "50m"
         max-file: "5"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Matterbridge 메인 서비스
   matterbridge:
     image: 42wim/matterbridge:stable
-    container_name: vms-chatops-matterbridge
+    container_name: v-project-matterbridge
     restart: always
     env_file:
       - .env
@@ -82,17 +82,17 @@ services:
         max-size: "50m"
         max-file: "5"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # PostgreSQL 데이터베이스
   postgres:
     image: postgres:16-alpine
-    container_name: vms-chatops-postgres
+    container_name: v-project-postgres
     restart: always
     expose:
       - "5432"
     environment:
-      - POSTGRES_DB=vms_chat_ops
+      - POSTGRES_DB=v_project
       - POSTGRES_USER=${POSTGRES_USER:-vmsuser}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
@@ -101,7 +101,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vmsuser} -d vms_chat_ops"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vmsuser} -d v_project"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -120,12 +120,12 @@ services:
         max-size: "50m"
         max-file: "5"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Redis 캐시 및 세션 스토어
   redis:
     image: redis:7-alpine
-    container_name: vms-chatops-redis
+    container_name: v-project-redis
     restart: always
     expose:
       - "6379"
@@ -157,7 +157,7 @@ services:
         max-size: "50m"
         max-file: "5"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Backend API (프로덕션 모드)
   backend:
@@ -166,7 +166,7 @@ services:
       dockerfile: Dockerfile
       args:
         - ENV=production
-    container_name: vms-chatops-backend
+    container_name: v-project-backend
     restart: always
     expose:
       - "8000"
@@ -179,7 +179,7 @@ services:
       - ENV=production
       - MATTERBRIDGE_CONFIG=/app/matterbridge.toml
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-vmsuser}:${POSTGRES_PASSWORD}@postgres:5432/vms_chat_ops
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-vmsuser}:${POSTGRES_PASSWORD}@postgres:5432/v_project
       - DATABASE_DIR=/app/data
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
@@ -218,7 +218,7 @@ services:
         max-size: "100m"
         max-file: "10"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Frontend UI (프로덕션 모드 - Nginx)
   frontend:
@@ -227,7 +227,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=
-    container_name: vms-chatops-frontend
+    container_name: v-project-frontend
     restart: always
     expose:
       - "80"
@@ -255,10 +255,10 @@ services:
         max-size: "50m"
         max-file: "5"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
 networks:
-  vms-chat-ops-network:
+  v-project-network:
     driver: bridge
     ipam:
       config:

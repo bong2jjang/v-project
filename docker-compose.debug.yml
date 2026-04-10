@@ -10,7 +10,7 @@ services:
   # Matterbridge 메인 서비스
   matterbridge:
     image: 42wim/matterbridge:stable
-    container_name: vms-chatops-matterbridge-debug
+    container_name: v-project-matterbridge-debug
     restart: unless-stopped
     env_file:
       - .env
@@ -33,14 +33,14 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Backend API (디버그 모드 - debugpy 활성화)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: vms-chatops-backend-debug
+    container_name: v-project-backend-debug
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -68,14 +68,14 @@ services:
       matterbridge:
         condition: service_started
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Frontend UI (개발 모드 - Vite HMR)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: vms-chatops-frontend-debug
+    container_name: v-project-frontend-debug
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -89,10 +89,10 @@ services:
       backend:
         condition: service_started
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
 networks:
-  vms-chat-ops-network:
+  v-project-network:
     driver: bridge
 
 volumes:

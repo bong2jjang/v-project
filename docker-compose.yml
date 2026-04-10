@@ -2,19 +2,19 @@ services:
   # PostgreSQL 데이터베이스
   postgres:
     image: postgres:16-alpine
-    container_name: vms-chatops-postgres
+    container_name: v-project-postgres
     restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=vms_chat_ops
+      - POSTGRES_DB=v_project
       - POSTGRES_USER=vmsuser
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vmspassword}
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vmsuser -d vms_chat_ops"]
+      test: ["CMD-SHELL", "pg_isready -U vmsuser -d v_project"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,12 +25,12 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Redis 캐시 및 라우팅 룰 스토어
   redis:
     image: redis:7-alpine
-    container_name: vms-chatops-redis
+    container_name: v-project-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -49,12 +49,12 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # MailHog 개발용 메일 서버
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: vms-chatops-mailhog
+    container_name: v-project-mailhog
     restart: unless-stopped
     ports:
       - "1025:1025"  # SMTP 포트
@@ -65,31 +65,33 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
-  # Backend API 서비스 (Light-Zowe Architecture)
+  # Backend API 서비스 (v-platform + v-channel-bridge)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: vms-chatops-backend
+    container_name: v-project-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./platform/backend:/platform/backend
       - backend_data:/app/data
     environment:
-      # Light-Zowe 설정
-      - BRIDGE_TYPE=native  # Matterbridge 대신 자체 브리지 사용
+      # v-channel-bridge
+      - BRIDGE_TYPE=native
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/platform/backend
       # Database
-      - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - DATABASE_DIR=/app/data
       # Redis (동적 라우팅 룰 저장)
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
       # Security
-      - SECRET_KEY=${SECRET_KEY:-vms-chatops-secret-key-change-in-production-12345}
+      - SECRET_KEY=${SECRET_KEY:-v-project-secret-key-change-in-production-12345}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       # Email
@@ -97,8 +99,8 @@ services:
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@vms-chatops.com}
-      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-VMS Chat Ops}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-channel-bridge}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       # Slack Provider (Socket Mode)
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
@@ -134,7 +136,7 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Frontend UI 서비스
   frontend:
@@ -143,12 +145,13 @@ services:
       dockerfile: Dockerfile.dev
       args:
         BUILDKIT_INLINE_CACHE: 1
-    container_name: vms-chatops-frontend
+    container_name: v-project-frontend
     restart: unless-stopped
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
+      - ./platform/frontend:/platform/frontend
       - /app/node_modules
       - /app/.vite
       - frontend-pnpm-store:/root/.local/share/pnpm/store
@@ -180,14 +183,14 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
   # Docusaurus 문서 사이트
   docusaurus:
     build:
       context: ./docusaurus
       dockerfile: Dockerfile.dev
-    container_name: vms-chatops-docusaurus
+    container_name: v-project-docusaurus
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -210,11 +213,11 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - vms-chat-ops-network
+      - v-project-network
 
 # 네트워크 정의
 networks:
-  vms-chat-ops-network:
+  v-project-network:
     driver: bridge
 
 # 볼륨 정의

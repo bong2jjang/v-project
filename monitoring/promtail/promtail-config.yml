@@ -1,4 +1,4 @@
-# Promtail 설정 - VMS Chat Ops Docker 컨테이너 로그 수집
+# Promtail 설정 - v-channel-bridge Docker 컨테이너 로그 수집
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
@@ -12,7 +12,7 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # VMS Chat Ops Docker 컨테이너 로그 수집
+  # v-channel-bridge Docker 컨테이너 로그 수집
   # com.docker.compose.project=vms-chat-ops 레이블을 가진 컨테이너만 대상
   - job_name: docker
     docker_sd_configs:

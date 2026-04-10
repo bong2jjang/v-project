@@ -20,7 +20,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@vms-chat-ops.com")
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "VMS Chat Ops")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "v-channel-bridge")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # Jinja2 템플릿 환경 설정
@@ -149,7 +149,7 @@ class EmailService:
                     <!-- 헤더 -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #0078d4 0%, #0066b8 100%); padding: 40px 40px 30px; border-radius: 8px 8px 0 0;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">VMS Chat Ops</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">v-channel-bridge</h1>
                             <p style="margin: 8px 0 0; color: #ffffff; font-size: 14px; opacity: 0.9;">비밀번호 재설정</p>
                         </td>
                     </tr>
@@ -160,7 +160,7 @@ class EmailService:
                                 안녕하세요, <strong>{username}</strong>님
                             </p>
                             <p style="margin: 0 0 24px; color: #616161; font-size: 14px; line-height: 1.6;">
-                                VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다. 아래 버튼을 클릭하여 새로운 비밀번호를 설정해주세요.
+                                v-channel-bridge 계정의 비밀번호 재설정을 요청하셨습니다. 아래 버튼을 클릭하여 새로운 비밀번호를 설정해주세요.
                             </p>
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
@@ -189,7 +189,7 @@ class EmailService:
                     <tr>
                         <td style="background-color: #f8f8f8; padding: 24px 40px; border-radius: 0 0 8px 8px; text-align: center;">
                             <p style="margin: 0; color: #a0a0a0; font-size: 12px; line-height: 1.6;">
-                                © 2024 VMS Chat Ops. All rights reserved.
+                                © 2024 v-channel-bridge. All rights reserved.
                             </p>
                             <p style="margin: 8px 0 0; color: #a0a0a0; font-size: 11px;">
                                 이 이메일은 자동으로 발송되었습니다. 회신하지 마세요.
@@ -206,11 +206,11 @@ class EmailService:
 
         # 텍스트 본문 (HTML을 지원하지 않는 이메일 클라이언트용)
         text_body = f"""
-VMS Chat Ops 비밀번호 재설정
+v-channel-bridge 비밀번호 재설정
 
 안녕하세요, {username}님
 
-VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다.
+v-channel-bridge 계정의 비밀번호 재설정을 요청하셨습니다.
 아래 링크를 클릭하여 새로운 비밀번호를 설정해주세요:
 
 {reset_link}
@@ -220,13 +220,13 @@ VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다.
 - 비밀번호 재설정을 요청하지 않으셨다면 이 이메일을 무시하세요
 - 링크는 1회만 사용 가능합니다
 
-© 2024 VMS Chat Ops. All rights reserved.
+© 2024 v-channel-bridge. All rights reserved.
 이 이메일은 자동으로 발송되었습니다. 회신하지 마세요.
 """
 
         return await EmailService.send_email(
             to_email=to_email,
-            subject="[VMS Chat Ops] 비밀번호 재설정 요청",
+            subject="[v-channel-bridge] 비밀번호 재설정 요청",
             html_body=html_body,
             text_body=text_body,
         )
@@ -261,7 +261,7 @@ VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다.
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <tr>
                         <td style="background: linear-gradient(135deg, #16825d 0%, #0f5c42 100%); padding: 40px 40px 30px; border-radius: 8px 8px 0 0;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">VMS Chat Ops</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">v-channel-bridge</h1>
                             <p style="margin: 8px 0 0; color: #ffffff; font-size: 14px; opacity: 0.9;">비밀번호가 변경되었습니다</p>
                         </td>
                     </tr>
@@ -271,7 +271,7 @@ VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다.
                                 안녕하세요, <strong>{username}</strong>님
                             </p>
                             <p style="margin: 0 0 24px; color: #616161; font-size: 14px; line-height: 1.6;">
-                                VMS Chat Ops 계정의 비밀번호가 성공적으로 변경되었습니다.
+                                v-channel-bridge 계정의 비밀번호가 성공적으로 변경되었습니다.
                             </p>
                             <div style="background-color: #e8f5ef; border-left: 4px solid #16825d; padding: 16px; margin: 24px 0; border-radius: 4px;">
                                 <p style="margin: 0; color: #0f5c42; font-size: 14px; font-weight: 500;">
@@ -286,7 +286,7 @@ VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다.
                     <tr>
                         <td style="background-color: #f8f8f8; padding: 24px 40px; border-radius: 0 0 8px 8px; text-align: center;">
                             <p style="margin: 0; color: #a0a0a0; font-size: 12px; line-height: 1.6;">
-                                © 2024 VMS Chat Ops. All rights reserved.
+                                © 2024 v-channel-bridge. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -299,20 +299,20 @@ VMS Chat Ops 계정의 비밀번호 재설정을 요청하셨습니다.
 """
 
         text_body = f"""
-VMS Chat Ops 비밀번호 변경 완료
+v-channel-bridge 비밀번호 변경 완료
 
 안녕하세요, {username}님
 
-VMS Chat Ops 계정의 비밀번호가 성공적으로 변경되었습니다.
+v-channel-bridge 계정의 비밀번호가 성공적으로 변경되었습니다.
 
 이 변경을 요청하지 않으셨다면 즉시 관리자에게 문의하세요.
 
-© 2024 VMS Chat Ops. All rights reserved.
+© 2024 v-channel-bridge. All rights reserved.
 """
 
         return await EmailService.send_email(
             to_email=to_email,
-            subject="[VMS Chat Ops] 비밀번호가 변경되었습니다",
+            subject="[v-channel-bridge] 비밀번호가 변경되었습니다",
             html_body=html_body,
             text_body=text_body,
         )
