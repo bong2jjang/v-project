@@ -6,8 +6,8 @@
 
 import { ComponentType } from "react";
 import { icons as lucideIcons } from "lucide-react";
-import type { MenuItemResponse } from "./api/types";
-import { isAdminRole } from "./api/types";
+import type { MenuItemResponse } from "../api/types";
+import { isAdminRole } from "../api/types";
 
 export type UserRole = "system_admin" | "org_admin" | "user";
 

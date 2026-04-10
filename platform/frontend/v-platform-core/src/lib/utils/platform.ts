@@ -2,7 +2,7 @@
  * 플랫폼 관련 유틸리티 함수
  */
 
-import type { Platform, PlatformConfig, PlatformGuide } from "../api/types";
+import type { Platform, PlatformConfig, PlatformGuide } from "../../api/types";
 
 /**
  * 플랫폼 설정

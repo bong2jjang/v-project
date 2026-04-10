@@ -8,7 +8,7 @@
  * 각 단계에서 접근 가능한 메뉴 목록에 포함되는지 확인합니다.
  */
 
-import type { MenuItemResponse } from "./api/types";
+import type { MenuItemResponse } from "../api/types";
 
 /**
  * 접근 가능한 메뉴 목록을 기준으로, 실제 이동할 시작 페이지를 결정합니다.
