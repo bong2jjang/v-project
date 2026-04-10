@@ -14,10 +14,14 @@ import type { ApiError, ApiErrorDetail } from "./types";
 import { authLogger } from "../lib/utils/authLogger";
 
 // API Base URL
-// 우선순위: VITE_API_URL 환경변수 > 현재 접속 호스트:8000 (dev) > /api (prod fallback)
+// Docker 환경: Vite proxy가 /api → backend로 전달하므로 빈 문자열 사용
+// 로컬 환경: VITE_API_URL로 명시 지정
+const _envUrl = import.meta.env.VITE_API_URL;
+const _dockerEnv = import.meta.env.VITE_DOCKER_ENV || (typeof window !== "undefined" && window.location.port !== "");
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? `http://${window.location.hostname}:8000` : "/api");
+  _envUrl && _envUrl.length > 0
+    ? _envUrl
+    : ""; // 빈 문자열 = 같은 origin (Vite proxy 사용)
 
 // 401 리다이렉트 플래그 (중복 리다이렉트 방지)
 let isRedirecting = false;
