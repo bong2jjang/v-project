@@ -5,7 +5,6 @@
 # 이 스크립트는 다음 항목들을 백업합니다:
 # - PostgreSQL 데이터베이스
 # - Redis 데이터
-# - Matterbridge 설정 파일
 # - 환경 변수 파일 (민감 정보 제외)
 # - 업로드된 파일 (있는 경우)
 #
@@ -112,21 +111,6 @@ backup_redis() {
     fi
 }
 
-# Matterbridge 설정 백업
-backup_matterbridge_config() {
-    log_info "Matterbridge 설정 파일 백업 중..."
-
-    local config_file="${PROJECT_DIR}/matterbridge.toml"
-    local backup_file="${BACKUP_DIR}/matterbridge_${TIMESTAMP}.toml"
-
-    if [ -f "${config_file}" ]; then
-        cp "${config_file}" "${backup_file}"
-        log_info "Matterbridge 설정 백업 완료: ${backup_file}"
-    else
-        log_warn "Matterbridge 설정 파일이 없습니다: ${config_file}"
-    fi
-}
-
 # 환경 변수 백업 (민감 정보 제외)
 backup_env() {
     log_info "환경 변수 파일 백업 중..."
@@ -207,7 +191,6 @@ User: $(whoami)
 Backup Contents:
 - PostgreSQL Database
 - Redis Data
-- Matterbridge Configuration
 - Environment Variables (masked)
 - Docker Compose Files
 
@@ -268,7 +251,6 @@ main() {
     # 각 항목 백업
     backup_postgresql
     backup_redis
-    backup_matterbridge_config
     backup_env
     backup_docker_compose
 

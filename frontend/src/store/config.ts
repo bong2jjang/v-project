@@ -5,11 +5,11 @@
  *
  * ⚠️ IMPORTANT: DB-First Architecture
  * - **Account**: /api/accounts-db를 사용하세요 (이 store는 deprecated)
- * - **Gateway**: /api/gateways를 사용하세요 (이 store는 deprecated)
+ * - **Route**: /api/routes를 사용하세요 (이 store는 deprecated)
  * - **General**: 이 store를 사용하세요 (권장)
  *
  * 이 store는 주로 General 설정과 백업/복원을 위해 사용됩니다.
- * Account와 Gateway는 각각의 전용 API를 사용하는 것을 권장합니다.
+ * Account와 Route는 각각의 전용 API를 사용하는 것을 권장합니다.
  */
 
 import { create } from "zustand";
@@ -17,13 +17,13 @@ import { devtools } from "zustand/middleware";
 import * as api from "../lib/api";
 import type {
   BackupInfo,
-  MatterbridgeConfig,
+  BridgeConfig,
   ValidationResult,
 } from "../lib/api/types";
 
 interface ConfigState {
   // 상태
-  config: MatterbridgeConfig | null;
+  config: BridgeConfig | null;
   validation: ValidationResult | null;
   backups: BackupInfo[];
   isLoading: boolean;
@@ -36,7 +36,7 @@ interface ConfigState {
    *
    * ⚠️ 주의: Account와 Gateway는 각각의 전용 API를 사용하는 것을 권장합니다.
    * - Account: getAccounts() from lib/api/accounts.ts
-   * - Gateway: getGateways() from lib/api/gateway.ts
+   * - Route: getRoutes() from lib/api/routes.ts
    * - General: 이 함수 사용 권장
    */
   fetchConfig: () => Promise<void>;
@@ -47,10 +47,10 @@ interface ConfigState {
    * Account와 Gateway를 포함하면 400 에러가 발생합니다.
    */
   updateConfig: (
-    config: MatterbridgeConfig,
+    config: BridgeConfig,
     createBackup?: boolean,
   ) => Promise<void>;
-  validateConfig: (config?: MatterbridgeConfig | null) => Promise<boolean>;
+  validateConfig: (config?: BridgeConfig | null) => Promise<boolean>;
   createBackup: () => Promise<void>;
   fetchBackups: () => Promise<void>;
   restoreConfig: (backupPath: string) => Promise<void>;

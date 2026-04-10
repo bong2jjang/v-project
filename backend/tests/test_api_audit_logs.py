@@ -43,8 +43,8 @@ def sample_audit_logs(db_session: Session, admin_user: User, normal_user: User):
             user_id=admin_user.id,
             action=AuditAction.CONFIG_UPDATE,
             resource_type="config",
-            resource_id="matterbridge.toml",
-            details=json.dumps({"changes": ["gateway settings"]}),
+            resource_id="bridge_config",
+            details=json.dumps({"changes": ["route settings"]}),
             timestamp=datetime(2026, 3, 22, 13, 0, 0),
         ),
     ]

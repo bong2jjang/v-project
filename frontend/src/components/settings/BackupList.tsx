@@ -343,8 +343,8 @@ export function BackupList({
         <ul className="list-disc list-inside space-y-1 text-body-sm">
           <li>설정 업데이트 시 자동으로 백업이 생성됩니다</li>
           <li>언제든지 수동으로 백업을 생성할 수 있습니다</li>
-          <li>백업에는 일반 설정, 계정, Gateway 정보가 모두 포함됩니다</li>
-          <li>복원 시 백업 설정으로 Matterbridge가 재시작됩니다</li>
+          <li>백업에는 일반 설정, 계정, Route 정보가 모두 포함됩니다</li>
+          <li>복원 시 백업 설정으로 v-channel-bridge가 재시작됩니다</li>
         </ul>
       </InfoBox>
     </div>

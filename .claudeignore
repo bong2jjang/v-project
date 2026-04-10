@@ -17,7 +17,6 @@ __pycache__/
 .cache/
 
 # Docker volumes
-matterbridge_data/
 backend/data/
 
 # Logs & temp

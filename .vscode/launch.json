@@ -46,7 +46,6 @@
       "cwd": "${workspaceFolder}/backend",
       "env": {
         "PYTHONUNBUFFERED": "1",
-        "MATTERBRIDGE_CONFIG": "${workspaceFolder}/matterbridge.toml",
         "ENV": "development"
       },
       "justMyCode": true,

@@ -7,34 +7,6 @@
 # - VSCode에서 "Attach to Backend (Docker)" 실행하여 디버거 연결
 
 services:
-  # Matterbridge 메인 서비스
-  matterbridge:
-    image: 42wim/matterbridge:stable
-    container_name: v-project-matterbridge-debug
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./matterbridge.toml:/etc/matterbridge/matterbridge.toml:ro
-      - matterbridge_data:/var/lib/matterbridge
-    environment:
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
-      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
-      - TEAMS_APP_ID=${TEAMS_APP_ID}
-      - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
-      - TEAMS_CHANNEL_ID=${TEAMS_CHANNEL_ID}
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    networks:
-      - v-project-network
-
   # Backend API (디버그 모드 - debugpy 활성화)
   backend:
     build:
@@ -47,10 +19,8 @@ services:
       - "5678:5678"   # debugpy 원격 디버거 포트
     volumes:
       - ./backend:/app
-      - ./matterbridge.toml:/app/matterbridge.toml
       - backend_pip_cache:/root/.cache/pip
     environment:
-      - MATTERBRIDGE_CONFIG=/app/matterbridge.toml
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       - ENV=development
@@ -64,9 +34,6 @@ services:
       --port 8000
       --reload
       --reload-dir /app
-    depends_on:
-      matterbridge:
-        condition: service_started
     networks:
       - v-project-network
 
@@ -96,7 +63,5 @@ networks:
     driver: bridge
 
 volumes:
-  matterbridge_data:
-    driver: local
   backend_pip_cache:
     driver: local

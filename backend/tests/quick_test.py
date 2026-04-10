@@ -97,10 +97,10 @@ def main():
     # Phase 1 Tests
     print_section("Phase 1: Basic API Tests")
     test_api("Health Check", "GET", "/api/health")
-    test_api("Get Status", "GET", "/api/matterbridge/status")
-    test_api("Get Logs (10 lines)", "GET", "/api/matterbridge/logs?lines=10")
-    test_api("Get Config", "GET", "/api/config")
-    test_api("Get Backups", "GET", "/api/config/backups")
+    test_api("Bridge Status", "GET", "/api/bridge/status")
+    test_api("Bridge Logs (10 lines)", "GET", "/api/bridge/logs?lines=10")
+    test_api("Bridge Routes", "GET", "/api/bridge/routes")
+    test_api("Bridge Providers", "GET", "/api/bridge/providers")
 
     # Phase 2 Week 1 Tests
     print_section("Phase 2 Week 1: WebSocket Tests")
@@ -117,7 +117,7 @@ def main():
 
     test_api("Get All Messages", "GET", "/api/messages")
     test_api("Search 'Hello'", "GET", "/api/messages?q=Hello&page=1&per_page=10")
-    test_api("Filter by Gateway", "GET", "/api/messages?gateway=gateway-1")
+    test_api("Filter by Route", "GET", "/api/messages?route=route-1")
     test_api("Filter by Channel", "GET", "/api/messages?channel=general")
     test_api("Filter by User", "GET", "/api/messages?user=alice")
     test_api("Get Message Stats", "GET", "/api/messages/stats/summary")

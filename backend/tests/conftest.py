@@ -192,45 +192,42 @@ def mock_config_manager():
 
 
 @pytest.fixture
-def mock_matterbridge_controller():
-    """모킹된 MatterbridgeController"""
-    from app.api.matterbridge import get_controller
+def mock_bridge():
+    """모킹된 WebSocketBridge"""
+    from app.services.websocket_bridge import get_bridge, set_bridge
 
-    controller = Mock()
-    app.dependency_overrides[get_controller] = lambda: controller
-    yield controller
-    app.dependency_overrides.clear()
+    bridge = Mock()
+    bridge.is_running = True
+    bridge.providers = {}
+    bridge._tasks = []
+    set_bridge(bridge)
+    yield bridge
+    set_bridge(None)
 
 
 @pytest.fixture
-def sample_matterbridge_config() -> dict:
-    """샘플 Matterbridge 설정"""
+def sample_bridge_config() -> dict:
+    """샘플 v-channel-bridge 설정 (routes 기반)"""
     return {
-        "general": {
-            "MediaServerUpload": "http://localhost:8080",
-        },
-        "slack": {
-            "myslack": {
-                "Token": "xoxb-test-token",
-            }
-        },
-        "teams": {
-            "myteams": {
-                "TenantID": "tenant-id",
-                "AppID": "app-id",
-                "AppPassword": "password",
-            }
-        },
-        "gateway": [
+        "routes": [
             {
-                "name": "test-gateway",
-                "enable": True,
-                "inout": [
-                    {"account": "slack.myslack", "channel": "general"},
-                    {"account": "teams.myteams", "channel": "19:xxx"},
-                ],
+                "source_platform": "slack",
+                "source_channel": "C12345",
+                "target_platform": "teams",
+                "target_channel": "19:xxx@thread.tacv2",
+                "message_mode": "sender_info",
+                "is_bidirectional": True,
+                "is_enabled": True,
             }
         ],
+        "providers": {
+            "slack": {"token": "xoxb-test-token"},
+            "teams": {
+                "tenant_id": "tenant-id",
+                "app_id": "app-id",
+                "app_password": "password",
+            },
+        },
     }
 
 

@@ -564,7 +564,7 @@ class WebSocketBridge:
                     # 일반 메시지 전송
                     else:
                         # Provider가 발신자 정보(username, icon)를 직접 설정하도록 함
-                        # (Matterbridge 방식: prefix 없이 username과 icon만 사용)
+                        # (v-channel-bridge 방식: prefix 없이 username과 icon만 사용)
                         success = await provider.send_message(target_message)
 
                     logger.debug(

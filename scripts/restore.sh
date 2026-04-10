@@ -260,29 +260,6 @@ restore_redis() {
     log_info "Redis 복원 완료"
 }
 
-# Matterbridge 설정 복원
-restore_matterbridge_config() {
-    log_step "Matterbridge 설정 파일 복원 중..."
-
-    local config_file=$(find "${RESTORE_DIR}" -name "matterbridge_*.toml" | head -1)
-
-    if [ -z "${config_file}" ]; then
-        log_warn "Matterbridge 설정 파일을 찾을 수 없습니다. 건너뜁니다."
-        return 0
-    fi
-
-    # 현재 설정 백업
-    if [ -f "${PROJECT_DIR}/matterbridge.toml" ]; then
-        cp "${PROJECT_DIR}/matterbridge.toml" "${PROJECT_DIR}/matterbridge.toml.bak.$(date +%s)"
-        log_info "현재 설정을 백업했습니다."
-    fi
-
-    # 설정 파일 복원
-    cp "${config_file}" "${PROJECT_DIR}/matterbridge.toml"
-
-    log_info "Matterbridge 설정 복원 완료"
-}
-
 # Docker Compose 파일 복원 (선택사항)
 restore_docker_compose() {
     log_step "Docker Compose 파일 복원 확인 중..."
@@ -372,7 +349,6 @@ main() {
     # 복원 실행
     restore_postgresql
     restore_redis
-    restore_matterbridge_config
     restore_docker_compose
 
     # 서비스 재시작

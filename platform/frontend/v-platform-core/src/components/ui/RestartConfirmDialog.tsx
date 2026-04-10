@@ -1,7 +1,7 @@
 /**
  * Restart 확인 다이얼로그
  *
- * Gateway 변경 후 Matterbridge 재시작 확인
+ * Route 변경 후 v-channel-bridge 재시작 확인
  */
 
 import { AlertCircle, RefreshCw } from "lucide-react";
@@ -22,8 +22,8 @@ export const RestartConfirmDialog = ({
   onClose,
   onConfirm,
   isRestarting = false,
-  title = "Matterbridge 재시작",
-  message = "Gateway 설정이 변경되었습니다. 변경사항을 적용하려면 Matterbridge를 재시작해야 합니다.",
+  title = "v-channel-bridge 재시작",
+  message = "Route 설정이 변경되었습니다. 변경사항을 적용하려면 v-channel-bridge를 재시작해야 합니다.",
   error = null,
 }: RestartConfirmDialogProps) => {
   if (!isOpen) return null;
@@ -52,7 +52,7 @@ export const RestartConfirmDialog = ({
                 {error ? "재시작 실패" : title}
               </h3>
               <p className="text-sm text-content-secondary leading-relaxed">
-                {error ? "Matterbridge 재시작에 실패했습니다." : message}
+                {error ? "v-channel-bridge 재시작에 실패했습니다." : message}
               </p>
             </div>
           </div>
@@ -247,10 +247,10 @@ export const RestartConfirmDialog = ({
                           </span>
                           <div className="flex-1 pt-0.5">
                             <div className="leading-relaxed mb-1.5">
-                              Matterbridge 컨테이너 상태 확인:
+                              v-channel-bridge 컨테이너 상태 확인:
                             </div>
                             <code className="block px-2 py-1 bg-surface-elevated rounded text-xs font-mono">
-                              docker ps -a | grep matterbridge
+                              docker ps -a | grep v-channel-bridge
                             </code>
                           </div>
                         </li>
@@ -298,7 +298,7 @@ export const RestartConfirmDialog = ({
                         </svg>
                       </div>
                       <p className="text-sm text-content-tertiary leading-relaxed pt-0.5">
-                        설정 탭에서 Matterbridge 설정을 확인하거나, 대시보드에서
+                        설정 탭에서 v-channel-bridge 설정을 확인하거나, 대시보드에서
                         상세 로그를 확인해주세요.
                       </p>
                     </div>

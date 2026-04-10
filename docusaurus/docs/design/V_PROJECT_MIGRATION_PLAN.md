@@ -62,8 +62,8 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 #### Commands (10개 파일)
 | 파일 | 변경 내용 |
 |------|----------|
-| `check_sync_status.md` | Matterbridge 참조 제거, Light-Zowe → 현재 아키텍처로 정리 |
-| `deploy_check.md` | Matterbridge 제거 검증 섹션 삭제, 플랫폼/앱 분리 배포 체크로 교체 |
+| `check_sync_status.md` | 레거시 브리지 참조 제거, 현재 아키텍처로 정리 |
+| `deploy_check.md` | 레거시 브리지 제거 검증 섹션 삭제, 플랫폼/앱 분리 배포 체크로 교체 |
 | `docker_troubleshoot.md` | 컨테이너명 업데이트 |
 | `enforce_standards.md` | 변경 최소 (규칙 자체는 유지) |
 | `gh_issue_solve.md` | 변경 최소 |
@@ -76,7 +76,7 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 #### Skills (5개 파일)
 | 파일 | 변경 내용 |
 |------|----------|
-| `backup-config.md` | matterbridge.toml 참조 제거 |
+| `backup-config.md` | 레거시 TOML 설정 참조 제거 |
 | `add-route-rule.md` | 변경 최소 |
 | `scaffold-provider.md` | 변경 최소 |
 | `sync-docs.md` | 변경 최소 |

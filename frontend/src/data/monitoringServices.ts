@@ -132,7 +132,7 @@ export const usageGuides: UsageGuide[] = [
       {
         title: "JSON 로그 파싱",
         query: '{container_name="vms-chat-ops-dev"} | json',
-        description: "Matterbridge JSON 로그 파싱 (Loki)",
+        description: "v-channel-bridge JSON 로그 파싱 (Loki)",
       },
     ],
   },

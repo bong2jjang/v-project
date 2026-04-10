@@ -1,7 +1,7 @@
 /**
  * API 사용 예제 컴포넌트
  *
- * Matterbridge API와 Config API의 기본 사용법을 보여주는 예제
+ * v-channel-bridge API와 Config API의 기본 사용법을 보여주는 예제
  */
 
 import { useEffect } from "react";
@@ -11,14 +11,14 @@ export function ApiExample() {
   const {
     status,
     logs,
-    isLoading: matterbridgeLoading,
-    error: matterbridgeError,
+    isLoading: bridgeLoading,
+    error: bridgeError,
     fetchStatus,
     start,
     stop,
     restart,
     fetchLogs,
-    clearError: clearMatterbridgeError,
+    clearError: clearBridgeError,
   } = useBridgeStore();
 
   const {
@@ -45,7 +45,7 @@ export function ApiExample() {
   const handleStart = async () => {
     try {
       await start();
-      alert("Matterbridge started successfully!");
+      alert("v-channel-bridge started successfully!");
     } catch (error) {
       // 에러는 store에서 자동으로 처리됨
     }
@@ -54,7 +54,7 @@ export function ApiExample() {
   const handleStop = async () => {
     try {
       await stop();
-      alert("Matterbridge stopped successfully!");
+      alert("v-channel-bridge stopped successfully!");
     } catch (error) {
       // 에러는 store에서 자동으로 처리됨
     }
@@ -63,7 +63,7 @@ export function ApiExample() {
   const handleRestart = async () => {
     try {
       await restart();
-      alert("Matterbridge restarted successfully!");
+      alert("v-channel-bridge restarted successfully!");
     } catch (error) {
       // 에러는 store에서 자동으로 처리됨
     }
@@ -83,7 +83,7 @@ export function ApiExample() {
     alert("Backup created successfully!");
   };
 
-  if (matterbridgeLoading || configLoading) {
+  if (bridgeLoading || configLoading) {
     return (
       <div className="p-4">
         <p className="text-gray-600">Loading...</p>
@@ -95,18 +95,18 @@ export function ApiExample() {
     <div className="p-6 max-w-6xl mx-auto space-y-8">
       <h1 className="text-3xl font-bold text-gray-900">API Example</h1>
 
-      {/* Matterbridge Section */}
+      {/* Bridge Section */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold text-gray-800">
-          Matterbridge Control
+          Bridge Control
         </h2>
 
-        {matterbridgeError && (
+        {bridgeError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <p className="text-red-800">{matterbridgeError}</p>
+              <p className="text-red-800">{bridgeError}</p>
               <button
-                onClick={clearMatterbridgeError}
+                onClick={clearBridgeError}
                 className="text-red-600 hover:text-red-800"
               >
                 ✕
@@ -156,28 +156,28 @@ export function ApiExample() {
           <div className="flex gap-2">
             <button
               onClick={handleStart}
-              disabled={matterbridgeLoading}
+              disabled={bridgeLoading}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
             >
               Start
             </button>
             <button
               onClick={handleStop}
-              disabled={matterbridgeLoading}
+              disabled={bridgeLoading}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
             >
               Stop
             </button>
             <button
               onClick={handleRestart}
-              disabled={matterbridgeLoading}
+              disabled={bridgeLoading}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
               Restart
             </button>
             <button
               onClick={fetchStatus}
-              disabled={matterbridgeLoading}
+              disabled={bridgeLoading}
               className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
             >
               Refresh

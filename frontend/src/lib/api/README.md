@@ -6,7 +6,7 @@ VMS Chat Ops API 클라이언트 라이브러리
 
 - [설치](#설치)
 - [기본 사용법](#기본-사용법)
-- [Matterbridge API](#matterbridge-api)
+- [Bridge API](#bridge-api)
 - [Config API](#config-api)
 - [에러 처리](#에러-처리)
 - [Zustand Store](#zustand-store)
@@ -34,7 +34,7 @@ VITE_API_URL=http://localhost:8000
 ```typescript
 import * as api from "@/lib/api";
 
-// Matterbridge 상태 조회
+// v-channel-bridge 상태 조회
 const status = await api.getStatus();
 console.log(status.running); // true/false
 
@@ -46,10 +46,10 @@ console.log(config.gateway);
 ### Zustand Store 사용 (권장)
 
 ```typescript
-import { useMatterbridgeStore, useConfigStore } from "@/store";
+import { useBridgeStore, useConfigStore } from "@/store";
 
 function MyComponent() {
-  const { status, fetchStatus, start, stop } = useMatterbridgeStore();
+  const { status, fetchStatus, start, stop } = useBridgeStore();
   const { config, fetchConfig } = useConfigStore();
 
   useEffect(() => {
@@ -67,11 +67,11 @@ function MyComponent() {
 }
 ```
 
-## Matterbridge API
+## Bridge API
 
 ### getStatus()
 
-Matterbridge 컨테이너의 현재 상태 조회
+v-channel-bridge 컨테이너의 현재 상태 조회
 
 ```typescript
 const status = await api.getStatus();
@@ -87,7 +87,7 @@ const status = await api.getStatus();
 
 ### start(request?)
 
-Matterbridge 시작
+v-channel-bridge 시작
 
 ```typescript
 // 기본 시작
@@ -99,7 +99,7 @@ await api.start({ force: true, timeout: 30 });
 
 ### stop(request?)
 
-Matterbridge 중지
+v-channel-bridge 중지
 
 ```typescript
 // 기본 중지 (SIGTERM)
@@ -111,7 +111,7 @@ await api.stop({ force: true, timeout: 15 });
 
 ### restart(timeout?)
 
-Matterbridge 재시작
+v-channel-bridge 재시작
 
 ```typescript
 await api.restart();
@@ -210,7 +210,7 @@ response.backups.forEach((backup) => {
 설정 복원
 
 ```typescript
-await api.restoreConfig("/path/to/backup.toml");
+await api.restoreConfig("/path/to/backup.json");
 ```
 
 ## 에러 처리
@@ -237,8 +237,8 @@ try {
 
 | 에러 타입             | 사용자 메시지                      |
 | --------------------- | ---------------------------------- |
-| `already_running`     | "Matterbridge가 이미 실행 중입니다." |
-| `not_running`         | "Matterbridge가 실행 중이 아닙니다." |
+| `already_running`     | "v-channel-bridge가 이미 실행 중입니다." |
+| `not_running`         | "v-channel-bridge가 실행 중이 아닙니다." |
 | `validation_failed`   | "설정 검증 실패: [상세 에러]"      |
 | `backup_not_found`    | "백업 파일을 찾을 수 없습니다."    |
 | `invalid_backup`      | "유효하지 않은 백업 파일입니다."   |
@@ -246,14 +246,14 @@ try {
 
 ## Zustand Store
 
-### useMatterbridgeStore
+### useBridgeStore
 
 ```typescript
-import { useMatterbridgeStore } from "@/store";
+import { useBridgeStore } from "@/store";
 
 function Dashboard() {
   const {
-    status,       // MatterbridgeStatus | null
+    status,       // BridgeStatus | null
     logs,         // string[]
     isLoading,    // boolean
     error,        // string | null
@@ -264,7 +264,7 @@ function Dashboard() {
     fetchLogs,    // (lines?) => Promise<void>
     clearError,   // () => void
     reset,        // () => void
-  } = useMatterbridgeStore();
+  } = useBridgeStore();
 
   useEffect(() => {
     fetchStatus();
@@ -291,7 +291,7 @@ import { useConfigStore } from "@/store";
 
 function Settings() {
   const {
-    config,          // MatterbridgeConfig | null
+    config,          // BridgeConfig | null
     validation,      // ValidationResult | null
     backups,         // BackupInfo[]
     isLoading,       // boolean
@@ -330,10 +330,10 @@ function Settings() {
 ## 예제: 전체 워크플로우
 
 ```typescript
-import { useMatterbridgeStore, useConfigStore } from "@/store";
+import { useBridgeStore, useConfigStore } from "@/store";
 
 function FullWorkflow() {
-  const matterbridge = useMatterbridgeStore();
+  const bridge = useBridgeStore();
   const config = useConfigStore();
 
   const handleConfigChange = async (newConfig) => {
@@ -348,11 +348,11 @@ function FullWorkflow() {
       // 2. 백업 생성 후 설정 업데이트
       await config.updateConfig(newConfig, true);
 
-      // 3. Matterbridge 재시작
-      await matterbridge.restart();
+      // 3. v-channel-bridge 재시작
+      await bridge.restart();
 
       // 4. 상태 확인
-      await matterbridge.fetchStatus();
+      await bridge.fetchStatus();
 
       alert("설정이 적용되었습니다!");
     } catch (error) {
@@ -370,9 +370,9 @@ function FullWorkflow() {
 
 ```typescript
 import type {
-  MatterbridgeStatus,
-  MatterbridgeControlRequest,
-  MatterbridgeConfig,
+  BridgeStatus,
+  BridgeControlResponse,
+  BridgeConfig,
   ValidationResult,
   BackupInfo,
   // ... 등등
@@ -384,8 +384,8 @@ import type {
 개발 환경에서는 자동으로 API 요청/응답이 콘솔에 로깅됩니다:
 
 ```
-[API] GET /api/matterbridge/status
-[API] GET /api/matterbridge/status - 200 { running: true, ... }
+[API] GET /api/bridge/status
+[API] GET /api/bridge/status - 200 { running: true, ... }
 ```
 
 프로덕션 환경에서는 로깅이 비활성화됩니다.

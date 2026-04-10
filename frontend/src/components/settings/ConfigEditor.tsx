@@ -10,12 +10,12 @@ import { Textarea } from "../ui/Textarea";
 import { Alert } from "../ui/Alert";
 import { Badge } from "../ui/Badge";
 import { InfoBox } from "../ui/InfoBox";
-import type { MatterbridgeConfig, ValidationResult } from "../../lib/api/types";
+import type { BridgeConfig, ValidationResult } from "../../lib/api/types";
 
 interface ConfigEditorProps {
-  config: MatterbridgeConfig;
-  onSave: (config: MatterbridgeConfig) => Promise<void>;
-  onValidate: (config: MatterbridgeConfig) => Promise<ValidationResult>;
+  config: BridgeConfig;
+  onSave: (config: BridgeConfig) => Promise<void>;
+  onValidate: (config: BridgeConfig) => Promise<ValidationResult>;
   isLoading: boolean;
 }
 
@@ -118,7 +118,7 @@ export function ConfigEditor({
       <div>
         <h3 className="text-heading-md text-content-primary">설정 편집</h3>
         <p className="text-body-base text-content-secondary mt-1">
-          JSON 형식으로 설정을 편집합니다. 잘못된 설정은 Matterbridge 오류를
+          JSON 형식으로 설정을 편집합니다. 잘못된 설정은 v-channel-bridge 오류를
           유발할 수 있으니 주의하세요.
         </p>
       </div>
@@ -307,8 +307,8 @@ export function ConfigEditor({
       {/* Warning */}
       <InfoBox variant="warning" title="고급 사용자 전용">
         <p className="text-body-sm">
-          Raw 설정 편집은 TOML/JSON 형식과 Matterbridge 설정 구조에 대한 이해가
-          필요합니다. 잘못된 설정은 Matterbridge 오류를 유발할 수 있습니다. 변경
+          Raw 설정 편집은 JSON 형식과 v-channel-bridge 설정 구조에 대한 이해가
+          필요합니다. 잘못된 설정은 v-channel-bridge 오류를 유발할 수 있습니다. 변경
           전 반드시 백업을 생성하세요.
         </p>
       </InfoBox>

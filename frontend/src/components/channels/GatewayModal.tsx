@@ -853,7 +853,7 @@ export function GatewayModal({
                     <p>
                       Gateway 설정을 저장하려면{" "}
                       <strong className="text-content-primary">
-                        Matterbridge 서비스를 일시 중지
+                        v-channel-bridge 서비스를 일시 중지
                       </strong>
                       해야 합니다.
                     </p>

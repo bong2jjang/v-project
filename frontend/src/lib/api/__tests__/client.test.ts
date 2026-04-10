@@ -15,7 +15,7 @@ describe("ApiClientError", () => {
           detail: {
             error: "validation_failed",
             message: "Validation failed",
-            errors: ["Gateway required"],
+            errors: ["Route required"],
           },
         },
         statusText: "Bad Request",
@@ -77,7 +77,7 @@ describe("ApiClientError", () => {
       } as AxiosError;
 
       const error = new ApiClientError(axiosError);
-      expect(error.getUserMessage()).toBe("Matterbridge가 이미 실행 중입니다.");
+      expect(error.getUserMessage()).toBe("v-channel-bridge가 이미 실행 중입니다.");
     });
 
     it("should return user-friendly message for not_running", () => {
@@ -99,7 +99,7 @@ describe("ApiClientError", () => {
       } as AxiosError;
 
       const error = new ApiClientError(axiosError);
-      expect(error.getUserMessage()).toBe("Matterbridge가 실행 중이 아닙니다.");
+      expect(error.getUserMessage()).toBe("v-channel-bridge가 실행 중이 아닙니다.");
     });
 
     it("should return validation error message", () => {
@@ -110,7 +110,7 @@ describe("ApiClientError", () => {
             detail: {
               error: "validation_failed",
               message: "Validation failed",
-              errors: ["Gateway must have at least 2 channels"],
+              errors: ["Route must have at least 2 channels"],
             },
           },
           statusText: "Bad Request",
@@ -123,7 +123,7 @@ describe("ApiClientError", () => {
 
       const error = new ApiClientError(axiosError);
       expect(error.getUserMessage()).toBe(
-        "설정 검증 실패: Gateway must have at least 2 channels",
+        "설정 검증 실패: Route must have at least 2 channels",
       );
     });
 

@@ -495,12 +495,12 @@ Monitoring.tsx
 
 ### 서비스 단위 통합 (Service Unit) 과정
 
-VMS Chat Ops는 원래 분리된 여러 도구(Matterbridge CLI, TOML 설정 파일, 별도 모니터링)를 **단일 웹 플랫폼**으로 통합한 프로젝트입니다.
+VMS Chat Ops는 원래 분리된 여러 도구(CLI, 설정 파일, 별도 모니터링)를 **단일 웹 플랫폼**으로 통합한 프로젝트입니다. 현재는 v-channel-bridge 네이티브 아키텍처로 전환 완료되었습니다.
 
 | 기존 (개별 도구) | 통합 후 (VMS Chat Ops) |
 |-----------------|----------------------|
-| Matterbridge CLI | Dashboard + Bridge 제어 API |
-| matterbridge.toml 편집 | Routes 페이지 UI |
+| 외부 브리지 CLI | Dashboard + Bridge 제어 API |
+| TOML 설정 파일 편집 | Routes 페이지 UI |
 | 별도 Slack Admin | Settings > Provider 관리 |
 | 별도 Azure Portal | Settings > Teams Provider |
 | SQLite 직접 조회 | Messages 페이지 |

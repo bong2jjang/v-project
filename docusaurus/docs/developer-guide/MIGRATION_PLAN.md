@@ -15,13 +15,13 @@ tags: [guide, developer]
 
 ## 개요
 
-이 문서는 VMS Chat Ops 프로젝트의 Matterbridge 기반 아키텍처에서 **Light-Zowe 아키텍처**로의 마이그레이션 계획 및 완료 기록입니다.
+이 문서는 VMS Chat Ops 프로젝트의 외부 브리지 기반 아키텍처에서 **v-channel-bridge (Light-Zowe 아키텍처)** 로의 마이그레이션 계획 및 완료 기록입니다.
 
 ---
 
 ## 마이그레이션 목표
 
-1. **Matterbridge 의존성 제거** — 외부 바이너리 의존 없이 자체 구현
+1. **외부 브리지 의존성 제거** — 외부 바이너리 의존 없이 v-channel-bridge로 자체 구현
 2. **Provider Pattern 도입** — Zowe Chat의 설계 철학을 차용한 플랫폼 추상화
 3. **CommonMessage Schema** — 플랫폼 간 정규화된 메시지 형식
 4. **Redis 기반 동적 라우팅** — TOML 파일 대신 실시간 Route 관리
@@ -39,7 +39,7 @@ tags: [guide, developer]
 - [x] `.env.example` 생성 및 환경 변수 정리
 - [x] CLAUDE.md 프로젝트 설정 업데이트
 
-### Phase 2: Matterbridge → Light-Zowe 전환 ✅
+### Phase 2: 외부 브리지 → v-channel-bridge 전환 ✅
 
 - [x] `BasePlatformProvider` 인터페이스 설계
 - [x] `SlackProvider` 구현 (Socket Mode)
@@ -48,12 +48,12 @@ tags: [guide, developer]
 - [x] `RouteManager` Redis 기반 구현
 - [x] `WebSocketBridge` 메시지 브로커 구현
 - [x] `MessageQueue` 배치 메시지 저장 구현
-- [x] `matterbridge.toml` 의존성 완전 제거
-- [x] Matterbridge 컨테이너 제거
+- [x] TOML 설정 의존성 완전 제거
+- [x] 외부 브리지 컨테이너 제거
 
 ### Phase 3: Frontend 전환 ✅
 
-- [x] Dashboard: Matterbridge 상태 → Bridge 상태 표시
+- [x] Dashboard: Bridge 상태 표시
 - [x] Channels → Routes 페이지: TOML Gateway → Redis Route CRUD
 - [x] Settings → Provider 계정 관리 UI
 - [x] Messages 페이지: 메시지 조회/검색
@@ -86,10 +86,10 @@ tags: [guide, developer]
 
 | 컴포넌트 | 상태 | 대체 |
 |----------|------|------|
-| `matterbridge.toml` | 삭제 | Redis Route Manager |
-| Matterbridge 바이너리/컨테이너 | 삭제 | SlackProvider + TeamsProvider |
-| `MatterbridgeControlService` | 삭제 | WebSocketBridge |
-| `ConfigManager` (TOML) | 삭제 | Redis Route 키 |
+| TOML 설정 파일 | 삭제 | Redis Route Manager |
+| 외부 브리지 바이너리/컨테이너 | 삭제 | SlackProvider + TeamsProvider |
+| 외부 브리지 ControlService | 삭제 | WebSocketBridge |
+| ConfigManager (TOML) | 삭제 | Redis Route 키 |
 | Gateway 개념 | 삭제 | Route 개념으로 대체 |
 | SQLite 메시지 로그 | 삭제 | PostgreSQL messages 테이블 |
 

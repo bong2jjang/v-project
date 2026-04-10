@@ -256,7 +256,7 @@ Hardening        Performance      Expansion        Intelligence
 
 ### 핵심 차별점
 
-1. **오픈소스 프레임워크(Matterbridge) 의존 탈피** → 자체 제어 가능한 아키텍처
+1. **외부 의존 탈피 → 자체 v-channel-bridge 아키텍처** 구축 완료
 2. **AI Agent 중심 개발** → 빠른 구현 속도 + 일관된 코드 품질
 3. **플랫폼 추상화** → 메시징 플랫폼 추가/교체 비용 최소화
 4. **관제 통합** → 운영자가 단일 화면에서 전체 시스템 관리

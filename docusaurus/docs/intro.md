@@ -58,7 +58,7 @@ docs/
 │   ├── DESIGN_SYSTEM.md           # UI/UX 디자인 시스템
 │   ├── PAGE_LAYOUT_GUIDE.md       # 페이지 레이아웃 가이드
 │   ├── EXECUTION_PLAN.md          # 개발 실행 계획
-│   ├── MIGRATION_PLAN.md          # Matterbridge→Light-Zowe 마이그레이션
+│   ├── MIGRATION_PLAN.md          # v-channel-bridge 마이그레이션 기록
 │   └── ZOWE_CHAT_MIGRATION_PLAN.md
 ├── api/                           # API 레퍼런스
 │   └── API.md

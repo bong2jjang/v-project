@@ -74,7 +74,7 @@ POST /teams/{team-id}/channels/{channel-id}/messages/{message-id}/replies
 - **Slack → Teams (전송)**: Teams Graph API의 `PATCH /messages/{id}`로 메시지 수정 가능하나 `ChannelMessage.UpdatePolicyViolation.All` 특수 권한 필요 (일반 앱 등록 불가).
 
 **한계:**
-- **현실적 접근**: 실제 수정 대신 "편집 알림"을 새 메시지로 전달 (Matterbridge 방식)
+- **현실적 접근**: 실제 수정 대신 "편집 알림"을 새 메시지로 전달
 - Graph API `changeType: "updated"`는 편집 외에도 메시지 속성 변경(리액션 추가 등)에도 발생할 수 있음 → 실제 텍스트 변경 여부 확인 필요
 
 **난이도: 중간** — 구독 확장 + 알림 처리 추가

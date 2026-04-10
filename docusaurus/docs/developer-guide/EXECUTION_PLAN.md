@@ -17,7 +17,7 @@ tags: [guide, developer]
 
 이 문서는 VMS Chat Ops 프로젝트의 초기 실행 계획을 기록한 아카이브 문서입니다.
 
-원래 Matterbridge 기반으로 Phase 1~3 단계별 구현 계획이 수립되었으나, 프로젝트 진행 중 **Light-Zowe 아키텍처**로 전면 전환되었습니다. Matterbridge 의존성을 제거하고 자체 Provider Pattern + CommonMessage Schema 기반으로 재구축하였습니다.
+원래 외부 브리지 기반으로 Phase 1~3 단계별 구현 계획이 수립되었으나, 프로젝트 진행 중 **v-channel-bridge (Light-Zowe 아키텍처)** 로 전면 전환되었습니다. 외부 의존성을 제거하고 자체 Provider Pattern + CommonMessage Schema 기반으로 재구축하였습니다.
 
 ---
 
@@ -61,10 +61,10 @@ tags: [guide, developer]
 
 | 원래 계획 | 실제 진행 |
 |-----------|-----------|
-| Phase 1: Matterbridge 제어 API | → Light-Zowe Provider Pattern으로 대체 |
+| Phase 1: 외부 브리지 제어 API | → v-channel-bridge Provider Pattern으로 대체 |
 | Phase 2: 실시간 로그 + 통계 UI | → WebSocket Bridge + Messages 페이지로 구현 |
 | Phase 3: JWT 인증 + 사용자 관리 | → ✅ 계획대로 구현 완료 |
-| Matterbridge.toml 설정 관리 | → Redis Route Manager로 대체 (UI에서 관리) |
+| TOML 설정 관리 | → Redis Route Manager로 대체 (UI에서 관리) |
 | SQLite 메시지 로그 | → PostgreSQL 메시지 테이블로 구현 |
 
 ---
@@ -72,7 +72,7 @@ tags: [guide, developer]
 ## 관련 문서
 
 - [아키텍처](architecture) — 현재 Light-Zowe 아키텍처
-- [마이그레이션 계획](migration-plan) — Matterbridge → Light-Zowe 전환 기록
+- [마이그레이션 계획](migration-plan) — v-channel-bridge 전환 기록
 - [Zowe Chat 마이그레이션](ZOWE_CHAT_MIGRATION_PLAN) — Light-Zowe 설계 배경
 - [개발 가이드](development) — 현재 개발 환경
 

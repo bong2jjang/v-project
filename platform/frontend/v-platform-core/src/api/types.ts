@@ -91,7 +91,7 @@ export interface GatewayConfig {
   validation_errors?: string | null;
 }
 
-export interface MatterbridgeConfig {
+export interface BridgeConfig {
   general?: GeneralConfig;
   slack?: Record<string, SlackConfig>;
   teams?: Record<string, TeamsConfig>;

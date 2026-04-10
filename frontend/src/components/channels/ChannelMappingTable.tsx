@@ -73,8 +73,8 @@ export function ChannelMappingTable({
               />
             </svg>
           }
-          title="Gateway가 없습니다"
-          description="새 Gateway를 추가하여 채널 간 메시지 동기화를 시작하세요."
+          title="Route가 없습니다"
+          description="새 Route를 추가하여 채널 간 메시지 동기화를 시작하세요."
           actions={
             <Button
               variant="secondary"
@@ -138,7 +138,7 @@ export function ChannelMappingTable({
                       variant="warning"
                       title={
                         gateway.validation_errors
-                          ? `유효하지 않은 Gateway (Matterbridge 설정에 미포함)\n\n유효성 검증 오류:\n${JSON.parse(
+                          ? `유효하지 않은 Route (v-channel-bridge 설정에 미포함)\n\n유효성 검증 오류:\n${JSON.parse(
                               gateway.validation_errors,
                             )
                               .map(
@@ -146,7 +146,7 @@ export function ChannelMappingTable({
                                   `• ${e.field}: ${e.message}`,
                               )
                               .join("\n")}`
-                          : "유효하지 않은 Gateway는 Matterbridge 설정에 포함되지 않습니다"
+                          : "유효하지 않은 Route는 v-channel-bridge 설정에 포함되지 않습니다"
                       }
                     >
                       Invalid
@@ -337,7 +337,7 @@ export function ChannelMappingTable({
                               variant="warning"
                               title={
                                 gateway.validation_errors
-                                  ? `유효하지 않은 Gateway (Matterbridge 설정에 미포함)\n\n유효성 검증 오류:\n${JSON.parse(
+                                  ? `유효하지 않은 Route (v-channel-bridge 설정에 미포함)\n\n유효성 검증 오류:\n${JSON.parse(
                                       gateway.validation_errors,
                                     )
                                       .map(
@@ -347,7 +347,7 @@ export function ChannelMappingTable({
                                         }) => `• ${e.field}: ${e.message}`,
                                       )
                                       .join("\n")}`
-                                  : "유효하지 않은 Gateway는 Matterbridge 설정에 포함되지 않습니다"
+                                  : "유효하지 않은 Route는 v-channel-bridge 설정에 포함되지 않습니다"
                               }
                             >
                               Invalid

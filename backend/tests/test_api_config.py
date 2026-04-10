@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.api.config import get_config_manager
 from app.main import app
 from app.models.config import (
-    MatterbridgeConfig,
+    BridgeConfig,
     SlackConfig,
     TeamsConfig,
     ValidationResult,
@@ -329,7 +329,7 @@ class TestGetConfigModel:
     def test_get_config_model_success(self, mock_manager):
         """설정 모델 조회 성공"""
         # Given: 모델 반환
-        config_model = MatterbridgeConfig(
+        config_model = BridgeConfig(
             slack={"myslack": SlackConfig(token="xoxb-test")},
             teams={
                 "myteams": TeamsConfig(

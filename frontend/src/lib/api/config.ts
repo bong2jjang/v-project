@@ -1,13 +1,13 @@
 /**
  * Configuration Management API
  *
- * matterbridge.toml 설정 파일 관리 API 메서드
+ * 설정 파일 관리 API 메서드
  */
 
 import { apiClient, get, post, put } from "./client";
 import type {
   BackupListResponse,
-  MatterbridgeConfig,
+  BridgeConfig,
   MessageResponse,
   RestoreRequest,
   ValidationResult,
@@ -16,8 +16,8 @@ import type {
 /**
  * 현재 설정 조회
  */
-export async function getConfig(): Promise<MatterbridgeConfig> {
-  return get<MatterbridgeConfig>("/api/config/");
+export async function getConfig(): Promise<BridgeConfig> {
+  return get<BridgeConfig>("/api/config/");
 }
 
 /**
@@ -28,7 +28,7 @@ export async function getConfig(): Promise<MatterbridgeConfig> {
  * @returns 업데이트 결과 (백업 경로 포함)
  */
 export async function updateConfig(
-  config: MatterbridgeConfig,
+  config: BridgeConfig,
   createBackup: boolean = true,
 ): Promise<MessageResponse> {
   return put<MessageResponse>("/api/config/", config, {
@@ -43,7 +43,7 @@ export async function updateConfig(
  * @returns 검증 결과
  */
 export async function validateConfig(
-  config: MatterbridgeConfig | null = null,
+  config: BridgeConfig | null = null,
 ): Promise<ValidationResult> {
   return post<ValidationResult>("/api/config/validate", config);
 }
@@ -84,8 +84,8 @@ export async function restoreConfig(
  *
  * @returns 타입 안전한 설정 모델
  */
-export async function getConfigModel(): Promise<MatterbridgeConfig> {
-  return get<MatterbridgeConfig>("/api/config/model");
+export async function getConfigModel(): Promise<BridgeConfig> {
+  return get<BridgeConfig>("/api/config/model");
 }
 
 /**
@@ -96,8 +96,8 @@ export async function getConfigModel(): Promise<MatterbridgeConfig> {
  */
 export async function getBackupContent(
   backupPath: string,
-): Promise<MatterbridgeConfig> {
-  return get<MatterbridgeConfig>("/api/config/backups/content", {
+): Promise<BridgeConfig> {
+  return get<BridgeConfig>("/api/config/backups/content", {
     params: { backup_path: backupPath },
   });
 }

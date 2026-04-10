@@ -57,8 +57,6 @@ function test_api() {
 echo "Phase 1: Basic API Tests"
 echo "------------------------"
 test_api "Health Check" "GET" "/api/health"
-test_api "Get Status" "GET" "/api/matterbridge/status"
-test_api "Get Logs" "GET" "/api/matterbridge/logs?lines=10"
 test_api "Get Config" "GET" "/api/config"
 test_api "Get Backups" "GET" "/api/config/backups"
 echo ""

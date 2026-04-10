@@ -4,13 +4,13 @@
 
 ### 배경
 
-초기 모니터링 설정은 `matterbridge` 기반 아키텍처를 전제로 구성되어 있었습니다. VMS Chat Ops가 **Light-Zowe 아키텍처** (FastAPI + Provider Pattern)로 전환되면서 다음과 같은 불일치 문제가 발생했습니다.
+초기 모니터링 설정은 외부 브리지 기반 아키텍처를 전제로 구성되어 있었습니다. VMS Chat Ops가 **v-channel-bridge 아키텍처** (FastAPI + Provider Pattern)로 전환되면서 다음과 같은 불일치 문제가 발생했습니다.
 
 | 문제 | 내용 |
 |------|------|
-| 네트워크 이름 오류 | `vms-chatops-matterbridge_vms-chat-ops-network` → `vms-chat-ops_vms-chat-ops-network` |
-| 잡 이름 불일치 | `alerts.yml`에서 존재하지 않는 `matterbridge` 잡 참조 |
-| 대시보드 구식 | Grafana 타이틀 "VMS Matterbridge Overview", `matterbridge` 서비스 로그 필터 |
+| 네트워크 이름 오류 | 이전 네트워크명 → `vms-chat-ops_vms-chat-ops-network` |
+| 잡 이름 불일치 | `alerts.yml`에서 존재하지 않는 레거시 잡 참조 |
+| 대시보드 구식 | Grafana 타이틀 및 서비스 로그 필터가 이전 아키텍처 기준 |
 | Loki 설정 오류 | 미사용 alertmanager URL 참조 (`ruler.alertmanager_url`) |
 | 이미지 버전 미고정 | `latest` 태그 사용으로 재현성 문제 |
 | 메트릭 미반영 | VMS 실제 메트릭 (`http_requests_total`, `message_count_total` 등) 미활용 |
@@ -215,7 +215,7 @@ docker compose -f docker-compose.monitoring.yml down -v
 
 | 날짜 | 버전 | 내용 |
 |------|------|------|
-| 2026-04-05 | 1.0 | 초기 개선 설계 (matterbridge → vms-chat-ops 전환) |
+| 2026-04-05 | 1.0 | 초기 개선 설계 (외부 브리지 → v-channel-bridge 전환) |
 
 ---
 

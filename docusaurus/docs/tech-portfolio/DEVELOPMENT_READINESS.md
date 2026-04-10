@@ -170,7 +170,7 @@ backend/tests/
 
 | 부채 항목 | 현재 상태 | 관리 방법 |
 |----------|----------|----------|
-| Matterbridge 잔여 코드 | ✅ 완전 제거 | Light-Zowe 전환 완료 |
+| 외부 브리지 잔여 코드 | ✅ 완전 제거 | v-channel-bridge 전환 완료 |
 | SQLite → PostgreSQL | ✅ 완전 전환 | 마이그레이션 완료 |
 | TOML 설정 → Redis | ✅ 완전 전환 | Route Manager 완료 |
 | Teams Provider 실 테스트 | ⚠️ Azure 등록 필요 | 코드 완성, 인프라 대기 |

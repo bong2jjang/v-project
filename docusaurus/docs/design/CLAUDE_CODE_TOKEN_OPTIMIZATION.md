@@ -194,7 +194,7 @@ Session 3 (Phase 3):
 
 **Before** (Sonnet 직접 사용):
 ```
-사용자: "codebase 전체에서 'matterbridge' 키워드 찾고,
+사용자: "codebase 전체에서 레거시 키워드 찾고,
         모든 파일 내용 읽어서 제거 필요한 부분 분석해줘"
 
 → Sonnet이 Grep + Read 반복
@@ -207,7 +207,7 @@ Task(
   subagent_type="Explore",
   model="haiku",
   prompt="""
-  1. Grep으로 'matterbridge' 포함 파일 찾기
+  1. Grep으로 레거시 키워드 포함 파일 찾기
   2. 각 파일에서 해당 라인 전후 10줄 읽기
   3. 제거 필요 여부 판단하여 리스트 반환
   """
@@ -241,7 +241,7 @@ Phase 3 - Frontend (Sonnet):
   토큰: ~40,000
 
 Phase 4 - Settings 통합 (Sonnet):
-  - Settings.tsx 수정 (Matterbridge 제거)
+  - Settings.tsx 수정 (레거시 코드 제거)
   토큰: ~30,000
 
 Phase 5 - 디버깅 (Sonnet):

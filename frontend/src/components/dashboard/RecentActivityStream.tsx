@@ -317,15 +317,15 @@ function formatAuditAction(action: string): string {
   const actionMap: Record<string, string> = {
     login: "로그인",
     logout: "로그아웃",
-    "matterbridge.start": "Matterbridge 시작",
-    "matterbridge.stop": "Matterbridge 중지",
-    "matterbridge.restart": "Matterbridge 재시작",
+    "bridge.start": "v-channel-bridge 시작",
+    "bridge.stop": "v-channel-bridge 중지",
+    "bridge.restart": "v-channel-bridge 재시작",
     "config.update": "설정 변경",
     "config.backup": "설정 백업",
     "config.restore": "설정 복원",
-    "gateway.create": "Gateway 생성",
-    "gateway.update": "Gateway 수정",
-    "gateway.delete": "Gateway 삭제",
+    "route.create": "Route 생성",
+    "route.update": "Route 수정",
+    "route.delete": "Route 삭제",
     "user.create": "사용자 생성",
     "user.update": "사용자 정보 수정",
     "user.delete": "사용자 삭제",
@@ -342,7 +342,7 @@ function getAuditIcon(action: string, status: string): React.ReactNode {
     return <AlertCircle className="w-4 h-4" />;
   }
 
-  if (action.includes("matterbridge")) {
+  if (action.includes("bridge")) {
     return <Settings className="w-4 h-4" />;
   }
 

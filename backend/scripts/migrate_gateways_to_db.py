@@ -1,6 +1,6 @@
 """Gateway 설정을 TOML 파일에서 DB로 마이그레이션
 
-기존 matterbridge.toml 파일의 Gateway 설정을 PostgreSQL로 이전
+기존 TOML 설정 파일의 Gateway 설정을 PostgreSQL로 이전
 """
 
 import logging
@@ -94,6 +94,6 @@ def migrate_gateways():
 
 
 if __name__ == "__main__":
-    logger.info("Starting Gateway migration from TOML to DB...")
+    logger.info("Starting gateway migration from TOML config to DB...")
     migrate_gateways()
     logger.info("Migration complete!")

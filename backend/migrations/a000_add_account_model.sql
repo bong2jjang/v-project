@@ -66,9 +66,9 @@ CREATE TRIGGER trigger_accounts_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_accounts_updated_at();
 
--- Migrate existing accounts from matterbridge.toml (optional, run manually if needed)
+-- Migrate existing accounts from config (optional, run manually if needed)
 -- This can be done programmatically in Python using ConfigManager
--- See: backend/app/services/config_manager.py -> migrate_accounts_from_toml()
+-- See: backend/app/services/config_manager.py -> migrate_accounts_to_db()
 
 COMMENT ON TABLE accounts IS 'Slack and Microsoft Teams account credentials';
 COMMENT ON COLUMN accounts.platform IS 'Platform type: slack or teams';

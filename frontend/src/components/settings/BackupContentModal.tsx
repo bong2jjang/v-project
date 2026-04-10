@@ -10,7 +10,7 @@ import { Button } from "../ui/Button";
 import { Spinner } from "../ui/Spinner";
 import { Alert } from "../ui/Alert";
 import { getBackupContent } from "../../lib/api/config";
-import type { MatterbridgeConfig } from "../../lib/api/types";
+import type { BridgeConfig } from "../../lib/api/types";
 
 interface BackupContentModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export function BackupContentModal({
   backupPath,
   backupTimestamp,
 }: BackupContentModalProps) {
-  const [content, setContent] = useState<MatterbridgeConfig | null>(null);
+  const [content, setContent] = useState<BridgeConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,7 +142,7 @@ export function BackupContentModal({
             {/* Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="border border-line rounded-card p-3">
-                <p className="text-body-sm text-content-secondary">Gateways</p>
+                <p className="text-body-sm text-content-secondary">Routes</p>
                 <p className="text-heading-md text-content-primary mt-1">
                   {content.gateway?.length || 0}
                 </p>
