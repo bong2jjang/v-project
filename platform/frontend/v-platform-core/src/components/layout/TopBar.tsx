@@ -16,9 +16,9 @@ import { Badge } from "../ui/Badge";
 import { useRealtimeStatus } from "../../hooks/useRealtimeStatus";
 import { useTheme } from "../../hooks/useTheme";
 import { useSidebar } from "../../hooks/useSidebar";
-import { useAuthStore } from "../../store/auth";
-import { usePermissionStore } from "../../store/permission";
-import { useSystemSettingsStore } from "../../store/systemSettings";
+import { useAuthStore } from "../../stores/auth";
+import { usePermissionStore } from "../../stores/permission";
+import { useSystemSettingsStore } from "../../stores/systemSettings";
 import { resolveStartPage } from "../../lib/resolveStartPage";
 import { apiClient } from "../../lib/api/client";
 

@@ -9,8 +9,8 @@ import { CheckCheck, Trash2 } from "lucide-react";
 import {
   useNotificationStore,
   type NotificationSeverity,
-} from "../../store/notification";
-import { useAuthStore } from "../../store/auth";
+} from "../../stores/notification";
+import { useAuthStore } from "../../stores/auth";
 import { isAdminRole } from "../../lib/api/types";
 import { NotificationItem } from "./NotificationItem";
 

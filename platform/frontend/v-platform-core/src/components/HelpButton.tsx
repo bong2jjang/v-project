@@ -10,7 +10,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useTour } from "../hooks/useTour";
-import { useSystemSettingsStore } from "../store/systemSettings";
+import { useSystemSettingsStore } from "../stores/systemSettings";
 
 export function HelpButton() {
   const [menuOpen, setMenuOpen] = useState(false);

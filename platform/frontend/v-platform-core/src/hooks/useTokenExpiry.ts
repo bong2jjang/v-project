@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useAuthStore } from "../store/auth";
+import { useAuthStore } from "../stores/auth";
 
 export interface TokenExpiryConfig {
   warningThresholdMinutes: number; // 경고 시작 시간 (기본 5분)

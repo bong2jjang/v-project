@@ -8,9 +8,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTokenExpiry } from "../../hooks/useTokenExpiry";
-import { useNotificationStore } from "../../store/notification";
-import { useAuthStore } from "../../store/auth";
-import { useSessionSettingsStore } from "../../store/sessionSettings";
+import { useNotificationStore } from "../../stores/notification";
+import { useAuthStore } from "../../stores/auth";
+import { useSessionSettingsStore } from "../../stores/sessionSettings";
 import { useActivityDetection } from "../../hooks/useActivityDetection";
 import { useIdleTimeout } from "../../hooks/useIdleTimeout";
 import { useTabSync } from "../../hooks/useTabSync";

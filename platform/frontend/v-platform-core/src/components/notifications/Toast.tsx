@@ -13,7 +13,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import type { Notification } from "../../store/notification";
+import type { Notification } from "../../stores/notification";
 
 interface ToastProps {
   notification: Notification;

@@ -11,7 +11,7 @@ import axios, {
   AxiosResponse,
 } from "axios";
 import type { ApiError, ApiErrorDetail } from "./types";
-import { authLogger } from "../utils/authLogger";
+import { authLogger } from "../lib/utils/authLogger";
 
 // API Base URL
 // 우선순위: VITE_API_URL 환경변수 > 현재 접속 호스트:8000 (dev) > /api (prod fallback)
@@ -316,7 +316,7 @@ function createApiClient(): AxiosInstance {
                 );
 
                 // 알림 추가 (동적 import로 순환 참조 방지)
-                import("../../store/notification").then(
+                import("../stores/notification").then(
                   ({ useNotificationStore }) => {
                     useNotificationStore.getState().addNotification({
                       id: "session-refresh-failed",

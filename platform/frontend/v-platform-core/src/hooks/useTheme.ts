@@ -20,7 +20,7 @@ import {
   createElement,
 } from "react";
 import { updateMe } from "../lib/api/users";
-import { useAuthStore } from "../store/auth";
+import { useAuthStore } from "../stores/auth";
 
 type Theme = "light" | "dark" | "system";
 export type ColorPreset = "blue" | "indigo" | "rose";

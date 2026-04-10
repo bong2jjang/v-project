@@ -15,8 +15,8 @@ import {
   filterNavItemsByRole,
   categorizeMenus,
 } from "../../lib/navigation";
-import { useAuthStore } from "../../store/auth";
-import { usePermissionStore } from "../../store/permission";
+import { useAuthStore } from "../../stores/auth";
+import { usePermissionStore } from "../../stores/permission";
 import { useSidebar } from "../../hooks/useSidebar";
 import { SidebarNavItem } from "./SidebarNavItem";
 import { SidebarGroupItem } from "./SidebarGroupItem";

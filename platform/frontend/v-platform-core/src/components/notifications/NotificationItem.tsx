@@ -14,7 +14,7 @@ import {
 import {
   useNotificationStore,
   type Notification,
-} from "../../store/notification";
+} from "../../stores/notification";
 import { formatDistanceToNow } from "../../lib/utils/date";
 
 interface NotificationItemProps {

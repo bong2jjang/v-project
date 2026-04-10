@@ -4,7 +4,7 @@
  * 토스트 메시지 컨테이너 (화면 우측 하단)
  */
 
-import { useNotificationStore } from "../../store/notification";
+import { useNotificationStore } from "../../stores/notification";
 import { Toast } from "./Toast";
 
 export function ToastContainer() {

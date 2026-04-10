@@ -155,6 +155,7 @@ services:
       - /app/node_modules
       - /app/.vite
       - frontend-pnpm-store:/root/.local/share/pnpm/store
+    command: sh -c "ln -sf /app/node_modules /platform/frontend/v-platform-core/node_modules && pnpm run dev -- --host 0.0.0.0"
     environment:
       - DOCKER_ENV=true
       - VITE_API_URL=

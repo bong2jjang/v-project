@@ -10,7 +10,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../store/auth";
+import { useAuthStore } from "../../stores/auth";
 import { getRoleDisplayName } from "../../lib/api/types";
 import { useTour } from "../../hooks/useTour";
 
