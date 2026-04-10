@@ -1,6 +1,6 @@
 # 시스템 상태 확인
 
-Light-Zowe 아키텍처 컴포넌트 현황과 Provider 연결 상태를 확인합니다.
+v-project(v-platform + v-channel-bridge) 컴포넌트 현황과 Provider 연결 상태를 확인합니다.
 
 ## 아키텍처 구성요소 확인
 
@@ -34,16 +34,16 @@ curl -s http://localhost:8000/api/bridge/status | python3 -m json.tool
 
 ```bash
 # 등록된 Route 수
-docker exec vms-chatops-redis redis-cli -a redispassword --scan --pattern "route:*" | grep -v "names\|modes\|bidirectional\|source_name" | wc -l
+docker exec v-project-redis redis-cli -a redispassword --scan --pattern "route:*" | grep -v "names\|modes\|bidirectional\|source_name" | wc -l
 
 # Route 목록
-docker exec vms-chatops-redis redis-cli -a redispassword --scan --pattern "route:*" | grep -v "names\|modes\|bidirectional\|source_name" | sort
+docker exec v-project-redis redis-cli -a redispassword --scan --pattern "route:*" | grep -v "names\|modes\|bidirectional\|source_name" | sort
 ```
 
 ## 테스트 상태
 
 ```bash
-docker exec vms-chatops-backend python -m pytest tests/ -q 2>/dev/null | tail -5
+docker exec v-project-backend python -m pytest tests/ -q 2>/dev/null | tail -5
 ```
 
 ## 컴포넌트 상태 요약

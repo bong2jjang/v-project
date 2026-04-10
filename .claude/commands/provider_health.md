@@ -2,7 +2,7 @@
 
 Slack/Teams Provider 연결 상태를 빠르게 확인합니다.
 
-**참고**: Light-Zowe 아키텍처 마이그레이션 후 사용하는 명령어입니다. 마이그레이션 전에는 `/check_sync_status`를 사용하세요.
+v-channel-bridge의 Slack/Teams Provider 연결 상태를 확인합니다.
 
 ## 사용법
 
@@ -226,23 +226,9 @@ docker compose -f docker-compose.dev.yml exec redis redis-cli SADD "route:slack:
 docker compose -f docker-compose.dev.yml exec redis redis-cli SMEMBERS "route:slack:#general"
 ```
 
-## 마이그레이션 전/후 비교
-
-### 마이그레이션 전 (Matterbridge)
-- Matterbridge 컨테이너 상태 확인
-- matterbridge.toml 설정 기반
-- Gateway 단위 연결 상태
-
-### 마이그레이션 후 (Native Provider)
-- Backend 내장 Provider 상태 확인
-- 환경 변수 기반 설정
-- Provider 단위 연결 상태
-- Socket Mode (Slack), Graph API (Teams)
-- Redis 동적 라우팅
-
 ## 관련 명령어
 
 - `/check_sync_status` - 전체 메시지 브리지 상태 (더 상세한 정보)
-- `/migration_status` - 마이그레이션 진행 상황
+- `/migration_status` - 시스템 상태 확인
 - `/test-provider` - Provider 단위 테스트
 - `/deploy-check` - 배포 전 체크리스트

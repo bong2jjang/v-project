@@ -33,8 +33,7 @@ docker inspect [container_name]
 
 ### 3. 서비스별 진단 포인트
 
-**matterbridge**: Slack/Teams 토큰, matterbridge.toml 게이트웨이 설정, 채널 ID
-**backend**: Python 의존성, 포트 8000 충돌, JWT_SECRET_KEY 설정, DB 연결 (SQLite 파일 경로), CORS
+**backend**: Python 의존성, 포트 8000 충돌, JWT_SECRET_KEY 설정, DB 연결, CORS, Provider 연결
 **frontend**: npm 의존성, 포트 5173 충돌, Vite 프록시 → backend:8000
 
 ### 4. 해결 방법
@@ -54,8 +53,10 @@ docker compose -f docker-compose.dev.yml down && docker compose -f docker-compos
 
 ```
 ## 서비스 상태
-✅ matterbridge: 정상
-❌ backend: 중지됨 - [원인]
+✅ backend: 정상
+✅ frontend: 정상
+✅ postgres: 정상
+✅ redis: 정상
 
 ## 해결 방법
 1. [구체적 조치]

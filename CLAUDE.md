@@ -1,12 +1,19 @@
-# VMS Chat Ops - Claude Code 프로젝트 설정
+# v-project - Claude Code 프로젝트 설정
 
 ## 프로젝트 개요
 
-VMS Chat Ops는 **Light-Zowe 아키텍처** 기반 Slack ↔ Microsoft Teams 양방향 메시지 브리지 시스템입니다.
+v-project는 **v-platform**(재사용 가능한 플랫폼 프레임워크)과 **v-channel-bridge**(Slack ↔ Microsoft Teams 양방향 메시지 브리지 앱)로 구성된 시스템입니다.
 
-**핵심 철학**: Zowe Chat의 Common Message Schema, Provider Pattern, Command Processor 개념을 Docker + FastAPI로 직접 구현합니다.
+**핵심 목표**: 인증/RBAC/감사로그 등 범용 기능(v-platform)을 앱 고유 기능(v-channel-bridge)과 분리하여, 플랫폼을 다른 프로젝트에서 재사용 가능하게 함.
 
-### 현재 시스템 상태 (2026-04-05 기준)
+### 아키텍처
+
+| 레이어 | 이름 | 역할 |
+|--------|------|------|
+| **플랫폼** | v-platform | 인증, SSO, RBAC, 사용자 관리, 조직도, 감사로그, UI Kit |
+| **앱** | v-channel-bridge | Slack/Teams 메시지 브리지, 채널 라우팅, 프로바이더 어댑터 |
+
+### 현재 시스템 상태
 
 | 컴포넌트 | 상태 | 비고 |
 |---|---|---|
@@ -16,6 +23,10 @@ VMS Chat Ops는 **Light-Zowe 아키텍처** 기반 Slack ↔ Microsoft Teams 양
 | WebSocket Bridge | ✅ 완성 | 메시지 라우팅, 파일 처리 |
 | Teams Webhook | ✅ 완성 | `POST /api/teams/webhook` |
 | Frontend | ✅ 완성 | Route 관리 UI (양방향 배지 포함) |
+| **Platform/App 분리** | 🔄 진행 중 | Phase 0 (컨텍스트 정비) |
+
+**마이그레이션 계획**: `docusaurus/docs/design/V_PROJECT_MIGRATION_PLAN.md`  
+**분리 아키텍처 설계**: `docusaurus/docs/design/PLATFORM_APP_SEPARATION_ARCHITECTURE.md`
 
 ---
 
@@ -28,19 +39,19 @@ VMS Chat Ops는 **Light-Zowe 아키텍처** 기반 Slack ↔ Microsoft Teams 양
 docker compose up -d --build
 
 # 백엔드만 재빌드
-docker stop vms-chatops-backend && docker rm vms-chatops-backend
-docker build -t vms-chat-ops-backend -f backend/Dockerfile backend/
-docker run -d --name vms-chatops-backend \
-  --network vms-chat-ops_vms-chat-ops-network \
+docker stop v-project-backend && docker rm v-project-backend
+docker build -t v-project-backend -f backend/Dockerfile backend/
+docker run -d --name v-project-backend \
+  --network v-project-network \
   --network-alias backend \
-  -p 8000:8000 -v $(pwd)/backend:/app vms-chat-ops-backend
+  -p 8000:8000 -v $(pwd)/backend:/app v-project-backend
 
 # 프론트엔드만 재빌드
-docker stop vms-chatops-frontend && docker rm vms-chatops-frontend
-docker build -t vms-chat-ops-frontend -f frontend/Dockerfile.dev frontend/
-docker run -d --name vms-chatops-frontend \
-  --network vms-chat-ops_vms-chat-ops-network \
-  -p 5173:5173 -v $(pwd)/frontend:/app -v /app/node_modules vms-chat-ops-frontend
+docker stop v-project-frontend && docker rm v-project-frontend
+docker build -t v-project-frontend -f frontend/Dockerfile.dev frontend/
+docker run -d --name v-project-frontend \
+  --network v-project-network \
+  -p 5173:5173 -v $(pwd)/frontend:/app -v /app/node_modules v-project-frontend
 ```
 
 **이유**: 로컬 Node.js v24 vs Docker v18 버전 불일치, npm 충돌 방지.
@@ -52,7 +63,7 @@ docker run -d --name vms-chatops-frontend \
 - **Backend**: Python 3.11 / FastAPI / Pydantic / Structlog / Uvicorn
 - **Frontend**: React 18 / TypeScript 5 / Vite / Tailwind CSS / Zustand / TanStack Query
 - **Infrastructure**: Docker Compose
-- **Database**: PostgreSQL 16 — `postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops`
+- **Database**: PostgreSQL 16 — `postgresql://vmsuser:vmspassword@postgres:5432/v_project`
 - **Cache/Routing**: Redis 7 — `redis://:redispassword@redis:6379/0`
 - **Mail**: MailHog (개발용)
 - **인증**: JWT (python-jose) / bcrypt
@@ -62,39 +73,51 @@ docker run -d --name vms-chatops-frontend \
 
 ## 프로젝트 구조
 
+### 현재 (모놀리스 — 분리 진행 중)
+
 ```
 backend/
 ├── app/
-│   ├── adapters/              # Provider Pattern
+│   ├── adapters/              # [v-channel-bridge] Provider Pattern
 │   │   ├── base.py            # BasePlatformProvider 인터페이스
 │   │   ├── slack_provider.py  # Slack Socket Mode
 │   │   └── teams_provider.py  # MS Graph API + Bot Framework
-│   ├── api/
-│   │   ├── bridge.py          # 브리지 제어 + Route CRUD
-│   │   ├── teams_webhook.py   # Teams Bot Framework webhook
-│   │   ├── auth.py / users.py / ...
-│   ├── models/                # SQLAlchemy 모델
+│   ├── api/                   # [v-platform] 15개 + [v-channel-bridge] 8개 혼재
+│   ├── models/                # [v-platform] 10개 + [v-channel-bridge] 3개 혼재
+│   ├── services/              # [v-platform] 7개 + [v-channel-bridge] 10개 혼재
 │   ├── schemas/
-│   │   └── common_message.py  # VMS-Message-Schema (CommonMessage)
-│   ├── services/
-│   │   ├── route_manager.py   # Redis 기반 동적 라우팅
-│   │   ├── websocket_bridge.py # 메시지 브로커
-│   │   └── command_processor.py
+│   │   └── common_message.py  # [v-channel-bridge] CommonMessage
 │   └── main.py
-├── tests/
-│   ├── adapters/              # Provider 단위 테스트
-│   └── services/              # Service 단위 테스트
-└── requirements.txt
 
 frontend/
 ├── src/
 │   ├── pages/                 # 8개 페이지
 │   ├── components/
-│   │   ├── channels/          # RouteList, RouteModal
-│   │   ├── ui/                # 디자인 시스템
+│   │   ├── channels/          # [v-channel-bridge] RouteList, RouteModal
+│   │   ├── ui/                # [v-platform] 디자인 시스템
 │   │   └── ...
 │   ├── store/                 # Zustand (bridge.ts, routes.ts, auth.ts)
 │   └── lib/api/               # API 클라이언트
+```
+
+### 목표 (분리 완료 후)
+
+```
+platform/
+├── backend/v_platform/        # Python 패키지: v_platform
+│   ├── core/                  # config, database, security
+│   ├── models/                # 플랫폼 모델 10개
+│   ├── api/                   # 플랫폼 라우터 15개
+│   ├── services/              # 플랫폼 서비스 7개
+│   └── ...
+└── frontend/v-platform-core/  # npm 패키지: @v-platform/core
+    └── src/
+        ├── components/ui/     # 디자인 시스템 17개
+        ├── stores/            # 인증/권한 스토어
+        └── ...
+
+backend/app/                   # v-channel-bridge (앱)
+frontend/src/                  # v-channel-bridge (앱)
 ```
 
 ---
@@ -117,7 +140,7 @@ cd frontend && npm run lint:fix && npm run format
 
 ```bash
 # Backend (Docker 컨테이너에서)
-docker exec vms-chatops-backend python -m pytest tests/ -v
+docker exec v-project-backend python -m pytest tests/ -v
 
 # Frontend
 cd frontend && npx vitest --run
@@ -159,19 +182,22 @@ Teams 채널 ID는 `{teamId}:{channelId}` 형식으로 저장 (`_parse_channel_r
 ## 환경 변수 (.env)
 
 ```bash
+# v-platform (플랫폼)
+DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/v_project
+REDIS_URL=redis://:redispassword@redis:6379/0
+SECRET_KEY=...                   # JWT 서명 키 (32자 이상)
+FRONTEND_URL=http://localhost:5173
+SMTP_HOST=mailhog
+SMTP_PORT=1025
+SMTP_FROM_EMAIL=noreply@v-project.local
+
+# v-channel-bridge (앱)
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_APP_TOKEN=xapp-...         # Socket Mode 필수
 TEAMS_TENANT_ID=...              # Azure Tenant ID
 TEAMS_APP_ID=...                 # Azure Application ID
 TEAMS_APP_PASSWORD=...           # Azure Client Secret
-SECRET_KEY=...                   # JWT 서명 키 (32자 이상)
-DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops
-REDIS_URL=redis://:redispassword@redis:6379/0
-BRIDGE_TYPE=native               # "native" = Light-Zowe 사용
-FRONTEND_URL=http://localhost:5173
-SMTP_HOST=mailhog
-SMTP_PORT=1025
-SMTP_FROM_EMAIL=noreply@vms.local
+BRIDGE_TYPE=native
 ```
 
 **.env 파일은 절대 커밋하지 마세요.**
@@ -216,7 +242,7 @@ Teams Provider 코드는 완성됐지만, 실제 동작을 위해 Azure에서 Bo
 ```
 
 - **type**: feat, fix, docs, style, refactor, test, chore
-- **scope**: backend, frontend, docker, adapters, docs, auth
+- **scope**: v-platform, v-channel-bridge, backend, frontend, docker, docs, migration
 
 ---
 
@@ -259,5 +285,5 @@ Teams Provider 코드는 완성됐지만, 실제 동작을 위해 Azure에서 Bo
 
 ---
 
-**문서 버전**: 3.0 (Light-Zowe 완성)
-**최종 업데이트**: 2026-04-05
+**문서 버전**: 4.0 (v-project — Platform/App 분리 시작)
+**최종 업데이트**: 2026-04-11

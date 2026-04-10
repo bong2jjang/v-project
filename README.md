@@ -1,10 +1,17 @@
-# VMS Chat Ops - Slack & Teams 메시지 브리지
+# v-project — v-platform + v-channel-bridge
 
-**Light-Zowe 아키텍처** 기반으로 Slack과 Microsoft Teams 간 실시간 메시지를 양방향으로 브리징하는 서비스입니다.
+**v-platform**(재사용 가능한 플랫폼 프레임워크) + **v-channel-bridge**(Slack ↔ Teams 메시지 브리지 앱) 구조의 시스템입니다.
+
+## 아키텍처
+
+| 레이어 | 이름 | 역할 |
+|--------|------|------|
+| **플랫폼** | v-platform | 인증, SSO, RBAC, 사용자 관리, 조직도, 감사로그, UI Kit |
+| **앱** | v-channel-bridge | Slack/Teams 메시지 브리지, 채널 라우팅, 프로바이더 어댑터 |
 
 ## 주요 기능
 
-### 메시지 브리지
+### 메시지 브리지 (v-channel-bridge)
 - **양방향/단방향 라우팅**: Route 1개로 양방향 또는 단방향 설정
 - **파일 첨부 지원**: 이미지 및 파일 포함 메시지 전달
 - **발신자 정보 표시**: 각 플랫폼에서 원본 발신자 이름 표시
@@ -20,10 +27,11 @@
 - **계정 관리**: 플랫폼 인증 정보 관리
 - **다크모드**: CSS 변수 기반 테마 지원
 
-### 인증 및 보안
+### 인증 및 보안 (v-platform)
 - **JWT 인증**: 토큰 기반 인증 시스템
-- **역할 기반 접근 제어**: 관리자(admin) / 일반 사용자(user)
+- **역할 기반 접근 제어**: RBAC + 메뉴 기반 권한
 - **감사 로그**: 주요 작업 자동 기록
+- **SSO**: Microsoft OAuth 등 SSO 지원
 
 ---
 
@@ -39,7 +47,7 @@
 ## 프로젝트 구조
 
 ```
-vms-chat-ops/
+v-project/
 ├── backend/                    # Python + FastAPI
 │   ├── app/
 │   │   ├── adapters/          # Provider Pattern (Slack, Teams)
@@ -54,7 +62,7 @@ vms-chat-ops/
 │       ├── pages/             # 8개 페이지
 │       └── store/             # Zustand 상태 관리
 ├── docusaurus/                 # 문서 사이트
-├── docker-compose.dev.yml      # 개발 환경
+├── docker-compose.yml          # 기본 환경
 ├── docker-compose.prod.yml     # 프로덕션
 ├── docker-compose.debug.yml    # 디버깅
 └── .env.example                # 환경 변수 템플릿
@@ -85,7 +93,7 @@ TEAMS_APP_PASSWORD=your-azure-client-secret
 # 보안
 SECRET_KEY=your-strong-random-secret-key-32chars-min
 
-# 브리지 타입 (Light-Zowe 자체 구현 사용)
+# 브리지 타입
 BRIDGE_TYPE=native
 ```
 
@@ -111,10 +119,10 @@ BRIDGE_TYPE=native
 
 ```bash
 # 개발 환경 (hot-reload)
-docker compose -f docker-compose.dev.yml up -d --build
+docker compose up -d --build
 
 # 로그 확인
-docker compose -f docker-compose.dev.yml logs -f backend
+docker compose logs -f backend
 ```
 
 ### 5. 웹 UI 접속
@@ -147,7 +155,7 @@ Teams 채널 ID 형식: `{teamId}:{channelId}` (예: `TEAM123:19:abc@thread.tacv
 
 ```bash
 # 컨테이너 상태
-docker compose -f docker-compose.dev.yml ps
+docker compose ps
 
 # Backend 헬스체크
 curl http://localhost:8000/api/health
@@ -156,23 +164,16 @@ curl http://localhost:8000/api/health
 curl http://localhost:8000/api/bridge/status
 ```
 
-### 로그 확인
-
-```bash
-docker compose -f docker-compose.dev.yml logs -f backend
-docker compose -f docker-compose.dev.yml logs -f frontend
-```
-
 ### Redis 라우팅 룰 확인
 
 ```bash
-docker exec vms-chatops-redis redis-cli -a redispassword KEYS "route:*"
+docker exec v-project-redis redis-cli -a redispassword KEYS "route:*"
 ```
 
 ### DB 백업
 
 ```bash
-docker exec vms-chatops-postgres pg_dump -U vmsuser vms_chat_ops > backup-$(date +%Y%m%d).sql
+docker exec v-project-postgres pg_dump -U vmsuser v_project > backup-$(date +%Y%m%d).sql
 ```
 
 ---
@@ -183,54 +184,6 @@ docker exec vms-chatops-postgres pg_dump -U vmsuser vms_chat_ops > backup-$(date
 - `SECRET_KEY`는 최소 32자 이상의 랜덤 값 사용
 - 프로덕션에서는 HTTPS 사용
 - Azure Client Secret은 주기적으로 갱신
-
----
-
-## 문제 해결
-
-### 메시지가 전달되지 않음
-
-```bash
-# 1. Provider 상태 확인
-curl http://localhost:8000/api/bridge/status
-
-# 2. Route 설정 확인 (Redis)
-docker exec vms-chatops-redis redis-cli -a redispassword KEYS "route:*"
-
-# 3. 백엔드 로그 확인
-docker compose -f docker-compose.dev.yml logs -f backend | grep -i "error\|failed"
-```
-
-### Slack Bot이 응답하지 않음
-
-- Slack App에서 **Socket Mode**가 활성화되어 있는지 확인
-- `SLACK_APP_TOKEN`이 App-Level Token (`xapp-` 시작)인지 확인
-- Bot이 해당 채널에 초대되어 있는지 확인
-
-### Teams Webhook 오류
-
-- Azure Bot의 Messaging Endpoint URL이 정확한지 확인
-- `TEAMS_APP_ID` / `TEAMS_APP_PASSWORD`가 올바른지 확인
-- Azure App의 API 권한 (`ChannelMessage.Send` 등) 부여 여부 확인
-
----
-
-## 버전 히스토리
-
-### v2.0.0 (2026-04-05)
-- Light-Zowe 아키텍처 완성 (자체 Provider 기반 브리지)
-- Slack Provider: Socket Mode, 양방향 라우팅, 발신자 이름 수정
-- Teams Provider: MS Graph API, Bot Framework Webhook, 파일 업로드
-- Route Manager: 양방향/단방향 라우팅, Redis 기반 동적 관리
-- Frontend: Route 관리 UI (양방향 배지, 메시지 모드 배지)
-
-### v1.1.0 (2026-03-22)
-- JWT 인증 시스템
-- 사용자 관리 및 역할 기반 접근 제어
-- 감사 로그 시스템
-
-### v1.0.0 (2026-03-20)
-- 초기 릴리스 (Matterbridge 기반)
 
 ---
 

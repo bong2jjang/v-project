@@ -2,7 +2,7 @@
 
 특정 Provider의 단위 테스트를 실행하고 CommonMessage 변환을 검증합니다.
 
-**참고**: Light-Zowe 아키텍처 Provider 개발 시 지속적인 검증을 위한 명령어입니다.
+**참고**: v-channel-bridge Provider 개발 시 지속적인 검증을 위한 명령어입니다.
 
 ## 사용법
 
@@ -167,7 +167,7 @@ TEAMS_APP_ID=test-app-id
 TEAMS_APP_PASSWORD=test-password
 TEAMS_TENANT_ID=test-tenant-id
 SECRET_KEY=test-secret-key
-DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops_test
+DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/v_project_test
 REDIS_URL=redis://:redispassword@redis:6379/1
 EOF
 
@@ -409,31 +409,7 @@ jobs:
 ## 관련 명령어
 
 - `/provider-health` - Provider 연결 상태 확인
-- `/migration_status` - 마이그레이션 진행 상황
+- `/migration_status` - 시스템 상태 확인
 - `/deploy-check` - 배포 전 체크리스트
 - `/enforce_standards` - 코드 표준 강제 적용
 
-## 마이그레이션 단계별 테스트
-
-### Week 1: Common Schema 테스트
-```bash
-cd backend && pytest tests/schemas/test_common_message.py -v
-```
-
-### Week 2: Slack Provider 테스트
-```bash
-cd backend && pytest tests/providers/test_slack_provider.py -v
-/test-provider slack
-```
-
-### Week 3: Teams Provider 테스트
-```bash
-cd backend && pytest tests/providers/test_teams_provider.py -v
-/test-provider teams
-```
-
-### Week 4: 통합 테스트
-```bash
-cd backend && pytest tests/integration/ -v
-/test-provider all
-```

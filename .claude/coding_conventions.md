@@ -1,8 +1,8 @@
-# VMS Chat Ops 코딩 컨벤션
+# v-project 코딩 컨벤션
 
-이 문서는 VMS Chat Ops 프로젝트의 코딩 표준을 정의합니다.
+이 문서는 v-project(v-platform + v-channel-bridge)의 코딩 표준을 정의합니다.
 
-**참고**: 이 프로젝트는 **Light-Zowe 아키텍처**로 마이그레이션 중입니다. Provider Pattern 및 Common Schema 관련 규칙을 반드시 준수하세요.
+**참고**: Provider Pattern 및 Common Schema 관련 규칙을 반드시 준수하세요.
 
 ## Python 백엔드 (FastAPI)
 
@@ -224,9 +224,9 @@ const MyPage = () => (
 
 ---
 
-## Light-Zowe 아키텍처 규칙
+## v-channel-bridge 아키텍처 규칙
 
-### Provider Pattern (플랫폼 어댑터)
+### Provider Pattern (메시징 플랫폼 어댑터)
 
 모든 메시징 플랫폼 (Slack, Teams 등)은 `BasePlatformProvider` 인터페이스를 구현해야 합니다.
 

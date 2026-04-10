@@ -2,7 +2,7 @@
 
 Slack ↔ Teams 메시지 동기화 상태를 확인합니다.
 
-**참고**: Light-Zowe 마이그레이션 상태에 따라 확인 내용이 달라집니다.
+**참고**: v-channel-bridge의 Native Bridge 상태를 확인합니다.
 
 ## 사용법
 
@@ -18,26 +18,17 @@ Slack ↔ Teams 메시지 동기화 상태를 확인합니다.
 # .env 파일에서 BRIDGE_TYPE 확인
 grep BRIDGE_TYPE .env
 
-# matterbridge (마이그레이션 전) 또는 native (마이그레이션 후)
+# native (v-channel-bridge)
 ```
 
 ### 2. 서비스 상태 확인
-
-#### 마이그레이션 전 (Matterbridge 사용)
-
-```bash
-docker compose -f docker-compose.dev.yml ps matterbridge
-docker compose -f docker-compose.dev.yml logs --tail=100 matterbridge
-```
-
-#### 마이그레이션 후 (Native Bridge 사용)
 
 ```bash
 docker compose -f docker-compose.dev.yml ps backend
 docker compose -f docker-compose.dev.yml logs --tail=100 backend | grep -i "provider\|bridge"
 ```
 
-### 3. Provider 연결 상태 확인 (마이그레이션 후)
+### 3. Provider 연결 상태 확인
 
 ```bash
 # Slack Provider 상태
@@ -56,14 +47,14 @@ docker compose -f docker-compose.dev.yml exec redis redis-cli ping
 # 헬스체크
 curl -s http://localhost:8000/api/health
 
-# 브리지 상태 (마이그레이션 후)
+# 브리지 상태
 curl -s http://localhost:8000/api/bridge/status
 
 # 채널 매핑 상태 (인증 필요 시 토큰 포함)
 curl -s http://localhost:8000/api/channels
 ```
 
-### 5. 라우팅 룰 확인 (마이그레이션 후)
+### 5. 라우팅 룰 확인
 
 ```bash
 # Redis에 저장된 라우팅 룰 확인
@@ -72,35 +63,11 @@ docker compose -f docker-compose.dev.yml exec redis redis-cli --scan --pattern "
 
 ## 출력 형식
 
-### 마이그레이션 전
-
 ```
-## 메시지 브리지 동기화 상태
+## 메시지 브리지 동기화 상태 (v-channel-bridge)
 
 ### 브리지 타입
-Matterbridge (마이그레이션 전)
-
-### 서비스
-- Matterbridge: ✅ 실행 중 / ❌ 중지됨
-- Backend API: ✅ 정상 / ❌ 비정상
-
-### 게이트웨이 연결
-- Slack: ✅ 연결됨 / ❌ 연결 실패 - [원인]
-- Teams: ✅ 연결됨 / ❌ 연결 실패 - [원인]
-
-### 채널 매핑
-| Slack 채널 | Teams 채널 | 상태 |
-|-----------|-----------|------|
-| #general  | General   | ✅   |
-```
-
-### 마이그레이션 후
-
-```
-## 메시지 브리지 동기화 상태
-
-### 브리지 타입
-Native (Light-Zowe 아키텍처)
+Native
 
 ### 서비스
 - Backend (Providers): ✅ 실행 중 / ❌ 중지됨
@@ -123,13 +90,6 @@ Native (Light-Zowe 아키텍처)
 ```
 
 ## 일반적인 문제
-
-### Matterbridge (마이그레이션 전)
-- **"Token expired"**: .env에서 Slack Bot Token 갱신 후 `docker compose -f docker-compose.dev.yml restart matterbridge`
-- **"Channel not found"**: matterbridge.toml의 채널 ID 확인
-- **"Connection refused"**: 네트워크 및 방화벽 확인
-
-### Native Bridge (마이그레이션 후)
 - **"Slack Socket Mode 연결 실패"**: SLACK_APP_TOKEN 확인, Socket Mode 활성화 여부 확인
 - **"Teams Provider 인증 실패"**: TEAMS_APP_ID, TEAMS_APP_PASSWORD, TEAMS_TENANT_ID 확인
 - **"Redis 연결 실패"**: Redis 컨테이너 상태 확인, REDIS_URL 확인
@@ -154,9 +114,3 @@ docker compose -f docker-compose.dev.yml logs -f backend
 docker compose -f docker-compose.dev.yml exec redis redis-cli --scan --pattern "route:*" | xargs -I {} docker compose -f docker-compose.dev.yml exec redis redis-cli SMEMBERS {}
 ```
 
-### 마이그레이션 상태 확인
-
-```bash
-# 마이그레이션 진행 상황 확인
-/migration-status
-```

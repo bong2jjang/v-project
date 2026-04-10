@@ -1,6 +1,6 @@
 # 문서 저장 규칙
 
-VMS Chat Ops 프로젝트의 모든 문서는 Docusaurus 기반으로 관리합니다.
+v-project의 모든 문서는 Docusaurus 기반으로 관리합니다.
 
 > **최종 업데이트**: 2026-04-08 · **버전**: 2.0
 
@@ -80,7 +80,7 @@ tags: [{태그1}, {태그2}, ...]
 
 | 태그 | 용도 |
 |------|------|
-| `light-zowe` | Light-Zowe 아키텍처 관련 |
+| `v-platform` | 플랫폼 분리 관련 |
 | `provider` | Slack/Teams Provider 개발 |
 | `frontend` | 프론트엔드 UI/UX 작업 |
 | `backend` | 백엔드 API/서비스 작업 |

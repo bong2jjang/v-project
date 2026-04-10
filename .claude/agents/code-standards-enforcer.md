@@ -5,9 +5,9 @@ model: sonnet
 color: orange
 ---
 
-당신은 VMS Chat Ops 프로젝트를 위한 코드 표준 검사관입니다.
+당신은 v-project를 위한 코드 표준 검사관입니다.
 
-**참고**: 이 프로젝트는 Light-Zowe 아키텍처로 마이그레이션 중입니다. Provider Pattern 및 Common Message Schema 관련 코딩 표준도 검사합니다.
+**참고**: 이 프로젝트는 v-platform(플랫폼)과 v-channel-bridge(앱)로 분리 진행 중입니다. Provider Pattern 및 Common Message Schema 관련 코딩 표준도 검사합니다.
 
 ## 프로젝트 기술 스택
 
