@@ -249,9 +249,20 @@ export default function NotificationManagement() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
-                              <Badge variant={n.is_active ? "success" : "default"}>
+                              <button
+                                onClick={async () => {
+                                  await updateNotification(n.id, { is_active: !n.is_active });
+                                  loadData();
+                                }}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full cursor-pointer transition-colors ${
+                                  n.is_active
+                                    ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400"
+                                }`}
+                                title={n.is_active ? "클릭하여 비활성화" : "클릭하여 활성화"}
+                              >
                                 {n.is_active ? "활성" : "비활성"}
-                              </Badge>
+                              </button>
                               {n.is_system && (
                                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                                   SYSTEM
