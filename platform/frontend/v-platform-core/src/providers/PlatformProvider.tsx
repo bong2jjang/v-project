@@ -21,10 +21,12 @@ export interface PlatformConfig {
   apiBaseUrl?: string;
   /** Application identifier */
   appName: string;
-  /** Display title shown on Login/Register pages (default: appName) */
+  /** Display title shown on TopBar, Login/Register pages (default: appName) */
   appTitle?: string;
   /** Short description shown on Login page (default: "") */
   appDescription?: string;
+  /** Logo icon as React node (default: built-in V icon) */
+  appLogo?: React.ReactNode;
   /** Feature toggles */
   features?: {
     sso?: boolean;

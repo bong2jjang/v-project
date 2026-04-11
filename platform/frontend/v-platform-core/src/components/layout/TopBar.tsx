@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { BookOpen, Activity, Database, Zap, Server, Wifi } from "lucide-react";
 import { StatusDetailPopup, ServiceStatus } from "../common";
 import { Badge } from "../ui/Badge";
+import { usePlatformConfig } from "../../providers/PlatformProvider";
 import { useRealtimeStatus } from "../../hooks/useRealtimeStatus";
 import { useTheme } from "../../hooks/useTheme";
 import { useSidebar } from "../../hooks/useSidebar";
@@ -41,8 +42,8 @@ const INITIAL_SERVICES: Omit<ServiceStatus, "status">[] = [
     icon: <Wifi className="w-5 h-5" />,
   },
   {
-    name: "Message Bridge",
-    description: "메시지 브리지 (Slack ↔ Teams)",
+    name: "App Service",
+    description: "앱 서비스",
     icon: <Server className="w-5 h-5" />,
   },
   {
@@ -64,6 +65,7 @@ const INITIAL_SERVICES: Omit<ServiceStatus, "status">[] = [
 
 export function TopBar() {
   const navigate = useNavigate();
+  const { appTitle } = usePlatformConfig();
   const { user } = useAuthStore();
   const { menus } = usePermissionStore();
   const { theme, setTheme } = useTheme();
@@ -317,7 +319,7 @@ export function TopBar() {
                 </svg>
               </div>
               <span className="text-body-sm font-semibold text-content-primary">
-                VMS Chat Ops
+                {appTitle || "v-platform"}
               </span>
             </button>
           </div>
