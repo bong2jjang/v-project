@@ -113,25 +113,29 @@ async def set_user_permissions(
 
 @router.get("/matrix")
 async def get_permission_matrix(
+    request: Request,
     current_user: User = Depends(require_admin_or_above()),
     db: Session = Depends(get_db_session),
 ):
     """전체 사용자×메뉴 권한 매트릭스 (개인 권한만)"""
     from v_platform.services.permission_service import PermissionService
 
-    matrix = PermissionService.get_permission_matrix(db, current_user)
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    matrix = PermissionService.get_permission_matrix(db, current_user, app_id=app_id)
     return matrix
 
 
 @router.get("/effective-matrix")
 async def get_effective_matrix(
+    request: Request,
     current_user: User = Depends(require_admin_or_above()),
     db: Session = Depends(get_db_session),
 ):
     """유효 권한 매트릭스 (그룹+개인 통합, source 포함)"""
     from v_platform.services.permission_service import PermissionService
 
-    return PermissionService.get_effective_matrix(db, current_user)
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    return PermissionService.get_effective_matrix(db, current_user, app_id=app_id)
 
 
 @router.get("/by-menu/{menu_item_id}")
@@ -233,6 +237,7 @@ class BulkGroupAssignRequest(BaseModel):
 
 @router.put("/bulk/by-group/{group_id}")
 async def bulk_assign_group(
+    request: Request,
     group_id: int,
     req: BulkGroupAssignRequest,
     current_user: User = Depends(require_admin_or_above()),
@@ -241,8 +246,9 @@ async def bulk_assign_group(
     """그룹 템플릿을 여러 사용자에게 일괄 적용"""
     from v_platform.services.permission_service import PermissionService
 
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     try:
-        PermissionService.apply_group_template(db, group_id, req.user_ids, current_user)
+        PermissionService.apply_group_template(db, group_id, req.user_ids, current_user, app_id=app_id)
         return {
             "message": "그룹 일괄 할당 완료",
             "group_id": group_id,

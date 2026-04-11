@@ -310,6 +310,7 @@ class PermissionService:
     def get_permission_matrix(
         db: Session,
         requester: User,
+        app_id: str | None = None,
     ) -> dict:
         """
         전체 권한 매트릭스 조회
@@ -322,9 +323,10 @@ class PermissionService:
                 ]
             }
         """
+        app_filter = or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
         menus = (
             db.query(MenuItem)
-            .filter(MenuItem.is_active.is_(True))
+            .filter(MenuItem.is_active.is_(True), app_filter)
             .order_by(MenuItem.sort_order)
             .all()
         )
@@ -567,7 +569,7 @@ class PermissionService:
         return result
 
     @staticmethod
-    def get_effective_matrix(db: Session, requester: User) -> dict:
+    def get_effective_matrix(db: Session, requester: User, app_id: str | None = None) -> dict:
         """
         유효 권한 매트릭스 (그룹+개인 통합) — 각 셀에 source 포함
 
@@ -584,9 +586,10 @@ class PermissionService:
                 }]
             }
         """
+        app_filter = or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
         menus = (
             db.query(MenuItem)
-            .filter(MenuItem.is_active.is_(True))
+            .filter(MenuItem.is_active.is_(True), app_filter)
             .order_by(MenuItem.sort_order)
             .all()
         )
@@ -656,9 +659,17 @@ class PermissionService:
         group_id: int,
         user_ids: list[int],
         current_user: User,
+        app_id: str | None = None,
     ) -> None:
         """그룹 소속에 사용자 일괄 추가"""
-        group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
+        group = (
+            db.query(PermissionGroup)
+            .filter(
+                PermissionGroup.id == group_id,
+                or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+            )
+            .first()
+        )
         if not group:
             raise ValueError("권한 그룹을 찾을 수 없습니다")
 

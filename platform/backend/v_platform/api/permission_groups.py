@@ -7,8 +7,9 @@ Permission Group Management API
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from v_platform.core.database import get_db_session
@@ -115,13 +116,16 @@ def _group_to_response(group: PermissionGroup, db: Session) -> dict:
 
 @router.get("", response_model=list[GroupResponse])
 async def list_groups(
+    request: Request,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_admin_or_above()),
 ):
     """권한 그룹 목록 (grants 포함)"""
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     groups = (
         db.query(PermissionGroup)
         .options(joinedload(PermissionGroup.grants))
+        .filter(or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id))
         .order_by(PermissionGroup.is_default.desc(), PermissionGroup.name)
         .all()
     )
@@ -138,15 +142,20 @@ async def list_groups(
 
 @router.get("/{group_id}", response_model=GroupResponse)
 async def get_group(
+    request: Request,
     group_id: int,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_admin_or_above()),
 ):
     """특정 권한 그룹 조회"""
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     group = (
         db.query(PermissionGroup)
         .options(joinedload(PermissionGroup.grants))
-        .filter(PermissionGroup.id == group_id)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
         .first()
     )
     if not group:
@@ -156,11 +165,13 @@ async def get_group(
 
 @router.post("", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
 async def create_group(
+    request: Request,
     data: GroupCreate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_system_admin()),
 ):
     """커스텀 그룹 생성 (system_admin 전용)"""
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     if db.query(PermissionGroup).filter(PermissionGroup.name == data.name).first():
         raise HTTPException(400, "동일한 이름의 그룹이 이미 존재합니다")
 
@@ -168,6 +179,7 @@ async def create_group(
         name=data.name,
         description=data.description,
         is_default=False,
+        app_id=app_id,
         created_by=current_user.id,
     )
     db.add(group)
@@ -178,13 +190,22 @@ async def create_group(
 
 @router.put("/{group_id}", response_model=GroupResponse)
 async def update_group(
+    request: Request,
     group_id: int,
     data: GroupUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_system_admin()),
 ):
     """그룹 수정 (is_default=true면 403)"""
-    group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    group = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
+        .first()
+    )
     if not group:
         raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
     if group.is_default:
@@ -202,12 +223,21 @@ async def update_group(
 
 @router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_group(
+    request: Request,
     group_id: int,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_system_admin()),
 ):
     """그룹 삭제 (is_default=true면 403)"""
-    group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    group = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
+        .first()
+    )
     if not group:
         raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
     if group.is_default:
@@ -219,13 +249,22 @@ async def delete_group(
 
 @router.put("/{group_id}/grants")
 async def set_group_grants(
+    request: Request,
     group_id: int,
     req: SetGrantsRequest,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_system_admin()),
 ):
     """그룹 메뉴 권한 일괄 설정 (system_admin은 디폴트 그룹도 수정 가능)"""
-    group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    group = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
+        .first()
+    )
     if not group:
         raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
 
@@ -252,12 +291,21 @@ async def set_group_grants(
 
 @router.get("/{group_id}/members")
 async def get_group_members(
+    request: Request,
     group_id: int,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(require_admin_or_above()),
 ):
     """그룹 소속 사용자 목록"""
-    group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    group = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
+        .first()
+    )
     if not group:
         raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
 

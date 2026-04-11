@@ -26,6 +26,7 @@ class PermissionGroup(Base):
     description = Column(String(500), nullable=True)
     is_default = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    app_id = Column(String(50), nullable=True, index=True)  # NULL = platform common
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
