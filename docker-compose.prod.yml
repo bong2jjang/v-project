@@ -125,7 +125,7 @@ services:
       dockerfile: Dockerfile
       args:
         - ENV=production
-    container_name: v-project-backend
+    container_name: v-channel-bridge-backend
     restart: always
     expose:
       - "8000"
@@ -182,7 +182,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=
-    container_name: v-project-frontend
+    container_name: v-channel-bridge-frontend
     restart: always
     expose:
       - "80"

@@ -48,10 +48,10 @@ Grep: "@router\.(get|post|put|delete)" --multiline
 **예시**:
 ```bash
 # Backend 에러 로그 확인
-Bash: docker logs v-project-backend --tail 100 | grep -i error
+Bash: docker logs v-channel-bridge-backend --tail 100 | grep -i error
 
 # Frontend 빌드 경고 확인
-Bash: docker logs v-project-frontend --tail 50 | grep -i warn
+Bash: docker logs v-channel-bridge-frontend --tail 50 | grep -i warn
 ```
 
 ### 4. 빠른 파일 읽기

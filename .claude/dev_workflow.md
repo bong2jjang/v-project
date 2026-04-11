@@ -37,7 +37,7 @@ docker compose -f docker-compose.dev.yml restart backend
 
 ```bash
 # Backend 컨테이너에 접속
-docker exec -it v-project-backend bash
+docker exec -it v-channel-bridge-backend bash
 
 # Redis CLI
 docker exec -it v-project-redis redis-cli -a redispassword
@@ -66,14 +66,14 @@ cd apps/v-channel-bridge/backend && python -m mypy app/
 
 ```bash
 # Docker 컨테이너에서 실행 (권장)
-docker exec v-project-backend python -m pytest tests/ -v
+docker exec v-channel-bridge-backend python -m pytest tests/ -v
 
 # 특정 테스트
-docker exec v-project-backend python -m pytest tests/adapters/test_slack_provider.py -v
-docker exec v-project-backend python -m pytest tests/services/test_route_manager.py -v
+docker exec v-channel-bridge-backend python -m pytest tests/adapters/test_slack_provider.py -v
+docker exec v-channel-bridge-backend python -m pytest tests/services/test_route_manager.py -v
 
 # 커버리지
-docker exec v-project-backend python -m pytest tests/ --cov=app --cov-report=html
+docker exec v-channel-bridge-backend python -m pytest tests/ --cov=app --cov-report=html
 ```
 
 ### 디버깅 (VSCode)
@@ -209,7 +209,7 @@ docker compose -f docker-compose.dev.yml logs -f backend | grep -i teams
 
 1. 코드 수정
 2. Lint/Format 실행
-3. 테스트 실행 (`docker exec v-project-backend python -m pytest tests/ -v`)
+3. 테스트 실행 (`docker exec v-channel-bridge-backend python -m pytest tests/ -v`)
 4. `git add` + `git commit`
 5. 사용자에게 완료 보고 (commit hash 포함)
 6. **`git push`는 사용자가 명시적으로 요청할 때만**
@@ -222,7 +222,7 @@ docker compose -f docker-compose.dev.yml logs -f backend | grep -i teams
 
 ```bash
 # 1. 전체 테스트 통과 확인
-docker exec v-project-backend python -m pytest tests/ -v
+docker exec v-channel-bridge-backend python -m pytest tests/ -v
 
 # 2. 환경 변수 검증
 /deploy-check

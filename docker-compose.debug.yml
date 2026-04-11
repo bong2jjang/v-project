@@ -12,7 +12,7 @@ services:
     build:
       context: ./apps/v-channel-bridge/backend
       dockerfile: Dockerfile.dev
-    container_name: v-project-backend-debug
+    container_name: v-channel-bridge-backend-debug
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -42,7 +42,7 @@ services:
     build:
       context: ./apps/v-channel-bridge/frontend
       dockerfile: Dockerfile.dev
-    container_name: v-project-frontend-debug
+    container_name: v-channel-bridge-frontend-debug
     restart: unless-stopped
     ports:
       - "3000:3000"

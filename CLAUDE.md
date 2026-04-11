@@ -39,19 +39,19 @@ v-project는 **v-platform**(재사용 가능한 플랫폼 프레임워크)과 **
 docker compose up -d --build
 
 # 백엔드만 재빌드
-docker stop v-project-backend && docker rm v-project-backend
-docker build -t v-project-backend -f apps/v-channel-bridge/backend/Dockerfile apps/v-channel-bridge/backend/
-docker run -d --name v-project-backend \
+docker stop v-channel-bridge-backend && docker rm v-channel-bridge-backend
+docker build -t v-channel-bridge-backend -f apps/v-channel-bridge/backend/Dockerfile apps/v-channel-bridge/backend/
+docker run -d --name v-channel-bridge-backend \
   --network v-project-network \
   --network-alias backend \
-  -p 8000:8000 -v $(pwd)/apps/v-channel-bridge/backend:/app v-project-backend
+  -p 8000:8000 -v $(pwd)/apps/v-channel-bridge/backend:/app v-channel-bridge-backend
 
 # 프론트엔드만 재빌드
-docker stop v-project-frontend && docker rm v-project-frontend
-docker build -t v-project-frontend -f apps/v-channel-bridge/frontend/Dockerfile.dev apps/v-channel-bridge/frontend/
-docker run -d --name v-project-frontend \
+docker stop v-channel-bridge-frontend && docker rm v-channel-bridge-frontend
+docker build -t v-channel-bridge-frontend -f apps/v-channel-bridge/frontend/Dockerfile.dev apps/v-channel-bridge/frontend/
+docker run -d --name v-channel-bridge-frontend \
   --network v-project-network \
-  -p 5173:5173 -v $(pwd)/apps/v-channel-bridge/frontend:/app -v /app/node_modules v-project-frontend
+  -p 5173:5173 -v $(pwd)/apps/v-channel-bridge/frontend:/app -v /app/node_modules v-channel-bridge-frontend
 ```
 
 **이유**: 로컬 Node.js v24 vs Docker v18 버전 불일치, npm 충돌 방지.
@@ -132,7 +132,7 @@ cd apps/v-channel-bridge/frontend && npm run lint:fix && npm run format
 
 ```bash
 # Backend (Docker 컨테이너에서)
-docker exec v-project-backend python -m pytest tests/ -v
+docker exec v-channel-bridge-backend python -m pytest tests/ -v
 
 # Frontend
 cd apps/v-channel-bridge/frontend && npx vitest --run

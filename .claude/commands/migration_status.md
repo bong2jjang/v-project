@@ -43,7 +43,7 @@ docker exec v-project-redis redis-cli -a redispassword --scan --pattern "route:*
 ## 테스트 상태
 
 ```bash
-docker exec v-project-backend python -m pytest tests/ -q 2>/dev/null | tail -5
+docker exec v-channel-bridge-backend python -m pytest tests/ -q 2>/dev/null | tail -5
 ```
 
 ## 컴포넌트 상태 요약
