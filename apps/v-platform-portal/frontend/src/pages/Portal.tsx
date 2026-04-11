@@ -1,13 +1,24 @@
 /**
  * Portal — 앱 런처 + 시스템 상태 + 사이트맵
+ *
+ * 플랫폼 디자인 시스템 준수:
+ * - ContentHeader + page-container + space-y-section-gap
+ * - Skeleton 로딩 패턴
+ * - Card/Badge/Table 컴포넌트 사용
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Rocket, Activity, CheckCircle, XCircle, AlertCircle, Clock,
   ExternalLink, RefreshCw, Map, LayoutDashboard, Server,
   MessageSquare, Ticket, Settings, ChevronRight,
 } from "lucide-react";
+import { ContentHeader } from "../components/layout/ContentHeader";
+import { Card, CardHeader, CardTitle, CardBody } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Skeleton, SkeletonCard } from "../components/ui/Skeleton";
+import { EmptyState } from "../components/ui/EmptyState";
 import type { PortalApp, AppHealth, SitemapEntry } from "../lib/api/portal";
 import { getApps, getAllHealth, getSitemap } from "../lib/api/portal";
 
@@ -21,24 +32,12 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "healthy" || status === "online") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-        <CheckCircle className="w-3 h-3" /> Online
-      </span>
-    );
+    return <Badge variant="success">Online</Badge>;
   }
   if (status === "degraded") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-        <AlertCircle className="w-3 h-3" /> Degraded
-      </span>
-    );
+    return <Badge variant="warning">Degraded</Badge>;
   }
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-      <XCircle className="w-3 h-3" /> Offline
-    </span>
-  );
+  return <Badge variant="danger">Offline</Badge>;
 }
 
 function AppCard({
@@ -51,7 +50,6 @@ function AppCard({
   token: string | null;
 }) {
   const handleClick = () => {
-    // Token Relay: 포탈 토큰을 URL 파라미터로 전달
     const url = token
       ? `${app.frontend_url}?auth_token=${encodeURIComponent(token)}`
       : app.frontend_url;
@@ -59,30 +57,56 @@ function AppCard({
   };
 
   return (
-    <button
-      onClick={handleClick}
-      className="flex flex-col p-6 rounded-xl border border-line bg-surface-card hover:bg-surface-hover hover:border-brand-300 transition-all text-left group cursor-pointer"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
-          {ICON_MAP[app.icon] || <Server className="w-6 h-6" />}
+    <Card className="hover:border-brand-300 transition-all cursor-pointer group" onClick={handleClick}>
+      <CardBody>
+        <div className="flex items-start justify-between mb-4">
+          <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 group-hover:bg-brand-100 transition-colors">
+            {ICON_MAP[app.icon] || <Server className="w-6 h-6" />}
+          </div>
+          <div className="flex items-center gap-2">
+            {health && <StatusBadge status={health.status} />}
+            <ExternalLink className="w-4 h-4 text-content-tertiary group-hover:text-brand-500 transition-colors" />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {health && <StatusBadge status={health.status} />}
-          <ExternalLink className="w-4 h-4 text-content-tertiary group-hover:text-brand-500 transition-colors" />
+        <h3 className="text-lg font-semibold text-content-primary mb-1">
+          {app.display_name}
+        </h3>
+        <p className="text-sm text-content-secondary">{app.description}</p>
+        {health?.response_time_ms && (
+          <div className="mt-3 flex items-center gap-1 text-xs text-content-tertiary">
+            <Clock className="w-3 h-3" />
+            {health.response_time_ms.toFixed(0)}ms
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-section-gap">
+      {/* 앱 카드 스켈레톤 */}
+      <div>
+        <Skeleton className="h-6 w-20 mb-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       </div>
-      <h3 className="text-lg font-semibold text-content-primary mb-1">
-        {app.display_name}
-      </h3>
-      <p className="text-sm text-content-secondary flex-1">{app.description}</p>
-      {health?.response_time_ms && (
-        <div className="mt-3 flex items-center gap-1 text-xs text-content-tertiary">
-          <Clock className="w-3 h-3" />
-          {health.response_time_ms.toFixed(0)}ms
-        </div>
-      )}
-    </button>
+      {/* 시스템 상태 스켈레톤 */}
+      <div>
+        <Skeleton className="h-6 w-32 mb-4" />
+        <Card>
+          <CardBody>
+            <Skeleton className="h-8 w-full mb-2" />
+            <Skeleton className="h-8 w-full mb-2" />
+            <Skeleton className="h-8 w-full" />
+          </CardBody>
+        </Card>
+      </div>
+    </div>
   );
 }
 
@@ -95,7 +119,7 @@ export default function Portal() {
 
   const token = localStorage.getItem("access_token");
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [appsData, healthData, sitemapData] = await Promise.all([
         getApps(),
@@ -111,13 +135,13 @@ export default function Portal() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 30000); // 30초마다 갱신
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -132,175 +156,129 @@ export default function Portal() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-600 rounded-lg">
-                <Rocket className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  v-platform Portal
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {apps.length}개 앱 등록 · {onlineCount}개 Online
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-              새로고침
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+      <ContentHeader
+        title="앱 포탈"
+        description={`${apps.length}개 앱 등록 · ${onlineCount}개 Online`}
+        actions={
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            새로고침
+          </Button>
+        }
+      />
+      <div className="page-container">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="w-8 h-8 animate-spin text-brand-500" />
-          </div>
+          <LoadingSkeleton />
         ) : (
-          <div className="space-y-8">
-            {/* App Launcher */}
-            <section>
+          <div className="space-y-section-gap">
+            {/* 앱 런처 */}
+            <div>
               <div className="flex items-center gap-2 mb-4">
-                <LayoutDashboard className="w-5 h-5 text-content-secondary" />
-                <h2 className="text-lg font-semibold text-content-primary">
-                  앱
-                </h2>
+                <Rocket className="w-5 h-5 text-content-secondary" />
+                <h2 className="text-heading-md text-content-primary">앱</h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {apps.map((app) => (
-                  <AppCard
-                    key={app.app_id}
-                    app={app}
-                    health={getHealth(app.app_id)}
-                    token={token}
-                  />
-                ))}
-                {apps.length === 0 && (
-                  <div className="col-span-full text-center py-12 text-content-secondary">
-                    등록된 앱이 없습니다. PORTAL_APPS 환경변수를 설정하세요.
-                  </div>
-                )}
-              </div>
-            </section>
+              {apps.length === 0 ? (
+                <EmptyState
+                  title="등록된 앱이 없습니다"
+                  description="PORTAL_APPS 환경변수를 설정하세요."
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {apps.map((app) => (
+                    <AppCard
+                      key={app.app_id}
+                      app={app}
+                      health={getHealth(app.app_id)}
+                      token={token}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
-            {/* System Status */}
-            <section>
+            {/* 시스템 상태 */}
+            <div>
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-5 h-5 text-content-secondary" />
-                <h2 className="text-lg font-semibold text-content-primary">
-                  시스템 상태
-                </h2>
+                <h2 className="text-heading-md text-content-primary">시스템 상태</h2>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        앱
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        상태
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        서비스
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        응답 시간
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {health.map((h) => (
-                      <tr key={h.app_id}>
-                        <td className="px-4 py-3 font-medium text-content-primary">
-                          {apps.find((a) => a.app_id === h.app_id)
-                            ?.display_name || h.app_id}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={h.status} />
-                        </td>
-                        <td className="px-4 py-3 text-sm text-content-secondary">
-                          {Object.entries(h.services || {}).map(
-                            ([name, svc]) => (
-                              <span
-                                key={name}
-                                className="inline-flex items-center gap-1 mr-2"
-                              >
-                                {(svc as any).status === "healthy" ? (
-                                  <CheckCircle className="w-3 h-3 text-green-500" />
-                                ) : (
-                                  <XCircle className="w-3 h-3 text-red-500" />
-                                )}
+              <Card>
+                <CardBody className="p-0">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-line">
+                        <th className="px-4 py-3 text-left text-caption font-medium text-content-tertiary uppercase">앱</th>
+                        <th className="px-4 py-3 text-left text-caption font-medium text-content-tertiary uppercase">상태</th>
+                        <th className="px-4 py-3 text-left text-caption font-medium text-content-tertiary uppercase">서비스</th>
+                        <th className="px-4 py-3 text-left text-caption font-medium text-content-tertiary uppercase">응답</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {health.map((h) => (
+                        <tr key={h.app_id}>
+                          <td className="px-4 py-3 text-body-sm font-medium text-content-primary">
+                            {apps.find((a) => a.app_id === h.app_id)?.display_name || h.app_id}
+                          </td>
+                          <td className="px-4 py-3"><StatusBadge status={h.status} /></td>
+                          <td className="px-4 py-3 text-body-sm text-content-secondary">
+                            {Object.entries(h.services || {}).map(([name, svc]) => (
+                              <span key={name} className="inline-flex items-center gap-1 mr-2">
+                                {(svc as any).status === "healthy"
+                                  ? <CheckCircle className="w-3 h-3 text-status-success" />
+                                  : <XCircle className="w-3 h-3 text-status-danger" />}
                                 {name}
                               </span>
-                            )
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-content-tertiary">
-                          {h.response_time_ms
-                            ? `${h.response_time_ms.toFixed(0)}ms`
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                            ))}
+                          </td>
+                          <td className="px-4 py-3 text-body-sm text-content-tertiary">
+                            {h.response_time_ms ? `${h.response_time_ms.toFixed(0)}ms` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardBody>
+              </Card>
+            </div>
 
-            {/* Sitemap */}
-            <section>
+            {/* 사이트맵 */}
+            <div>
               <div className="flex items-center gap-2 mb-4">
                 <Map className="w-5 h-5 text-content-secondary" />
-                <h2 className="text-lg font-semibold text-content-primary">
-                  사이트맵
-                </h2>
+                <h2 className="text-heading-md text-content-primary">사이트맵</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {sitemap.map((entry) => (
-                  <div
-                    key={entry.app_id}
-                    className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
-                  >
-                    <h3 className="font-semibold text-content-primary mb-3">
-                      {entry.display_name}
-                    </h3>
-                    <ul className="space-y-1">
-                      {entry.menus.map((menu) => (
-                        <li
-                          key={menu.permission_key}
-                          className="flex items-center gap-2 text-sm text-content-secondary py-1"
-                        >
-                          <ChevronRight className="w-3 h-3" />
-                          {menu.label}
-                        </li>
-                      ))}
-                      {entry.menus.length === 0 && (
-                        <li className="text-sm text-content-tertiary">
-                          메뉴 정보 없음
-                        </li>
-                      )}
-                    </ul>
-                  </div>
+                  <Card key={entry.app_id}>
+                    <CardHeader>
+                      <CardTitle>{entry.display_name}</CardTitle>
+                    </CardHeader>
+                    <CardBody>
+                      <ul className="space-y-1">
+                        {entry.menus.map((menu) => (
+                          <li key={menu.permission_key} className="flex items-center gap-2 text-body-sm text-content-secondary py-1">
+                            <ChevronRight className="w-3 h-3" />
+                            {menu.label}
+                          </li>
+                        ))}
+                        {entry.menus.length === 0 && (
+                          <li className="text-body-sm text-content-tertiary">메뉴 정보 없음</li>
+                        )}
+                      </ul>
+                    </CardBody>
+                  </Card>
                 ))}
               </div>
-            </section>
+            </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

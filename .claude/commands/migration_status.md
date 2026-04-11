@@ -1,32 +1,47 @@
 # 시스템 상태 확인
 
-v-project(v-platform + v-channel-bridge) 컴포넌트 현황과 Provider 연결 상태를 확인합니다.
+v-project(v-platform + v-channel-bridge + v-platform-template + v-platform-portal) 멀티 앱 시스템 현황을 확인합니다.
 
-## 아키텍처 구성요소 확인
+## 플랫폼 핵심 파일 확인
 
 ```bash
-# 핵심 파일 존재 여부
-ls -la apps/v-channel-bridge/backend/app/schemas/common_message.py && echo "✅ Common Schema" || echo "❌ Common Schema"
-ls -la apps/v-channel-bridge/backend/app/adapters/base.py && echo "✅ Provider Interface" || echo "❌ Provider Interface"
-ls -la apps/v-channel-bridge/backend/app/adapters/slack_provider.py && echo "✅ Slack Provider" || echo "❌ Slack Provider"
-ls -la apps/v-channel-bridge/backend/app/adapters/teams_provider.py && echo "✅ Teams Provider" || echo "❌ Teams Provider"
-ls -la apps/v-channel-bridge/backend/app/services/route_manager.py && echo "✅ Route Manager" || echo "❌ Route Manager"
-ls -la apps/v-channel-bridge/backend/app/services/websocket_bridge.py && echo "✅ WebSocket Bridge" || echo "❌ WebSocket Bridge"
-ls -la apps/v-channel-bridge/backend/app/api/teams_webhook.py && echo "✅ Teams Webhook" || echo "❌ Teams Webhook"
-ls -la apps/v-channel-bridge/backend/app/api/bridge.py && echo "✅ Bridge API" || echo "❌ Bridge API"
-ls -la apps/v-channel-bridge/frontend/src/lib/api/bridge.ts && echo "✅ Frontend Bridge API" || echo "❌ Frontend Bridge API"
+# v-platform 핵심 파일
+ls -la platform/backend/v_platform/app.py && echo "✅ PlatformApp" || echo "❌ PlatformApp"
+ls -la platform/backend/v_platform/api/ && echo "✅ Platform API (15 routers)" || echo "❌ Platform API"
+ls -la platform/backend/v_platform/models/ && echo "✅ Platform Models (11)" || echo "❌ Platform Models"
+ls -la platform/backend/v_platform/services/ && echo "✅ Platform Services (12)" || echo "❌ Platform Services"
+ls -la platform/frontend/v-platform-core/src/pages/ && echo "✅ Platform Pages (17)" || echo "❌ Platform Pages"
+```
+
+## 앱 상태 확인
+
+```bash
+# v-channel-bridge
+ls -la apps/v-channel-bridge/backend/app/main.py && echo "✅ v-channel-bridge backend" || echo "❌ v-channel-bridge backend"
+ls -la apps/v-channel-bridge/frontend/src/App.tsx && echo "✅ v-channel-bridge frontend" || echo "❌ v-channel-bridge frontend"
+
+# v-platform-template
+ls -la apps/v-platform-template/backend/app/main.py && echo "✅ v-platform-template backend" || echo "❌ v-platform-template backend"
+ls -la apps/v-platform-template/frontend/src/App.tsx && echo "✅ v-platform-template frontend" || echo "❌ v-platform-template frontend"
+
+# v-platform-portal
+ls -la apps/v-platform-portal/backend/ && echo "✅ v-platform-portal backend" || echo "❌ v-platform-portal backend"
+ls -la apps/v-platform-portal/frontend/ && echo "✅ v-platform-portal frontend" || echo "❌ v-platform-portal frontend"
 ```
 
 ## Docker 서비스 상태
 
 ```bash
-docker compose -f docker-compose.dev.yml ps
+# 기본 서비스
+docker compose ps
+
+# 프로필 포함 전체 서비스
+docker compose --profile template --profile portal ps
 ```
 
-## Provider 연결 상태
+## Provider 연결 상태 (v-channel-bridge)
 
 ```bash
-# Backend API를 통한 Provider 상태 조회
 curl -s http://localhost:8000/api/bridge/status | python3 -m json.tool
 ```
 
@@ -50,15 +65,11 @@ docker exec v-channel-bridge-backend python -m pytest tests/ -q 2>/dev/null | ta
 
 | 컴포넌트 | 상태 | 비고 |
 |---|---|---|
-| Slack Provider | ✅ 완성 | Socket Mode 동작 중 |
-| Teams Provider | ✅ 코드 완성 | Azure Bot 등록 후 실 테스트 필요 |
-| Route Manager | ✅ 완성 | 양방향/단방향 지원 |
-| WebSocket Bridge | ✅ 완성 | 메시지 라우팅 동작 중 |
-| Teams Webhook | ✅ 완성 | `/api/teams/webhook` |
-| Frontend UI | ✅ 완성 | Route 관리 UI |
-
-## 다음 작업 후보
-
-- **Teams 실 테스트**: Azure Bot 등록 후 Teams 채널에서 메시지 송수신 검증
-- **E2E 통합 테스트**: Slack ↔ Teams 완전한 흐름 테스트 코드 작성
-- **모니터링 강화**: 메시지 전달 실패율 추적, 알림 설정
+| v-platform Backend | ✅ 완성 | PlatformApp, 15 라우터, 12 서비스, 11 모델 |
+| v-platform Frontend | ✅ 완성 | 17 페이지, 6 스토어, 11 훅, 60+ 컴포넌트 |
+| v-channel-bridge | ✅ 완성 | Slack/Teams 양방향 브리지 |
+| v-platform-template | ✅ 완성 | 새 앱 스캐폴딩 템플릿 |
+| v-platform-portal | ✅ 완성 | AppRegistry, SSO Relay, App Launcher |
+| Multi-app 데이터 격리 | ✅ 완성 | app_id 기반 (menu_items, audit_logs, system_settings) |
+| Token Relay SSO | ✅ 완성 | 포털 → 앱 JWT 자동 인증 |
+| Migrations | ✅ 완성 | p001~p016 |

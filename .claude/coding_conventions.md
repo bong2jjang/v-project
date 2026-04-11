@@ -1,6 +1,6 @@
 # v-project 코딩 컨벤션
 
-이 문서는 v-project(v-platform + v-channel-bridge)의 코딩 표준을 정의합니다.
+이 문서는 v-project(v-platform + v-channel-bridge + v-platform-template + v-platform-portal)의 코딩 표준을 정의합니다.
 
 **참고**: Provider Pattern 및 Common Schema 관련 규칙을 반드시 준수하세요.
 
@@ -134,7 +134,7 @@ type ApiResponse<T> = { data: T; error?: string };
 ### 상태 관리
 
 - 서버 상태: TanStack Query (`@tanstack/react-query`)
-- 클라이언트 상태: Zustand (`store/bridge.ts`, `store/config.ts`, `store/auth.ts`)
+- 클라이언트 상태: Zustand (6 stores: auth, permission, notification, systemSettings, sessionSettings, user-oauth)
 - 로컬 상태: useState/useReducer
 - 테마 상태: `useTheme` 훅 (ThemeContext)
 - 불필요한 전역 상태 최소화
@@ -185,8 +185,10 @@ import { ContentHeader } from "../components/Layout";
 const MyPage = () => (
   <>
     <ContentHeader title="페이지 제목" description="설명" actions={...} />
-    <div className="page-container space-y-section-gap">
-      {/* 콘텐츠 */}
+    <div className="page-container">
+      <div className="space-y-section-gap">
+        {/* 콘텐츠 */}
+      </div>
     </div>
   </>
 );
@@ -195,6 +197,48 @@ const MyPage = () => (
 **금지 사항**:
 - 페이지에 `min-h-screen` 사용 금지 (Layout이 관리)
 - 페이지에 자체 `<header>`, `<footer>` 금지 (Layout이 관리)
+
+### 스켈레톤 로딩 패턴 (필수)
+
+비동기 데이터를 불러오는 모든 페이지는 Skeleton 로딩 상태를 구현해야 합니다:
+
+```tsx
+import { ContentHeader } from "../components/Layout";
+import { SkeletonCard } from "@v-platform/core/components";
+
+// 로딩 상태 - 스켈레톤 패턴 (필수)
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-section-gap">
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  );
+}
+
+export default function MyPage() {
+  const [loading, setLoading] = useState(true);
+  
+  if (loading) return <><ContentHeader title="..." /><div className="page-container"><LoadingSkeleton /></div></>;
+  
+  return (
+    <>
+      <ContentHeader title="페이지 제목" description="설명" />
+      <div className="page-container">
+        <div className="space-y-section-gap">
+          {/* 콘텐츠 */}
+        </div>
+      </div>
+    </>
+  );
+}
+```
+
+**스켈레톤 규칙**:
+- 비동기 데이터 페이지에 Skeleton 로딩은 **필수**
+- `ContentHeader`는 로딩/완료 양쪽 모두 렌더링
+- `page-container`로 감싸서 레이아웃 일관성 유지
+- `space-y-section-gap`으로 섹션 간격 유지
 
 ## 공통 규칙
 
@@ -228,7 +272,7 @@ const MyPage = () => (
 
 ### 앱 프론트엔드 페이지
 
-- **플랫폼 공통 페이지** (Login, Register, Settings, UserManagement 등)는 `@v-platform/core/pages`에서 import
+- **플랫폼 공통 페이지** (Login, Register, Settings, UserManagement 등)는 `@v-platform/core/pages`에서 import — **복사 금지**
 - **앱 전용 페이지**만 `pages/` 디렉토리에 직접 구현
 - 앱 이름/설명은 PlatformConfig에서 설정 — **하드코딩 금지**
 
@@ -238,16 +282,63 @@ import { LoginPage, SettingsPage, UserManagementPage } from '@v-platform/core/pa
 import Dashboard from './pages/Dashboard';  // 앱 전용
 ```
 
+### PlatformConfig 사용
+
+앱 브랜딩(이름, 설명, 로고)은 코드에서 PlatformConfig로 설정하며, Settings UI에서도 변경 가능합니다:
+
+```tsx
+// App.tsx
+import { PlatformProvider } from '@v-platform/core/providers';
+
+const config: PlatformConfig = {
+  appTitle: "My App",
+  appDescription: "앱 설명",
+  appLogo: "/logo.svg",
+  // ... 기타 설정
+};
+
+function App() {
+  return (
+    <PlatformProvider config={config}>
+      {/* 라우트 */}
+    </PlatformProvider>
+  );
+}
+```
+
+### Shim 패턴 (하위 호환)
+
+앱 로컬 파일에서 `@v-platform/core`를 re-export하는 shim 파일을 사용하여 기존 import 경로를 유지합니다:
+
+```tsx
+// src/components/Layout.tsx (shim)
+export { ContentHeader, Sidebar } from '@v-platform/core/components';
+```
+
 ### 앱 메뉴 시드
 
 - 플랫폼 공통 메뉴 (`app_id = NULL`)는 자동 제공
 - 앱 전용 메뉴는 `app_id`를 지정하여 시드
-- 다른 앱의 메뉴가 표시되지 않음
+- 다른 앱의 메뉴가 표시되지 않음 (app_id 격리)
 
 ### 앱 컨테이너 명명
 
 - 인프라: `v-project-{service}` (postgres, redis, mailhog)
 - 앱: `{app-name}-{service}` (v-channel-bridge-backend, v-channel-bridge-frontend)
+
+### 앱 백엔드 진입점
+
+새 앱의 `main.py`는 PlatformApp만 사용하면 됩니다 (~30줄):
+
+```python
+from v_platform.app import PlatformApp
+
+app = PlatformApp(
+    app_id="my-app",
+    app_title="My App",
+)
+# PlatformApp이 자동 제공: auth, RBAC, audit, SSO, middleware, logging, metrics
+```
 
 ---
 

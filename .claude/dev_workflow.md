@@ -8,12 +8,42 @@
 | `docker-compose.debug.yml` | 디버깅 (debugpy 5678) | `docker compose -f docker-compose.debug.yml up -d --build` |
 | `docker-compose.prod.yml` | 배포 (Nginx, 리소스 제한) | `docker compose -f docker-compose.prod.yml up -d --build` |
 
+### Docker 프로필
+
+기본 프로필은 v-channel-bridge만 실행합니다. 다른 앱은 프로필로 활성화합니다:
+
+```bash
+# 기본 (v-channel-bridge만)
+docker compose up -d --build
+
+# Template 앱 포함
+docker compose --profile template up -d --build
+
+# Portal 앱 포함
+docker compose --profile portal up -d --build
+
+# 모든 앱 포함
+docker compose --profile template --profile portal up -d --build
+```
+
+### 컨테이너 명명 규칙
+
+| 카테고리 | 패턴 | 예시 |
+|----------|------|------|
+| 인프라 | `v-project-{service}` | v-project-postgres, v-project-redis, v-project-mailhog |
+| 앱 | `{app-name}-{service}` | v-channel-bridge-backend, v-channel-bridge-frontend |
+| 포털 | `{app-name}-{service}` | v-platform-portal-backend, v-platform-portal-frontend |
+
 ### 서비스 포트
 
 | 서비스 | 포트 |
 |--------|------|
-| Backend API | 8000 |
-| Frontend UI | 5173 |
+| v-channel-bridge Backend | 8000 |
+| v-channel-bridge Frontend | 5173 |
+| v-platform-template Backend | 8002 |
+| v-platform-template Frontend | 5174 |
+| v-platform-portal Backend | 8080 |
+| v-platform-portal Frontend | 5180 |
 | PostgreSQL | 5432 |
 | Redis | 6379 |
 | MailHog Web UI | 8025 |
@@ -195,7 +225,7 @@ docker compose -f docker-compose.dev.yml logs -f backend | grep -i teams
 ```
 
 - **type**: feat, fix, docs, style, refactor, test, chore
-- **scope**: backend, frontend, docker, adapters, docs, auth
+- **scope**: v-platform, v-channel-bridge, v-platform-template, v-platform-portal, backend, frontend, docker, adapters, docs, auth, migration
 
 ### 브랜치 전략
 
