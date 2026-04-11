@@ -7,7 +7,7 @@
 
 import { useMemo } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { usePermissionStore } from "../store/permission";
+import { usePermissionStore } from "../stores/permission";
 import { ContentHeader } from "../components/Layout";
 import { Spinner } from "../components/ui/Spinner";
 

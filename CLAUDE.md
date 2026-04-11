@@ -75,41 +75,45 @@ docker run -d --name v-channel-bridge-frontend \
 
 ```
 platform/
-├── backend/
-│   ├── v_platform/                # Python 패키지: v_platform
-│   │   ├── app.py                 # PlatformApp 클래스 (프레임워크 진입점)
-│   │   ├── core/                  # database, exceptions
-│   │   ├── models/                # 플랫폼 모델 11개 (User, RBAC, Org...)
-│   │   ├── api/                   # 플랫폼 라우터 15개 (auth, users, menus...)
-│   │   ├── services/              # 플랫폼 서비스 7개 (token, permission, email...)
-│   │   ├── middleware/            # CSRF, Prometheus metrics
-│   │   ├── sso/                   # Microsoft, Generic OIDC
-│   │   ├── utils/                 # auth, audit_logger, encryption
-│   │   ├── schemas/               # user, audit_log, system_settings
-│   │   └── migrations/            # p001~p014
-│   └── pyproject.toml
-└── frontend/
-    └── v-platform-core/           # npm 패키지: @v-platform/core
-        └── src/
-            ├── api/               # client, auth, users, permissions...
-            ├── stores/            # auth, permission, notification...
-            ├── hooks/             # useTheme, useTokenExpiry...
-            ├── components/ui/     # 디자인 시스템 24개
-            ├── components/layout/ # Sidebar, TopBar, ContentHeader...
-            └── index.ts           # 패키지 진입점
+├── backend/v_platform/            # Python 패키지: v_platform
+│   ├── app.py                     # PlatformApp (프레임워크 진입점)
+│   ├── core/                      # database, logging, exceptions
+│   ├── models/                    # 플랫폼 모델 11개 (app_id 분리 포함)
+│   ├── api/                       # 플랫폼 라우터 15개
+│   ├── services/                  # 12개 (export, stats, event_broadcaster...)
+│   ├── monitoring/                # 메트릭 레지스트리
+│   ├── middleware/                # CSRF, Prometheus metrics
+│   ├── sso/                       # Microsoft, Generic OIDC
+│   ├── utils/                     # auth, audit_logger, encryption, filters
+│   ├── schemas/                   # user, audit_log, system_settings
+│   └── migrations/                # p001~p015
+└── frontend/v-platform-core/      # npm 패키지: @v-platform/core
+    └── src/
+        ├── pages/                 # ★ 17개 플랫폼 페이지 (Login, Settings, Admin...)
+        ├── api/                   # client, auth, users, permissions...
+        ├── stores/                # auth, permission, notification, user-oauth...
+        ├── hooks/                 # 11개 (useTheme, useWebSocket, useNotifications...)
+        ├── components/            # ui(24), layout(10), settings(4), profile(2), oauth(3)
+        ├── providers/             # PlatformProvider (Config, QueryClient, Sidebar)
+        └── index.ts
 
 apps/v-channel-bridge/             # 앱: Slack ↔ Teams 메시지 브리지
 ├── backend/app/
 │   ├── adapters/                  # Slack, Teams Provider
 │   ├── api/                       # bridge, messages, accounts, teams_webhook
-│   ├── models/                    # Message, Account (+ 플랫폼 re-export shim)
+│   ├── models/                    # Message, Account
 │   ├── services/                  # websocket_bridge, route_manager, message_queue...
 │   └── main.py                    # PlatformApp + register_app_routers()
 └── frontend/src/
-    ├── pages/                     # Channels, Messages, Statistics...
-    ├── components/                # dashboard, channels, messages, providers...
-    ├── store/                     # routes, bridge, providers (+ 플랫폼 re-export shim)
-    └── App.tsx
+    ├── pages/                     # 앱 전용: Channels, Messages, Statistics, Dashboard...
+    ├── components/                # 앱 전용: dashboard, channels, messages, providers...
+    └── App.tsx                    # 플랫폼 페이지 import + 앱 전용 라우트
+
+apps/v-platform-template/          # 새 앱 시작 템플릿
+├── backend/app/main.py            # PlatformApp만 (~30줄)
+└── frontend/src/
+    ├── App.tsx                    # 플랫폼 페이지 import (~100줄)
+    └── pages/Dashboard.tsx        # 유일한 앱 전용 페이지
 ```
 
 ---

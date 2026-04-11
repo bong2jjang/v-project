@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { requestPasswordReset } from "../lib/api/auth";
-import { ApiClientError } from "../lib/api/client";
+import { requestPasswordReset } from "../api/auth";
+import { ApiClientError } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Alert } from "../components/ui/Alert";

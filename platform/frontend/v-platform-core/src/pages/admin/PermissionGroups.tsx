@@ -16,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ContentHeader } from "../../components/Layout";
-import { usePermissionStore } from "../../store/permission";
+import { usePermissionStore } from "../../stores/permission";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Textarea } from "../../components/ui/Textarea";
@@ -30,10 +30,10 @@ import type {
   PermissionGroup,
   MenuItemResponse,
   AccessLevel,
-} from "../../lib/api/types";
-import { getRoleDisplayName } from "../../lib/api/types";
-import * as groupApi from "../../lib/api/permission-groups";
-import * as permissionApi from "../../lib/api/permissions";
+} from "../../api/types";
+import { getRoleDisplayName } from "../../api/types";
+import * as groupApi from "../../api/permission-groups";
+import * as permissionApi from "../../api/permissions";
 
 interface MenuTreeNode {
   menu: MenuItemResponse;

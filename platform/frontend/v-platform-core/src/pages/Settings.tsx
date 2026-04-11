@@ -5,10 +5,10 @@
  */
 
 import { useEffect, useState } from "react";
-import { useAuthStore } from "../store/auth";
-import { usePermissionStore } from "../store/permission";
-import { isAdminRole, getRoleDisplayName } from "../lib/api/types";
-import { useSystemSettingsStore } from "../store/systemSettings";
+import { useAuthStore } from "../stores/auth";
+import { usePermissionStore } from "../stores/permission";
+import { isAdminRole, getRoleDisplayName } from "../api/types";
+import { useSystemSettingsStore } from "../stores/systemSettings";
 import { ThemeSettings } from "../components/settings/ThemeSettings";
 import { SecurityTab } from "../components/settings/SecurityTab";
 import { SessionSettings } from "../components/settings/SessionSettings";
@@ -303,7 +303,7 @@ const Settings = () => {
                               서비스
                             </dt>
                             <dd className="text-sm text-content-primary">
-                              VMS Chat Ops
+                              v-platform
                             </dd>
                           </div>
                         </dl>

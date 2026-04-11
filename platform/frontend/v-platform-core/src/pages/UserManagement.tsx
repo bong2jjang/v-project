@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useAuthStore } from "../store/auth";
-import { usePermissionStore } from "../store/permission";
-import { useNotificationStore } from "../store/notification";
-import * as usersApi from "../lib/api/users";
-import * as orgApi from "../lib/api/organizations";
-import * as groupApi from "../lib/api/permission-groups";
-import { ApiClientError } from "../lib/api/client";
+import { useAuthStore } from "../stores/auth";
+import { usePermissionStore } from "../stores/permission";
+import { useNotificationStore } from "../stores/notification";
+import * as usersApi from "../api/users";
+import * as orgApi from "../api/organizations";
+import * as groupApi from "../api/permission-groups";
+import { ApiClientError } from "../api/client";
 import type {
   User,
   UserRole,
@@ -16,12 +16,12 @@ import type {
   OrgCompanyNode,
   OrgDeptNode,
   OrgUserBrief,
-} from "../lib/api/types";
+} from "../api/types";
 import {
   isAdminRole,
   isSystemAdmin,
   getRoleDisplayName,
-} from "../lib/api/types";
+} from "../api/types";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";

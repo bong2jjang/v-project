@@ -224,6 +224,33 @@ const MyPage = () => (
 
 ---
 
+## 새 앱 작성 규칙
+
+### 앱 프론트엔드 페이지
+
+- **플랫폼 공통 페이지** (Login, Register, Settings, UserManagement 등)는 `@v-platform/core/pages`에서 import
+- **앱 전용 페이지**만 `pages/` 디렉토리에 직접 구현
+- 앱 이름/설명은 PlatformConfig에서 설정 — **하드코딩 금지**
+
+```tsx
+// App.tsx에서 플랫폼 페이지 import
+import { LoginPage, SettingsPage, UserManagementPage } from '@v-platform/core/pages';
+import Dashboard from './pages/Dashboard';  // 앱 전용
+```
+
+### 앱 메뉴 시드
+
+- 플랫폼 공통 메뉴 (`app_id = NULL`)는 자동 제공
+- 앱 전용 메뉴는 `app_id`를 지정하여 시드
+- 다른 앱의 메뉴가 표시되지 않음
+
+### 앱 컨테이너 명명
+
+- 인프라: `v-project-{service}` (postgres, redis, mailhog)
+- 앱: `{app-name}-{service}` (v-channel-bridge-backend, v-channel-bridge-frontend)
+
+---
+
 ## v-channel-bridge 아키텍처 규칙
 
 ### Provider Pattern (메시징 플랫폼 어댑터)

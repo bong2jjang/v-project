@@ -7,8 +7,8 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/auth";
-import * as authApi from "../lib/api/auth";
+import { useAuthStore } from "../stores/auth";
+import * as authApi from "../api/auth";
 import { Loader2 } from "lucide-react";
 
 export default function SSOCallback() {

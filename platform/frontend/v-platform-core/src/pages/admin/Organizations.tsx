@@ -28,7 +28,7 @@ import {
   List,
 } from "lucide-react";
 import { ContentHeader } from "../../components/Layout";
-import { usePermissionStore } from "../../store/permission";
+import { usePermissionStore } from "../../stores/permission";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
@@ -36,8 +36,8 @@ import { Alert } from "../../components/ui/Alert";
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Skeleton } from "../../components/ui/Skeleton";
-import type { Company, Department } from "../../lib/api/types";
-import * as orgApi from "../../lib/api/organizations";
+import type { Company, Department } from "../../api/types";
+import * as orgApi from "../../api/organizations";
 
 // ── 드래그&드랍 타입 ────────────────────────────────────────────────
 

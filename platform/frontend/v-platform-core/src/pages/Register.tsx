@@ -1,13 +1,15 @@
 import { useState, FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuthStore } from "../store/auth";
-import { ApiClientError } from "../lib/api/client";
+import { usePlatformConfig } from "../providers/PlatformProvider";
+import { useAuthStore } from "../stores/auth";
+import { ApiClientError } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Alert } from "../components/ui/Alert";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { appTitle } = usePlatformConfig();
   const { register, isLoading } = useAuthStore();
 
   const [username, setUsername] = useState("");
@@ -54,7 +56,7 @@ export default function Register() {
         {/* 헤더 */}
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            VMS Chat Ops
+            {appTitle || "v-platform"}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             새 계정 만들기

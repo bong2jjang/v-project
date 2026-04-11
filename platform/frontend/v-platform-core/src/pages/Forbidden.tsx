@@ -9,9 +9,9 @@
 import { useNavigate } from "react-router-dom";
 import { ShieldX, ArrowLeft, Home, UserCog, LogOut, User } from "lucide-react";
 import { Button } from "../components/ui/Button";
-import { useAuthStore } from "../store/auth";
-import { usePermissionStore } from "../store/permission";
-import { getRoleDisplayName } from "../lib/api/types";
+import { useAuthStore } from "../stores/auth";
+import { usePermissionStore } from "../stores/permission";
+import { getRoleDisplayName } from "../api/types";
 
 export default function Forbidden() {
   const navigate = useNavigate();

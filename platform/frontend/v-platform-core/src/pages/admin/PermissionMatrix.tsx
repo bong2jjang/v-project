@@ -9,15 +9,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, User, Menu } from "lucide-react";
 import { ContentHeader } from "../../components/Layout";
-import { usePermissionStore } from "../../store/permission";
+import { usePermissionStore } from "../../stores/permission";
 import { Button } from "../../components/ui/Button";
 import { Skeleton, SkeletonTableRow } from "../../components/ui/Skeleton";
 import { Alert } from "../../components/ui/Alert";
 import { UserPermissionView } from "../../components/admin/permissions/UserPermissionView";
 import { MenuPermissionView } from "../../components/admin/permissions/MenuPermissionView";
-import type { MenuItemResponse, User as UserType } from "../../lib/api/types";
-import * as permissionApi from "../../lib/api/permissions";
-import * as usersApi from "../../lib/api/users";
+import type { MenuItemResponse, User as UserType } from "../../api/types";
+import * as permissionApi from "../../api/permissions";
+import * as usersApi from "../../api/users";
 
 type ViewMode = "user" | "menu";
 

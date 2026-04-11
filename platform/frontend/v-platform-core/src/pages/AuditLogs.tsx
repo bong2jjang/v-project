@@ -12,10 +12,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import * as auditLogsApi from "../lib/api/auditLogs";
-import type { GetAuditLogsParams } from "../lib/api/auditLogs";
-import { ApiClientError } from "../lib/api/client";
-import type { AuditLog } from "../lib/api/types";
+import * as auditLogsApi from "../api/auditLogs";
+import type { GetAuditLogsParams } from "../api/auditLogs";
+import { ApiClientError } from "../api/client";
+import type { AuditLog } from "../api/types";
 import { Select } from "../components/ui/Select";
 import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";

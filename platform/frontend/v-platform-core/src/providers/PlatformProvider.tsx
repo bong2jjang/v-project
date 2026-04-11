@@ -19,8 +19,12 @@ import { SidebarProvider } from "../hooks/useSidebar";
 export interface PlatformConfig {
   /** API base URL (e.g. "" for same-origin, "http://localhost:8000") */
   apiBaseUrl?: string;
-  /** Application display name */
+  /** Application identifier */
   appName: string;
+  /** Display title shown on Login/Register pages (default: appName) */
+  appTitle?: string;
+  /** Short description shown on Login page (default: "") */
+  appDescription?: string;
   /** Feature toggles */
   features?: {
     sso?: boolean;

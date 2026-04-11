@@ -11,7 +11,7 @@ import { Card, CardHeader, CardTitle, CardBody } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { useTour } from "../hooks/useTour";
-import { useAuthStore } from "../store/auth";
+import { useAuthStore } from "../stores/auth";
 import {
   LayoutDashboard,
   Route,
@@ -60,7 +60,7 @@ const Help = () => {
 
   return (
     <>
-      <ContentHeader title="도움말" description="VMS Chat Ops 사용 가이드" />
+      <ContentHeader title="도움말" description="v-platform 사용 가이드" />
 
       <div className="page-container space-y-section-gap">
         {/* 제품 소개 */}
@@ -72,10 +72,10 @@ const Help = () => {
               </div>
               <div>
                 <h3 className="text-heading-md text-content-primary mb-2">
-                  VMS Chat Ops란?
+                  v-platform란?
                 </h3>
                 <p className="text-body-base text-content-secondary leading-relaxed">
-                  VMS Chat Ops는{" "}
+                  v-platform는{" "}
                   <strong>
                     Slack과 Microsoft Teams 간 메시지를 실시간으로 연동
                   </strong>

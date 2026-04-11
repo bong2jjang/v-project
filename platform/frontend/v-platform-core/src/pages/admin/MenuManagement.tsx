@@ -47,9 +47,9 @@ import {
   MenuFormModal,
   type MenuFormData,
 } from "../../components/admin/MenuFormModal";
-import type { MenuItemResponse } from "../../lib/api/types";
-import * as permissionApi from "../../lib/api/permissions";
-import { usePermissionStore } from "../../store/permission";
+import type { MenuItemResponse } from "../../api/types";
+import * as permissionApi from "../../api/permissions";
+import { usePermissionStore } from "../../stores/permission";
 
 type MenuSection = "basic" | "admin" | "custom";
 

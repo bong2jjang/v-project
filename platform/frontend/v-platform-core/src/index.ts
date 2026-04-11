@@ -56,3 +56,6 @@ export type * from './api/types';
 // ── Lib ──
 export * from './lib/navigation';
 export { resolveStartPage } from './lib/resolveStartPage';
+
+// ── Pages ──
+export * from './pages';

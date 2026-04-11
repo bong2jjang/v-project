@@ -9,12 +9,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ContentHeader } from "../components/Layout";
-import { useAuthStore } from "../store/auth";
-import { usePermissionStore } from "../store/permission";
-import { useSystemSettingsStore } from "../store/systemSettings";
+import { useAuthStore } from "../stores/auth";
+import { usePermissionStore } from "../stores/permission";
+import { useSystemSettingsStore } from "../stores/systemSettings";
 import { resolveStartPage } from "../lib/resolveStartPage";
-import { getMe, updateMe } from "../lib/api/users";
-import { useNotificationStore } from "../store/notification";
+import { getMe, updateMe } from "../api/users";
+import { useNotificationStore } from "../stores/notification";
 import { SessionDeviceList } from "../components/profile/SessionDeviceList";
 import {
   Tabs,
@@ -23,8 +23,8 @@ import {
   TabsContent,
 } from "../components/ui/Tabs";
 import { Card, CardBody } from "../components/ui/Card";
-import type { User } from "../lib/api/types";
-import { getRoleDisplayName } from "../lib/api/types";
+import type { User } from "../api/types";
+import { getRoleDisplayName } from "../api/types";
 
 export default function Profile() {
   const { setUser } = useAuthStore();

@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback, FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuthStore } from "../store/auth";
-import { useSystemSettingsStore } from "../store/systemSettings";
-import { ApiClientError } from "../lib/api/client";
+import { usePlatformConfig } from "../providers/PlatformProvider";
+import { useAuthStore } from "../stores/auth";
+import { useSystemSettingsStore } from "../stores/systemSettings";
+import { ApiClientError } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Alert } from "../components/ui/Alert";
 import { SSOButton } from "../components/auth/SSOButton";
-import { getSSOProviders, getSSOAuthorizeUrl } from "../lib/api/auth";
-import type { SSOProviderInfo } from "../lib/api/types";
+import { getSSOProviders, getSSOAuthorizeUrl } from "../api/auth";
+import type { SSOProviderInfo } from "../api/types";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { appTitle, appDescription } = usePlatformConfig();
   const { login, isLoading } = useAuthStore();
   const { settings: systemSettings } = useSystemSettingsStore();
 
@@ -45,7 +47,7 @@ export default function Login() {
       if (event.data.success && event.data.token) {
         try {
           const { saveToken, getCurrentUser, saveUser } =
-            await import("../lib/api/auth");
+            await import("../api/auth");
           saveToken(event.data.token, event.data.expires_at);
           const user = await getCurrentUser();
           saveUser(user);
@@ -137,10 +139,10 @@ export default function Login() {
         {/* 헤더 */}
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            VMS Chat Ops
+            {appTitle || "v-platform"}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            로그인하여 계속하세요
+            {appDescription || "로그인하여 계속하세요"}
           </p>
         </div>
 
