@@ -14,6 +14,10 @@ class SystemSettingsBase(BaseModel):
     default_start_page: str = Field(
         default="/", description="시스템 기본 시작 페이지 경로"
     )
+    # 앱 브랜딩
+    app_title: str | None = Field(default=None, description="앱 표시 이름 (TopBar, Login)")
+    app_description: str | None = Field(default=None, description="앱 설명 (Login 페이지)")
+    app_logo_url: str | None = Field(default=None, description="로고 이미지 URL")
 
 
 class SystemSettingsUpdate(BaseModel):
@@ -22,6 +26,9 @@ class SystemSettingsUpdate(BaseModel):
     manual_enabled: bool | None = None
     manual_url: str | None = None
     default_start_page: str | None = None
+    app_title: str | None = None
+    app_description: str | None = None
+    app_logo_url: str | None = None
 
 
 class SystemSettingsResponse(SystemSettingsBase):

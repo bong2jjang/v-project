@@ -9,12 +9,19 @@ export interface SystemSettings {
   manual_enabled: boolean;
   manual_url: string;
   default_start_page: string;
+  // 앱 브랜딩
+  app_title?: string;
+  app_description?: string;
+  app_logo_url?: string;
 }
 
 export interface SystemSettingsUpdate {
   manual_enabled?: boolean;
   manual_url?: string;
   default_start_page?: string;
+  app_title?: string;
+  app_description?: string;
+  app_logo_url?: string;
 }
 
 export const systemSettingsApi = {

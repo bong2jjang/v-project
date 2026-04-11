@@ -30,4 +30,10 @@ class SystemSettings(Base):
     default_start_page = Column(
         String(255), default="/", nullable=False, server_default="/"
     )
+
+    # 앱 브랜딩 설정
+    app_title = Column(String(200), nullable=True)  # 앱 표시 이름 (TopBar, Login)
+    app_description = Column(String(500), nullable=True)  # 앱 설명 (Login 페이지)
+    app_logo_url = Column(String(500), nullable=True)  # 로고 이미지 URL (선택)
+
     app_id = Column(String(50), nullable=True)  # NULL = global, value = app-specific

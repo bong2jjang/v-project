@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { BookOpen, Home, Save } from "lucide-react";
+import { BookOpen, Home, Save, Palette } from "lucide-react";
 import { useSystemSettingsStore } from "../../stores/systemSettings";
 import { usePermissionStore } from "../../stores/permission";
 import { useNotificationStore } from "../../stores/notification";
@@ -28,6 +28,9 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
   const [defaultStartPage, setDefaultStartPage] = useState(
     settings?.default_start_page ?? "/",
   );
+  const [appTitle, setAppTitle] = useState(settings?.app_title ?? "");
+  const [appDescription, setAppDescription] = useState(settings?.app_description ?? "");
+  const [appLogoUrl, setAppLogoUrl] = useState(settings?.app_logo_url ?? "");
   const [isDirty, setIsDirty] = useState(false);
 
   // 시스템에서 사용 가능한 모든 페이지 목록 (menu_group 및 외부 링크 제외)
@@ -52,6 +55,9 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
       setManualEnabled(settings.manual_enabled);
       setManualUrl(settings.manual_url);
       setDefaultStartPage(settings.default_start_page);
+      setAppTitle(settings.app_title ?? "");
+      setAppDescription(settings.app_description ?? "");
+      setAppLogoUrl(settings.app_logo_url ?? "");
     }
   }, [settings]);
 
@@ -61,6 +67,9 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
         manual_enabled: manualEnabled,
         manual_url: manualUrl,
         default_start_page: defaultStartPage,
+        app_title: appTitle || undefined,
+        app_description: appDescription || undefined,
+        app_logo_url: appLogoUrl || undefined,
       });
       addToast({
         id: `system-settings-saved-${Date.now()}`,
@@ -234,6 +243,95 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                   프로덕션 환경에서는 실제 도메인으로 변경하세요. (예:
                   https://docs.vms-chat-ops.com)
                 </p>
+              </div>
+
+              {/* 저장 버튼 */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  onClick={handleSave}
+                  disabled={readOnly || !isDirty || isLoading}
+                  variant="primary"
+                  className="flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isLoading ? "저장 중..." : "저장"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 앱 브랜딩 설정 */}
+      <div className="p-6 bg-surface-card border border-line rounded-lg">
+        <div className="flex items-start gap-3 mb-4">
+          <Palette className="w-5 h-5 text-content-primary flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-content-primary mb-2">
+              앱 브랜딩
+            </h3>
+            <p className="text-sm text-content-secondary mb-4">
+              로그인 페이지, TopBar에 표시되는 앱 이름과 설명을 설정합니다.
+            </p>
+
+            <div className="space-y-4">
+              {/* 앱 타이틀 */}
+              <div>
+                <label className="block text-sm font-medium text-content-primary mb-1">
+                  앱 타이틀
+                </label>
+                <input
+                  type="text"
+                  value={appTitle}
+                  onChange={(e) => { setAppTitle(e.target.value); setIsDirty(true); }}
+                  disabled={readOnly}
+                  placeholder="예: v-channel-bridge"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-xs text-content-tertiary mt-1">
+                  TopBar 좌측과 로그인 페이지에 표시됩니다. 비어있으면 기본값을 사용합니다.
+                </p>
+              </div>
+
+              {/* 앱 설명 */}
+              <div>
+                <label className="block text-sm font-medium text-content-primary mb-1">
+                  앱 설명
+                </label>
+                <input
+                  type="text"
+                  value={appDescription}
+                  onChange={(e) => { setAppDescription(e.target.value); setIsDirty(true); }}
+                  disabled={readOnly}
+                  placeholder="예: Slack ↔ Teams 메시지 브리지"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-xs text-content-tertiary mt-1">
+                  로그인 페이지 부제목으로 표시됩니다.
+                </p>
+              </div>
+
+              {/* 로고 URL */}
+              <div>
+                <label className="block text-sm font-medium text-content-primary mb-1">
+                  로고 이미지 URL (선택)
+                </label>
+                <input
+                  type="text"
+                  value={appLogoUrl}
+                  onChange={(e) => { setAppLogoUrl(e.target.value); setIsDirty(true); }}
+                  disabled={readOnly}
+                  placeholder="https://example.com/logo.svg"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-xs text-content-tertiary mt-1">
+                  TopBar 좌측 로고 이미지. 비어있으면 기본 아이콘을 사용합니다.
+                </p>
+                {appLogoUrl && (
+                  <div className="mt-2 p-2 border border-line rounded-lg inline-block">
+                    <img src={appLogoUrl} alt="Logo preview" className="h-8 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                )}
               </div>
 
               {/* 저장 버튼 */}
