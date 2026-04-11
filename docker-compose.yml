@@ -186,13 +186,15 @@ services:
     networks:
       - v-project-network
 
-  # Docusaurus 문서 사이트
+  # Docusaurus 문서 사이트 (메모리 절약: profile=docs로 분리)
   docusaurus:
     build:
       context: ./docusaurus
       dockerfile: Dockerfile.dev
     container_name: v-project-docusaurus
     restart: unless-stopped
+    profiles:
+      - docs
     ports:
       - "3000:3000"
     volumes:
