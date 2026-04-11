@@ -20,7 +20,10 @@ def migrate(engine):
             # App-specific menus for v-channel-bridge
             conn.execute(text("""
                 UPDATE menu_items SET app_id = 'v-channel-bridge'
-                WHERE permission_key IN ('channels', 'messages', 'statistics', 'integrations', 'monitoring')
+                WHERE permission_key IN (
+                    'channels', 'messages', 'statistics', 'integrations', 'monitoring',
+                    'menu_group_mgtmonitor', 'menu_group01'
+                )
             """))
             logger.info("Added app_id to menu_items, classified existing menus")
 
