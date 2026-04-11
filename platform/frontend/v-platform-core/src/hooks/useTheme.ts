@@ -21,6 +21,11 @@ import {
 } from "react";
 import { updateMe } from "../api/users";
 import { useAuthStore } from "../stores/auth";
+import { usePlatformConfig } from "../providers/PlatformProvider";
+
+/** 앱별 localStorage 키 생성 (동일 브라우저에서 앱별 테마 분리) */
+function themeKey(appName?: string) { return appName ? `${appName}:theme` : "theme"; }
+function presetKey(appName?: string) { return appName ? `${appName}:colorPreset` : "colorPreset"; }
 
 type Theme = "light" | "dark" | "system";
 export type ColorPreset = "blue" | "indigo" | "rose";
@@ -78,16 +83,16 @@ function applyColorPreset(preset: ColorPreset) {
 }
 
 /** 초기 테마 값 결정: 사용자 DB 값 > localStorage > 기본값 */
-function resolveInitialTheme(userTheme?: string | null): Theme {
+function resolveInitialTheme(userTheme?: string | null, appName?: string): Theme {
   if (isValidTheme(userTheme)) return userTheme;
-  const stored = localStorage.getItem("theme");
+  const stored = localStorage.getItem(themeKey(appName));
   if (isValidTheme(stored)) return stored;
   return "system";
 }
 
-function resolveInitialPreset(userPreset?: string | null): ColorPreset {
+function resolveInitialPreset(userPreset?: string | null, appName?: string): ColorPreset {
   if (isValidPreset(userPreset)) return userPreset;
-  const stored = localStorage.getItem("colorPreset");
+  const stored = localStorage.getItem(presetKey(appName));
   if (isValidPreset(stored)) return stored;
   return "blue";
 }
@@ -95,13 +100,15 @@ function resolveInitialPreset(userPreset?: string | null): ColorPreset {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  let appName: string | undefined;
+  try { appName = usePlatformConfig().appName; } catch { /* PlatformProvider not mounted yet */ }
 
   const [theme, setThemeState] = useState<Theme>(() =>
-    resolveInitialTheme(user?.theme),
+    resolveInitialTheme(user?.theme, appName),
   );
 
   const [colorPreset, setColorPresetState] = useState<ColorPreset>(() =>
-    resolveInitialPreset(user?.color_preset),
+    resolveInitialPreset(user?.color_preset, appName),
   );
 
   const [isDark, setIsDark] = useState(
@@ -128,7 +135,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback(
     (newTheme: Theme) => {
       setThemeState(newTheme);
-      localStorage.setItem("theme", newTheme);
+      localStorage.setItem(themeKey(appName), newTheme);
       const effective = getEffectiveTheme(newTheme);
       applyTheme(effective);
       setIsDark(effective === "dark");
@@ -144,7 +151,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setColorPreset = useCallback(
     (preset: ColorPreset) => {
       setColorPresetState(preset);
-      localStorage.setItem("colorPreset", preset);
+      localStorage.setItem(presetKey(appName), preset);
       applyColorPreset(preset);
       saveToServer({ color_preset: preset });
     },
@@ -158,13 +165,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const serverPreset = resolveInitialPreset(user.color_preset);
 
       setThemeState(serverTheme);
-      localStorage.setItem("theme", serverTheme);
+      localStorage.setItem(themeKey(appName), serverTheme);
       const effective = getEffectiveTheme(serverTheme);
       applyTheme(effective);
       setIsDark(effective === "dark");
 
       setColorPresetState(serverPreset);
-      localStorage.setItem("colorPreset", serverPreset);
+      localStorage.setItem(presetKey(appName), serverPreset);
       applyColorPreset(serverPreset);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

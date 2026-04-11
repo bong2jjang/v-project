@@ -97,6 +97,7 @@ def log_user_login(
     user: User,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """사용자 로그인 로그"""
     return create_audit_log(
@@ -108,6 +109,7 @@ def log_user_login(
         description=f"User {user.email} logged in",
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -116,6 +118,7 @@ def log_user_register(
     user: User,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """사용자 등록 로그"""
     return create_audit_log(
@@ -128,6 +131,7 @@ def log_user_register(
         details={"role": user.role.value if user.role else None},
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -138,6 +142,7 @@ def log_user_update(
     changes: dict,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """사용자 정보 수정 로그"""
     return create_audit_log(
@@ -150,6 +155,7 @@ def log_user_update(
         details={"changes": changes},
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -160,6 +166,7 @@ def log_user_delete(
     deleted_by: User,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """사용자 삭제 로그"""
     return create_audit_log(
@@ -171,6 +178,7 @@ def log_user_delete(
         description=f"User {user_email} deleted by {deleted_by.email}",
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -182,6 +190,7 @@ def log_user_role_change(
     changed_by: User,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """사용자 역할 변경 로그"""
     return create_audit_log(
@@ -194,6 +203,7 @@ def log_user_role_change(
         details={"old_role": old_role, "new_role": new_role},
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -202,6 +212,7 @@ def log_user_password_change(
     user: User,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """사용자 비밀번호 변경 로그"""
     return create_audit_log(
@@ -213,6 +224,7 @@ def log_user_password_change(
         description=f"User {user.email} changed password",
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -221,6 +233,7 @@ def log_password_reset_request(
     email: str,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """비밀번호 재설정 요청 로그"""
     return create_audit_log(
@@ -231,6 +244,7 @@ def log_password_reset_request(
         description=f"Password reset requested for {email}",
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -239,6 +253,7 @@ def log_password_reset(
     user: User,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """비밀번호 재설정 완료 로그"""
     return create_audit_log(
@@ -250,6 +265,7 @@ def log_password_reset(
         description=f"User {user.email} reset password via email",
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -262,6 +278,7 @@ def log_menu_action(
     details: Optional[dict] = None,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """메뉴 관련 액션 로그"""
     return create_audit_log(
@@ -274,6 +291,7 @@ def log_menu_action(
         details=details,
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -285,6 +303,7 @@ def log_permission_update(
     grants: list[dict],
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """권한 변경 로그"""
     return create_audit_log(
@@ -297,6 +316,7 @@ def log_permission_update(
         details={"target_user_id": target_user_id, "grants": grants},
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -310,6 +330,7 @@ def log_bridge_action(
     error_message: Optional[str] = None,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """메시지 브리지 액션 로그"""
     return create_audit_log(
@@ -323,6 +344,7 @@ def log_bridge_action(
         error_message=error_message,
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )
 
 
@@ -336,6 +358,7 @@ def log_config_action(
     error_message: Optional[str] = None,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    app_id: str | None = None,
 ) -> AuditLog:
     """Config 액션 로그"""
     return create_audit_log(
@@ -349,4 +372,5 @@ def log_config_action(
         error_message=error_message,
         ip_address=ip_address,
         user_agent=user_agent,
+        app_id=app_id,
     )

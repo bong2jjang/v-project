@@ -8,10 +8,10 @@ import csv
 import io
 from typing import Optional
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc, func
+from sqlalchemy import and_, desc, func, or_
 
 from v_platform.core.database import get_db_session
 from v_platform.models.audit_log import AuditLog
@@ -63,6 +63,7 @@ def _build_audit_filters(
 
 @router.get("/export/csv")
 async def export_audit_logs_csv(
+    request: Request,
     action: Optional[str] = Query(None),
     user_id: Optional[int] = Query(None),
     user_email: Optional[str] = Query(None),
@@ -80,7 +81,9 @@ async def export_audit_logs_csv(
 
     현재 필터 조건에 맞는 로그를 CSV로 내보냅니다. 최대 10,000건.
     """
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     query = db.query(AuditLog)
+    query = query.filter(or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)))
     filters = _build_audit_filters(
         action,
         user_id,
@@ -143,6 +146,7 @@ async def export_audit_logs_csv(
 
 @router.get("", response_model=AuditLogListResponse)
 async def get_audit_logs(
+    request: Request,
     page: int = Query(1, ge=1, description="페이지 번호"),
     per_page: int = Query(50, ge=1, le=500, description="페이지당 항목 수"),
     action: Optional[str] = Query(None, description="액션 필터 (예: user.login)"),
@@ -168,7 +172,9 @@ async def get_audit_logs(
 
     다양한 필터와 페이징을 지원하여 감사 로그를 조회합니다.
     """
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     query = db.query(AuditLog)
+    query = query.filter(or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)))
     filters = _build_audit_filters(
         action,
         user_id,
@@ -202,13 +208,18 @@ async def get_audit_logs(
 @router.get("/{log_id}", response_model=AuditLogResponse)
 async def get_audit_log(
     log_id: int,
+    request: Request,
     db: Session = Depends(get_db_session),
     current_admin: User = Depends(require_permission("audit_logs", "read")),
 ):
     """
     특정 감사 로그 조회 (관리자 전용)
     """
-    log = db.query(AuditLog).filter(AuditLog.id == log_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    log = db.query(AuditLog).filter(
+        AuditLog.id == log_id,
+        or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)),
+    ).first()
 
     if not log:
         raise HTTPException(status_code=404, detail="Audit log not found")
@@ -218,6 +229,7 @@ async def get_audit_log(
 
 @router.get("/stats/summary")
 async def get_audit_stats(
+    request: Request,
     days: int = Query(7, ge=1, le=365, description="통계 기간 (일)"),
     db: Session = Depends(get_db_session),
     current_admin: User = Depends(require_permission("audit_logs", "read")),
@@ -227,16 +239,19 @@ async def get_audit_stats(
 
     지정된 기간 동안의 액션별, 상태별 통계를 제공합니다.
     """
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_filter = or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None))
+
     # 기간 계산
     start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     # 전체 로그 수
-    total_logs = db.query(AuditLog).filter(AuditLog.timestamp >= start_date).count()
+    total_logs = db.query(AuditLog).filter(AuditLog.timestamp >= start_date, app_filter).count()
 
     # 상태별 통계
     status_stats = (
         db.query(AuditLog.status, func.count(AuditLog.id).label("count"))
-        .filter(AuditLog.timestamp >= start_date)
+        .filter(AuditLog.timestamp >= start_date, app_filter)
         .group_by(AuditLog.status)
         .all()
     )
@@ -244,7 +259,7 @@ async def get_audit_stats(
     # 액션별 상위 10개
     action_stats = (
         db.query(AuditLog.action, func.count(AuditLog.id).label("count"))
-        .filter(AuditLog.timestamp >= start_date)
+        .filter(AuditLog.timestamp >= start_date, app_filter)
         .group_by(AuditLog.action)
         .order_by(desc("count"))
         .limit(10)
@@ -254,7 +269,7 @@ async def get_audit_stats(
     # 사용자별 상위 10개
     user_stats = (
         db.query(AuditLog.user_email, func.count(AuditLog.id).label("count"))
-        .filter(and_(AuditLog.timestamp >= start_date, AuditLog.user_email.isnot(None)))
+        .filter(and_(AuditLog.timestamp >= start_date, AuditLog.user_email.isnot(None)), app_filter)
         .group_by(AuditLog.user_email)
         .order_by(desc("count"))
         .limit(10)

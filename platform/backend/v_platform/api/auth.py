@@ -80,11 +80,13 @@ async def register(
     db.refresh(new_user)
 
     # 감사 로그 생성
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_register(
         db=db,
         user=new_user,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     return new_user
@@ -138,11 +140,13 @@ async def login(
     db.commit()
 
     # 감사 로그 생성
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_login(
         db=db,
         user=user,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     # Access Token 생성 (15분)
@@ -239,11 +243,13 @@ async def login_form(
     db.commit()
 
     # 감사 로그 생성
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_login(
         db=db,
         user=user,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     # Access Token 생성 (15분)

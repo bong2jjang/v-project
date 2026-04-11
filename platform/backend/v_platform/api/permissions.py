@@ -136,6 +136,7 @@ async def get_effective_matrix(
 
 @router.get("/by-menu/{menu_item_id}")
 async def get_permissions_by_menu(
+    request: Request,
     menu_item_id: int,
     current_user: User = Depends(require_admin_or_above()),
     db: Session = Depends(get_db_session),
@@ -143,8 +144,13 @@ async def get_permissions_by_menu(
     """특정 메뉴에 대한 모든 사용자 권한 조회"""
     from v_platform.services.permission_service import PermissionService
     from v_platform.models.menu_item import MenuItem
+    from sqlalchemy import or_
 
-    menu = db.query(MenuItem).filter(MenuItem.id == menu_item_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    menu = db.query(MenuItem).filter(
+        MenuItem.id == menu_item_id,
+        or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
+    ).first()
     if not menu:
         raise HTTPException(404, "메뉴를 찾을 수 없습니다")
 
@@ -168,8 +174,13 @@ async def set_permissions_by_menu(
     """특정 메뉴에 대한 여러 사용자 개인 권한 일괄 설정"""
     from v_platform.models.menu_item import MenuItem
     from v_platform.models.user_permission import UserPermission
+    from sqlalchemy import or_
 
-    menu = db.query(MenuItem).filter(MenuItem.id == menu_item_id).first()
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    menu = db.query(MenuItem).filter(
+        MenuItem.id == menu_item_id,
+        or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
+    ).first()
     if not menu:
         raise HTTPException(404, "메뉴를 찾을 수 없습니다")
 

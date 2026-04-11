@@ -176,11 +176,13 @@ async def create_user(
     db.refresh(new_user)
 
     # 감사 로그 생성
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_register(
         db=db,
         user=new_user,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     # 알림 전송
@@ -261,6 +263,7 @@ async def update_me(
 
     # 감사 로그 생성 (변경 사항이 있는 경우에만)
     if changes:
+        app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
         log_user_update(
             db=db,
             user=user,
@@ -268,6 +271,7 @@ async def update_me(
             changes=changes,
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
+            app_id=app_id,
         )
 
     return user
@@ -314,11 +318,13 @@ async def change_password(
     db.commit()
 
     # 감사 로그 생성
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_password_change(
         db=db,
         user=user,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     return {"message": "Password changed successfully"}
@@ -421,6 +427,7 @@ async def update_user(
 
     # 감사 로그 생성 (변경 사항이 있는 경우에만)
     if changes:
+        app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
         log_user_update(
             db=db,
             user=user,
@@ -428,6 +435,7 @@ async def update_user(
             changes=changes,
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
+            app_id=app_id,
         )
 
     return user
@@ -609,6 +617,7 @@ async def delete_user(
 
     # 감사 로그 생성 (삭제 전에 정보 저장)
     user_email = user.email
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_delete(
         db=db,
         user_email=user_email,
@@ -616,6 +625,7 @@ async def delete_user(
         deleted_by=current_admin,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     # 사용자 삭제
@@ -689,6 +699,7 @@ async def update_user_role(
     db.refresh(user)
 
     # 감사 로그 생성
+    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
     log_user_role_change(
         db=db,
         user=user,
@@ -697,6 +708,7 @@ async def update_user_role(
         changed_by=current_admin,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
     )
 
     # 성공 알림 전송
