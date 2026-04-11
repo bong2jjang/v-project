@@ -26,6 +26,7 @@ import SSOCallback from "./pages/SSOCallback";
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./hooks/useTheme";
+import { PlatformProvider } from "@v-platform/core/providers/PlatformProvider";
 import { TourProvider } from "./components/tour/TourProvider";
 import { TokenExpiryManager } from "./components/auth/TokenExpiryManager";
 import { useAuthStore } from "./store/auth";
@@ -60,6 +61,11 @@ function App() {
   }, [isInitialized, isAuthenticated]);
 
   return (
+    <PlatformProvider config={{
+      appName: "v-channel-bridge",
+      appTitle: "v-channel-bridge",
+      appDescription: "Slack ↔ Teams 메시지 브리지",
+    }}>
     <ThemeProvider>
       <BrowserRouter
         future={{
@@ -263,6 +269,7 @@ function App() {
         </TourProvider>
       </BrowserRouter>
     </ThemeProvider>
+    </PlatformProvider>
   );
 }
 

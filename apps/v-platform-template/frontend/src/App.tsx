@@ -33,6 +33,7 @@ import {
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./hooks/useTheme";
+import { PlatformProvider } from "@v-platform/core/providers/PlatformProvider";
 import { TokenExpiryManager } from "./components/auth/TokenExpiryManager";
 import { useAuthStore } from "./store/auth";
 import { usePermissionStore } from "./store/permission";
@@ -61,6 +62,11 @@ function App() {
   }, [isInitialized, isAuthenticated]);
 
   return (
+    <PlatformProvider config={{
+      appName: "v-platform-template",
+      appTitle: "v-platform",
+      appDescription: "플랫폼 템플릿 앱",
+    }}>
     <ThemeProvider>
       <BrowserRouter
         future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
@@ -101,6 +107,7 @@ function App() {
         <TokenExpiryManager />
       </BrowserRouter>
     </ThemeProvider>
+    </PlatformProvider>
   );
 }
 
