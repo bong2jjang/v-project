@@ -271,16 +271,18 @@ export default function NotificationManagement() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => handleEdit(n)} className="p-1 hover:bg-surface-hover rounded" title="범위 수정">
-                                <Pencil className="w-4 h-4 text-content-tertiary" />
-                              </button>
-                              {!n.is_system && (
+                            {n.is_system ? (
+                              <span className="text-caption text-content-tertiary">—</span>
+                            ) : (
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={() => handleEdit(n)} className="p-1 hover:bg-surface-hover rounded" title="수정">
+                                  <Pencil className="w-4 h-4 text-content-tertiary" />
+                                </button>
                                 <button onClick={() => handleDelete(n.id)} className="p-1 hover:bg-surface-hover rounded" title="삭제">
                                   <Trash2 className="w-4 h-4 text-status-danger" />
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}
