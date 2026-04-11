@@ -13,6 +13,7 @@ import { ThemeSettings } from "../components/settings/ThemeSettings";
 import { SecurityTab } from "../components/settings/SecurityTab";
 import { SessionSettings } from "../components/settings/SessionSettings";
 import { SystemSettingsTab } from "../components/settings/SystemSettingsTab";
+import NotificationManagement from "./admin/NotificationManagement";
 import { Card, CardBody } from "../components/ui/Card";
 import {
   Tabs,
@@ -48,7 +49,7 @@ const Settings = () => {
       // 공용 탭: overview, theme, session
       // 관리자 전용 탭: security, system
       const allowedTabs = isAdmin
-        ? ["overview", "theme", "session", "security", "system"]
+        ? ["overview", "theme", "session", "security", "system", "notifications"]
         : ["overview", "theme", "session"];
 
       if (hash && allowedTabs.includes(hash)) {
@@ -230,6 +231,19 @@ const Settings = () => {
                     시스템 설정
                   </TabsTrigger>
                 )}
+                {isAdmin && (
+                  <TabsTrigger
+                    value="notifications"
+                    icon={
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    }
+                  >
+                    알림 관리
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               {/* Overview Tab - 모든 사용자 (첫 번째) */}
@@ -365,6 +379,11 @@ const Settings = () => {
               {isAdmin && (
                 <TabsContent value="system">
                   <SystemSettingsTab readOnly={!canEdit} />
+                </TabsContent>
+              )}
+              {isAdmin && (
+                <TabsContent value="notifications">
+                  <NotificationManagement />
                 </TabsContent>
               )}
             </Tabs>
