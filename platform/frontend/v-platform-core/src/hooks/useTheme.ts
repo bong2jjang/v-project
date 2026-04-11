@@ -100,8 +100,7 @@ function resolveInitialPreset(userPreset?: string | null, appName?: string): Col
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  let appName: string | undefined;
-  try { appName = usePlatformConfig().appName; } catch { /* PlatformProvider not mounted yet */ }
+  const { appName } = usePlatformConfig();
 
   const [theme, setThemeState] = useState<Theme>(() =>
     resolveInitialTheme(user?.theme, appName),

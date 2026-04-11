@@ -25,6 +25,7 @@ class AuditLogResponse(BaseModel):
     error_message: Optional[str] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
+    app_id: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -216,6 +216,18 @@ function AuditLogDetailModal({
             </p>
           </div>
           <div>
+            <p className="text-label-sm text-content-tertiary">앱</p>
+            <p className="text-body-sm text-content-primary">
+              {log.app_id ? (
+                <code className="text-label-sm bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 px-1.5 py-0.5 rounded">
+                  {log.app_id}
+                </code>
+              ) : (
+                <span className="text-content-tertiary">플랫폼 공통</span>
+              )}
+            </p>
+          </div>
+          <div>
             <p className="text-label-sm text-content-tertiary">리소스 타입</p>
             <p className="text-body-sm text-content-primary">
               {formatResourceType(log.resource_type) || "-"}
@@ -712,6 +724,9 @@ export default function AuditLogs() {
                     시간
                   </th>
                   <th className="px-4 py-3 text-left text-label-sm text-content-secondary">
+                    앱
+                  </th>
+                  <th className="px-4 py-3 text-left text-label-sm text-content-secondary">
                     사용자
                   </th>
                   <th className="px-4 py-3 text-left text-label-sm text-content-secondary">
@@ -743,7 +758,7 @@ export default function AuditLogs() {
                 ) : logs.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-4 py-12 text-center text-content-tertiary"
                     >
                       {activeFilterCount > 0
@@ -760,6 +775,15 @@ export default function AuditLogs() {
                     >
                       <td className="px-4 py-3 text-body-sm text-content-primary whitespace-nowrap">
                         {formatDate(log.timestamp)}
+                      </td>
+                      <td className="px-4 py-3 text-body-sm">
+                        {log.app_id ? (
+                          <code className="text-xs bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 px-1.5 py-0.5 rounded">
+                            {log.app_id.replace('v-', '')}
+                          </code>
+                        ) : (
+                          <span className="text-xs text-content-tertiary">공통</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-body-sm text-content-primary">
                         {log.user_email || "-"}

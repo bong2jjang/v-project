@@ -468,6 +468,7 @@ export interface AuditLog {
   error_message: string | null;
   ip_address: string | null;
   user_agent: string | null;
+  app_id: string | null;
 }
 
 export interface AuditLogListResponse {
