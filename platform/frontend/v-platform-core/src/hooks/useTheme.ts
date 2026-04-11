@@ -15,11 +15,9 @@ import {
   useCallback,
   createContext,
   useContext,
-  useRef,
   ReactNode,
   createElement,
 } from "react";
-import { updateMe } from "../api/users";
 import { useAuthStore } from "../stores/auth";
 import { usePlatformConfig } from "../providers/PlatformProvider";
 
@@ -116,22 +114,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => getEffectiveTheme(theme) === "dark",
   );
 
-  // 서버 저장 debounce용 타이머
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /** 서버에 테마 설정 저장 (debounce 300ms) */
-  const saveToServer = useCallback(
-    (updates: { theme?: string; color_preset?: string }) => {
-      if (!isAuthenticated) return;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        updateMe(updates).catch((err) =>
-          console.warn("[Theme] Failed to save to server:", err),
-        );
-      }, 300);
-    },
-    [isAuthenticated],
-  );
+  // 테마는 앱별 localStorage에만 저장 (DB 저장 안 함)
+  // 이유: users.theme은 앱 구분이 없어서 앱별 분리 불가
 
   const setTheme = useCallback(
     (newTheme: Theme) => {
@@ -140,9 +124,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const effective = getEffectiveTheme(newTheme);
       applyTheme(effective);
       setIsDark(effective === "dark");
-      saveToServer({ theme: newTheme });
     },
-    [saveToServer, appName],
+    [appName],
   );
 
   const toggle = useCallback(() => {
@@ -154,29 +137,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setColorPresetState(preset);
       localStorage.setItem(presetKey(appName), preset);
       applyColorPreset(preset);
-      saveToServer({ color_preset: preset });
     },
-    [saveToServer, appName],
+    [appName],
   );
 
-  // 로그인/로그아웃 시 사용자 DB 값으로 동기화
+  // 로그인 시 앱별 localStorage에서 테마 적용 (DB 사용 안 함)
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const serverTheme = resolveInitialTheme(user.theme, appName);
-      const serverPreset = resolveInitialPreset(user.color_preset, appName);
+    if (isAuthenticated) {
+      const currentTheme = resolveInitialTheme(null, appName);
+      const currentPreset = resolveInitialPreset(null, appName);
 
-      setThemeState(serverTheme);
-      localStorage.setItem(themeKey(appName), serverTheme);
-      const effective = getEffectiveTheme(serverTheme);
+      setThemeState(currentTheme);
+      const effective = getEffectiveTheme(currentTheme);
       applyTheme(effective);
       setIsDark(effective === "dark");
 
-      setColorPresetState(serverPreset);
-      localStorage.setItem(presetKey(appName), serverPreset);
-      applyColorPreset(serverPreset);
+      setColorPresetState(currentPreset);
+      applyColorPreset(currentPreset);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, appName]);
 
   // 시스템 테마 변경 감지
   useEffect(() => {
