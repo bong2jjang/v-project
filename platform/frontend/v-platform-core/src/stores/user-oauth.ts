@@ -10,8 +10,8 @@ import {
   OAuthStatus,
   AdminOAuthEntry,
   AdminOAuthStats,
-} from "@/api/user-oauth";
-import { ApiClientError } from "@/api/client";
+} from "../api/user-oauth";
+import { ApiClientError } from "../api/client";
 
 /** ApiClientError이면 getUserMessage(), 아니면 기본 메시지 */
 function extractErrorMessage(error: unknown, fallback: string): string {

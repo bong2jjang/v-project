@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useUserOAuthStore } from "@/stores/user-oauth";
+import { useUserOAuthStore } from "../../stores/user-oauth";
 import { UserOAuthCard } from "./UserOAuthCard";
 import { Skeleton, SkeletonOAuthCard } from "../ui/Skeleton";
 import { Alert } from "../ui/Alert";

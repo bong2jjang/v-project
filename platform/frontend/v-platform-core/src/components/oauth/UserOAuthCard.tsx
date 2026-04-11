@@ -15,7 +15,7 @@ import {
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Tooltip } from "../ui/Tooltip";
-import type { OAuthStatus } from "@/api/user-oauth";
+import type { OAuthStatus } from "../../api/user-oauth";
 
 /** 현재 사용자 OAuth를 지원하는 플랫폼 */
 const OAUTH_SUPPORTED_PLATFORMS = new Set(["teams"]);

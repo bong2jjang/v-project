@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { Trash2, RefreshCw, Users, Link2, Link2Off } from "lucide-react";
-import { useUserOAuthStore } from "@/stores/user-oauth";
+import { useUserOAuthStore } from "../../stores/user-oauth";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Skeleton, SkeletonCard, SkeletonTableRow } from "../ui/Skeleton";
