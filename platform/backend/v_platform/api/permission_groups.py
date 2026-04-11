@@ -172,7 +172,15 @@ async def create_group(
 ):
     """커스텀 그룹 생성 (system_admin 전용)"""
     app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
-    if db.query(PermissionGroup).filter(PermissionGroup.name == data.name).first():
+    # 같은 앱 내에서 중복 이름 체크 (다른 앱에서는 같은 이름 허용)
+    existing = db.query(PermissionGroup).filter(
+        PermissionGroup.name == data.name,
+        or_(
+            PermissionGroup.app_id == app_id,
+            PermissionGroup.app_id.is_(None),
+        )
+    ).first()
+    if existing:
         raise HTTPException(400, "동일한 이름의 그룹이 이미 존재합니다")
 
     group = PermissionGroup(
