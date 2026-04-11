@@ -124,7 +124,7 @@ async def create_menu(
     )
     if existing:
         raise HTTPException(
-            400, f"permission_key '{req.permission_key}' 가 이미 존재합니다"
+            400, f"메뉴 키 '{req.permission_key}'이(가) 이미 존재합니다. 다른 키를 사용해 주세요."
         )
 
     menu = MenuItem(

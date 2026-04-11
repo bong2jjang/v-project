@@ -181,7 +181,7 @@ async def create_group(
         )
     ).first()
     if existing:
-        raise HTTPException(400, "동일한 이름의 그룹이 이미 존재합니다")
+        raise HTTPException(400, "이 앱에 동일한 이름의 권한 그룹이 이미 존재합니다. 다른 이름을 사용해 주세요.")
 
     group = PermissionGroup(
         name=data.name,
@@ -283,7 +283,7 @@ async def set_group_grants(
 
     for item in req.grants:
         if item.access_level not in ("none", "read", "write"):
-            raise HTTPException(400, f"잘못된 access_level: {item.access_level}")
+            raise HTTPException(400, f"잘못된 권한 수준입니다: {item.access_level}")
         grant = PermissionGroupGrant(
             permission_group_id=group_id,
             menu_item_id=item.menu_item_id,

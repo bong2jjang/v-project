@@ -60,7 +60,7 @@ async def register(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
+            detail="이미 등록된 이메일 주소입니다. 다른 이메일을 사용하거나 로그인해 주세요.",
         )
 
     # 비밀번호 해싱

@@ -81,7 +81,7 @@ async def sso_authorize(provider: str, request: Request):
     """SSO 인증 URL을 JSON으로 반환 (프론트엔드에서 직접 이동)"""
     sso = sso_registry.get(provider)
     if not sso:
-        raise HTTPException(404, f"SSO provider '{provider}' not found")
+        raise HTTPException(404, f"SSO 제공자 '{provider}'을(를) 찾을 수 없습니다. 설정을 확인해 주세요.")
 
     state = secrets.token_urlsafe(32)
     backend_base = os.getenv("BACKEND_URL", "").rstrip("/")
@@ -117,15 +117,15 @@ async def sso_callback(
     # 1. State 검증 (CSRF 보호)
     pending = _pending_states.pop(state, None)
     if not pending or pending["provider"] != provider:
-        raise HTTPException(400, "Invalid or expired state")
+        raise HTTPException(400, "SSO 인증 상태가 유효하지 않거나 만료되었습니다. 다시 시도해 주세요.")
 
     if datetime.now(timezone.utc) - pending["created_at"] > timedelta(minutes=10):
-        raise HTTPException(400, "State expired")
+        raise HTTPException(400, "SSO 인증이 만료되었습니다. 다시 시도해 주세요.")
 
     # 2. Provider에서 사용자 정보 획득
     sso = sso_registry.get(provider)
     if not sso:
-        raise HTTPException(404, f"SSO provider '{provider}' not found")
+        raise HTTPException(404, f"SSO 제공자 '{provider}'을(를) 찾을 수 없습니다. 설정을 확인해 주세요.")
 
     try:
         sso_user: SSOUserInfo = await sso.handle_callback(
