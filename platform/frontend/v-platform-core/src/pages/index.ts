@@ -29,3 +29,4 @@ export { default as MenuManagementPage } from './admin/MenuManagement';
 export { default as PermissionMatrixPage } from './admin/PermissionMatrix';
 export { default as PermissionGroupsPage } from './admin/PermissionGroups';
 export { default as OrganizationsPage } from './admin/Organizations';
+export { default as NotificationManagementPage } from './admin/NotificationManagement';
