@@ -216,6 +216,62 @@ services:
     networks:
       - v-project-network
 
+  # v-platform-portal (포트 8080/5180)
+  portal-backend:
+    build:
+      context: .
+      dockerfile: apps/v-platform-portal/backend/Dockerfile
+    container_name: v-platform-portal-backend
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./apps/v-platform-portal/backend:/app
+      - ./platform/backend:/platform/backend
+    environment:
+      - PYTHONPATH=/app:/platform/backend
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
+      - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:-v-platform-portal-secret-key-32chars!!}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-mailhog}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - FRONTEND_URL=http://localhost:5180
+      - PORTAL_APPS=v-channel-bridge|Channel Bridge|Slack ↔ Teams 메시지 브리지|MessageSquare|http://localhost:5173|http://v-channel-bridge-backend:8000,v-platform-template|Platform Template|플랫폼 템플릿 앱|LayoutDashboard|http://localhost:5174|http://v-project-template-backend:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - portal
+    networks:
+      - v-project-network
+
+  portal-frontend:
+    build:
+      context: ./apps/v-platform-portal/frontend
+      dockerfile: Dockerfile.dev
+    container_name: v-platform-portal-frontend
+    ports:
+      - "5180:5173"
+    volumes:
+      - ./apps/v-platform-portal/frontend:/app
+      - ./platform/frontend:/platform/frontend
+      - /app/node_modules
+      - /app/.vite
+    command: sh -c "ln -sf /app/node_modules /platform/frontend/v-platform-core/node_modules && pnpm run dev -- --host 0.0.0.0"
+    environment:
+      - DOCKER_ENV=true
+      - VITE_API_URL=
+      - NODE_OPTIONS=--max-old-space-size=4096
+    depends_on:
+      - portal-backend
+    profiles:
+      - portal
+    networks:
+      - v-project-network
+
   # v-platform-template (포트 8002/5174)
   template-backend:
     build:

@@ -205,6 +205,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadUserFromStorage: () => {
     authLogger.logAuthState("Loading user from storage");
 
+    // SSO Token Relay: URL에서 auth_token 파라미터 수신 (포탈에서 전달)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const relayToken = params.get("auth_token");
+      if (relayToken) {
+        authLogger.logAuthState("Token relay received from portal");
+        authApi.setToken(relayToken);
+        // URL에서 토큰 파라미터 제거 (보안)
+        const url = new URL(window.location.href);
+        url.searchParams.delete("auth_token");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+
     const token = authApi.getToken();
     const user = authApi.getUser();
     const expiresAt = authApi.getTokenExpiresAt();

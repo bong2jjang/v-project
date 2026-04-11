@@ -1,0 +1,5 @@
+dist
+node_modules
+e2e-archived
+# 인코딩 손상 파일 (한글 깨짐 — 원본 복구 필요)
+src/hooks/useApiErrorHandler.ts

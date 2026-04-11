@@ -1,0 +1,51 @@
+{
+  "name": "v-platform-portal-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 150",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^4.2.2",
+    "@tanstack/react-query": "^5.17.0",
+    "axios": "^1.6.5",
+    "driver.js": "^1.3.1",
+    "lucide-react": "^0.309.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.0",
+    "recharts": "^2.15.4",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.2.0",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^1.2.0",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^24.0.0",
+    "postcss": "^8.4.33",
+    "prettier": "^3.2.4",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.0"
+  },
+  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be"
+}
