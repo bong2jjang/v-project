@@ -94,6 +94,18 @@ class PersistentNotificationService:
         return notifications, total
 
     @staticmethod
+    def list_all(
+        db: Session,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[Notification], int]:
+        """관리자용: 모든 알림 (scope 무관)"""
+        query = db.query(Notification)
+        total = query.count()
+        notifications = query.order_by(Notification.is_system.desc(), Notification.created_at.desc()).offset(offset).limit(limit).all()
+        return notifications, total
+
+    @staticmethod
     def get(db: Session, notification_id: int) -> Optional[Notification]:
         return db.query(Notification).filter(Notification.id == notification_id).first()
 

@@ -100,7 +100,7 @@ export default function NotificationManagement() {
 
   const loadData = useCallback(async () => {
     try {
-      const resp = await listNotifications({ limit: 100 });
+      const resp = await listNotifications({ limit: 100, admin_view: true });
       setNotifications(resp.notifications);
     } catch (e) {
       console.error("Failed to load notifications:", e);

@@ -60,6 +60,7 @@ export async function listNotifications(params?: {
   limit?: number;
   offset?: number;
   unread_only?: boolean;
+  admin_view?: boolean;
 }): Promise<NotificationListResponse> {
   const resp = await apiClient.get<NotificationListResponse>(BASE, { params });
   return resp.data;

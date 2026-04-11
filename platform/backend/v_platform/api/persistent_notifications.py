@@ -79,26 +79,33 @@ async def list_notifications(
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
     unread_only: bool = Query(default=False),
+    admin_view: bool = Query(default=False),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ):
-    """현재 사용자에게 해당하는 알림 목록 (scope 기반 필터)"""
+    """알림 목록 — admin_view=true면 전체 알림, 아니면 scope 기반 필터"""
     app_id = getattr(request.app.state, 'app_id', None)
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
 
-    notifications, total = PersistentNotificationService.list_for_user(
-        db=db,
-        user_id=current_user.id,
-        user_role=user_role,
-        app_id=app_id,
-        limit=limit,
-        offset=offset,
-        unread_only=unread_only,
-    )
-
-    unread = PersistentNotificationService.unread_count(
-        db=db, user_id=current_user.id, app_id=app_id, user_role=user_role,
-    )
+    if admin_view:
+        # 관리자 뷰: 모든 알림 (scope 무관)
+        notifications, total = PersistentNotificationService.list_all(
+            db=db, limit=limit, offset=offset,
+        )
+        unread = 0
+    else:
+        notifications, total = PersistentNotificationService.list_for_user(
+            db=db,
+            user_id=current_user.id,
+            user_role=user_role,
+            app_id=app_id,
+            limit=limit,
+            offset=offset,
+            unread_only=unread_only,
+        )
+        unread = PersistentNotificationService.unread_count(
+            db=db, user_id=current_user.id, app_id=app_id, user_role=user_role,
+        )
 
     return NotificationListResponse(
         notifications=[
