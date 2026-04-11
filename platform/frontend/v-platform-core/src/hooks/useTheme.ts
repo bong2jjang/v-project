@@ -178,13 +178,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyColorPreset(colorPreset);
   }, [theme, colorPreset]);
 
-  // cleanup
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
   const value: ThemeContextValue = {
     theme,
     isDark,
