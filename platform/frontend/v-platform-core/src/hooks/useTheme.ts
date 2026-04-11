@@ -140,7 +140,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setIsDark(effective === "dark");
       saveToServer({ theme: newTheme });
     },
-    [saveToServer],
+    [saveToServer, appName],
   );
 
   const toggle = useCallback(() => {
@@ -154,14 +154,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyColorPreset(preset);
       saveToServer({ color_preset: preset });
     },
-    [saveToServer],
+    [saveToServer, appName],
   );
 
   // 로그인/로그아웃 시 사용자 DB 값으로 동기화
   useEffect(() => {
     if (isAuthenticated && user) {
-      const serverTheme = resolveInitialTheme(user.theme);
-      const serverPreset = resolveInitialPreset(user.color_preset);
+      const serverTheme = resolveInitialTheme(user.theme, appName);
+      const serverPreset = resolveInitialPreset(user.color_preset, appName);
 
       setThemeState(serverTheme);
       localStorage.setItem(themeKey(appName), serverTheme);

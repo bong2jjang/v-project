@@ -10,8 +10,9 @@
     <!-- FOUC 방지: 다크모드 + 색상 프리셋 깜빡임 차단 -->
     <script>
       (function() {
-        var t = localStorage.getItem('theme');
-        var p = localStorage.getItem('colorPreset');
+        var app = 'v-platform-portal';
+        var t = localStorage.getItem(app + ':theme') || localStorage.getItem('theme');
+        var p = localStorage.getItem(app + ':colorPreset') || localStorage.getItem('colorPreset');
         if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark');
         }
