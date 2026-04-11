@@ -25,8 +25,8 @@ class MenuItem(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     permission_key = Column(
-        String(100), unique=True, nullable=False, index=True
-    )  # 'dashboard', 'channels', 'custom:3'
+        String(100), nullable=False, index=True
+    )  # unique per (permission_key, app_id)
     label = Column(String(200), nullable=False)
     icon = Column(String(100), nullable=True)  # Lucide 아이콘명
     path = Column(String(500), nullable=False)  # 라우트 경로
