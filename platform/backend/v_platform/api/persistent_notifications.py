@@ -58,6 +58,7 @@ class NotificationResponse(BaseModel):
     source: Optional[str] = None
     link: Optional[str] = None
     is_active: bool
+    is_system: bool = False
     expires_at: Optional[str] = None
     created_by: Optional[int] = None
     created_at: str
@@ -196,7 +197,12 @@ async def delete_notification(
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ):
-    """알림 삭제 (관리자)"""
-    if not PersistentNotificationService.delete(db, notification_id):
+    """알림 삭제 (관리자) — 시스템 기본 알림은 삭제 불가"""
+    notif = PersistentNotificationService.get(db, notification_id)
+    if not notif:
         raise HTTPException(404, "알림을 찾을 수 없습니다.")
+    if notif.is_system:
+        raise HTTPException(403, "시스템 기본 알림은 삭제할 수 없습니다. 비활성화만 가능합니다.")
+    if not PersistentNotificationService.delete(db, notification_id):
+        raise HTTPException(500, "알림 삭제에 실패했습니다.")
     return {"status": "deleted"}

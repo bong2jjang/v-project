@@ -36,6 +36,7 @@ class Notification(Base):
 
     # 상태
     is_active = Column(Boolean, default=True, nullable=False)
+    is_system = Column(Boolean, default=False, nullable=False)  # True=시스템 기본 (삭제 불가)
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
     # 발신자
@@ -65,6 +66,7 @@ class Notification(Base):
             "source": self.source,
             "link": self.link,
             "is_active": self.is_active,
+            "is_system": self.is_system,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,

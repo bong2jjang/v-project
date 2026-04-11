@@ -248,18 +248,27 @@ export default function NotificationManagement() {
                             {formatDate(n.created_at)}
                           </td>
                           <td className="px-4 py-3">
-                            <Badge variant={n.is_active ? "success" : "default"}>
-                              {n.is_active ? "활성" : "비활성"}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant={n.is_active ? "success" : "default"}>
+                                {n.is_active ? "활성" : "비활성"}
+                              </Badge>
+                              {n.is_system && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                  SYSTEM
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => handleEdit(n)} className="p-1 hover:bg-surface-hover rounded" title="수정">
+                              <button onClick={() => handleEdit(n)} className="p-1 hover:bg-surface-hover rounded" title="범위 수정">
                                 <Pencil className="w-4 h-4 text-content-tertiary" />
                               </button>
-                              <button onClick={() => handleDelete(n.id)} className="p-1 hover:bg-surface-hover rounded" title="삭제">
-                                <Trash2 className="w-4 h-4 text-status-danger" />
-                              </button>
+                              {!n.is_system && (
+                                <button onClick={() => handleDelete(n.id)} className="p-1 hover:bg-surface-hover rounded" title="삭제">
+                                  <Trash2 className="w-4 h-4 text-status-danger" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

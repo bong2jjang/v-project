@@ -17,6 +17,7 @@ export interface PersistentNotification {
   source: string | null;
   link: string | null;
   is_active: boolean;
+  is_system: boolean;
   expires_at: string | null;
   created_by: number | null;
   created_at: string;
