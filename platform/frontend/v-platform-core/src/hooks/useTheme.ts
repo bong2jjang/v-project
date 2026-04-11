@@ -82,18 +82,20 @@ function applyColorPreset(preset: ColorPreset) {
   }
 }
 
-/** 초기 테마 값 결정: 사용자 DB 값 > localStorage > 기본값 */
+/** 초기 테마 값 결정: 앱별 localStorage > 사용자 DB 값 > 기본값 */
 function resolveInitialTheme(userTheme?: string | null, appName?: string): Theme {
-  if (isValidTheme(userTheme)) return userTheme;
+  // 앱별 localStorage 우선 (앱별 분리)
   const stored = localStorage.getItem(themeKey(appName));
   if (isValidTheme(stored)) return stored;
+  // DB 값 fallback (최초 설정 전)
+  if (isValidTheme(userTheme)) return userTheme;
   return "system";
 }
 
 function resolveInitialPreset(userPreset?: string | null, appName?: string): ColorPreset {
-  if (isValidPreset(userPreset)) return userPreset;
   const stored = localStorage.getItem(presetKey(appName));
   if (isValidPreset(stored)) return stored;
+  if (isValidPreset(userPreset)) return userPreset;
   return "blue";
 }
 
