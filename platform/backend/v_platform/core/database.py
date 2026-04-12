@@ -69,6 +69,11 @@ def init_db():
     except ImportError:
         pass
 
+    try:
+        from app.models import portal_app  # noqa: F401
+    except ImportError:
+        pass
+
     # Create data directory if not exists
     if "sqlite" in DATABASE_URL:
         os.makedirs(DATABASE_DIR, exist_ok=True)

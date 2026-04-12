@@ -13,6 +13,7 @@ from v_platform.services.event_broadcaster import EventBroadcaster
 import v_platform.services.event_broadcaster as broadcaster_module
 
 from app.api.portal import router as portal_router
+from app.services.app_registry import app_registry
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-8s %(name)s %(message)s")
 logger = structlog.get_logger()
@@ -22,6 +23,16 @@ logger = structlog.get_logger()
 async def lifespan(fastapi_app):
     logger.info("Starting v-platform-portal")
     platform.init_platform()
+
+    # DB seed (env var → DB if empty) + load apps into memory
+    from v_platform.core.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        app_registry.seed_from_env(db)
+        app_registry.reload_from_db(db)
+    finally:
+        db.close()
 
     # EventBroadcaster — WebSocket 알림 전달에 필요
     broadcaster = EventBroadcaster(manager, None)
