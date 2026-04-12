@@ -27,6 +27,7 @@ export default defineConfig({
       interval: 2000,
       ignored: [
         '**/node_modules/**',
+        '**/.pnpm-store/**',
         '**/.git/**',
         '**/tests/**',
         '**/test/**',

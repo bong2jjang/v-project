@@ -50,9 +50,11 @@ class PlatformApp:
         description: str = "",
         lifespan: Optional[Callable] = None,
         cors_origins: Optional[list[str]] = None,
+        app_menu_keys: Optional[list[str]] = None,
     ):
         self.app_name = app_name
         self.version = version
+        self.app_menu_keys = app_menu_keys
 
         # Initialize structured logging before anything else
         configure_platform_logging(app_name=app_name)
@@ -124,6 +126,26 @@ class PlatformApp:
             self.fastapi.include_router(router)
 
     def init_platform(self):
-        """Initialize database and SSO providers"""
+        """Initialize database, SSO providers, and classify app menus"""
         init_db()
         init_sso_providers()
+        if self.app_menu_keys:
+            self._classify_app_menus()
+
+    def _classify_app_menus(self):
+        """Tag menu_items with this app's app_id based on app_menu_keys"""
+        from v_platform.core.database import engine
+        from sqlalchemy import text
+        keys = self.app_menu_keys
+        with engine.connect() as conn:
+            placeholders = ", ".join(f":k{i}" for i in range(len(keys)))
+            params = {f"k{i}": k for i, k in enumerate(keys)}
+            params["app_id"] = self.app_name
+            conn.execute(
+                text(
+                    f"UPDATE menu_items SET app_id = :app_id "
+                    f"WHERE permission_key IN ({placeholders}) AND app_id IS NULL"
+                ),
+                params,
+            )
+            conn.commit()

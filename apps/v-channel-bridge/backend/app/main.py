@@ -14,8 +14,6 @@ import redis.asyncio as aioredis
 from v_platform.app import PlatformApp
 from v_platform.api.health import health_registry, ServiceHealth
 from v_platform.services.websocket_manager import manager
-from v_platform.core.database import init_db
-from v_platform.sso import init_sso_providers
 
 # App services
 from app.services.event_broadcaster import EventBroadcaster
@@ -212,9 +210,8 @@ async def lifespan(fastapi_app):
     """App lifecycle — startup/shutdown"""
     logger.info("Starting v-channel-bridge")
 
-    # Platform init
-    init_db()
-    init_sso_providers()
+    # Platform init (DB + SSO + app menu classification)
+    platform.init_platform()
 
     # EventBroadcaster
     broadcaster = EventBroadcaster(manager, None)
@@ -300,6 +297,13 @@ platform = PlatformApp(
     version="2.0.0",
     description="v-platform + v-channel-bridge: Slack ↔ Teams Message Bridge",
     lifespan=lifespan,
+    app_menu_keys=[
+        "channels",
+        "messages",
+        "statistics",
+        "integrations",
+        "monitoring",
+    ],
 )
 
 # Register app-specific routers

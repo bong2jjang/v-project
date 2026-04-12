@@ -170,12 +170,6 @@ services:
         hard: 65536
     depends_on:
       - backend
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:5173 || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
     logging:
       driver: "json-file"
       options:
@@ -299,6 +293,10 @@ services:
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
       - FRONTEND_URL=http://localhost:5174
+      # SSO (Teams 자격증명 재사용)
+      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
+      - TEAMS_APP_ID=${TEAMS_APP_ID}
+      - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

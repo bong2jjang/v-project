@@ -20,21 +20,23 @@ def migrate(engine):
             conn.execute(
                 text("CREATE INDEX idx_menu_items_app_id ON menu_items(app_id)")
             )
+            logger.info("Added app_id column to menu_items")
 
-            # Classify existing built-in menus as platform common (app_id = NULL)
-            # App-specific menus for v-channel-bridge
-            conn.execute(
-                text(
-                    """
+        # Always classify app menus (idempotent — safe to re-run)
+        # This fixes the race condition where create_all() creates the column
+        # before migration runs, causing the UPDATE to be skipped.
+        conn.execute(
+            text(
+                """
                 UPDATE menu_items SET app_id = 'v-channel-bridge'
                 WHERE permission_key IN (
                     'channels', 'messages', 'statistics', 'integrations', 'monitoring',
                     'menu_group_mgtmonitor', 'menu_group01'
-                )
+                ) AND app_id IS NULL
             """
-                )
             )
-            logger.info("Added app_id to menu_items, classified existing menus")
+        )
+        logger.info("Classified v-channel-bridge menus")
 
         # audit_logs.app_id
         result = conn.execute(
