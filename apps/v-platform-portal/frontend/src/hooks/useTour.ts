@@ -1,5 +1,5 @@
 /**
- * useTour 훅
+ * useTour 훅 — Portal 전용
  *
  * Product Tour 상태 관리 및 제어
  */
@@ -8,13 +8,7 @@ import { useCallback, useEffect } from "react";
 import { driver, DriveStep, Driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import "../lib/tour/driver-theme.css";
-import {
-  mainTourSteps,
-  channelsTourSteps,
-  messagesTourSteps,
-  settingsTourSteps,
-  statisticsTourSteps,
-} from "../lib/tour";
+import { mainTourSteps, settingsTourSteps } from "../lib/tour";
 
 // LocalStorage 키
 const TOUR_STORAGE = {
@@ -22,12 +16,7 @@ const TOUR_STORAGE = {
   PAGE_SEEN: "tour_page_seen_",
 };
 
-type PageName =
-  | "dashboard"
-  | "channels"
-  | "messages"
-  | "settings"
-  | "statistics";
+type PageName = "dashboard" | "settings";
 
 let driverInstance: Driver | null = null;
 
@@ -67,7 +56,6 @@ export function useTour() {
    * 메인 투어 시작
    */
   const startMainTour = useCallback(() => {
-    // 투어 완료 시 localStorage에 저장하는 콜백
     const onComplete = () => {
       localStorage.setItem(TOUR_STORAGE.MAIN_COMPLETED, "true");
     };
@@ -84,23 +72,13 @@ export function useTour() {
     let steps: DriveStep[] = [];
 
     switch (pageName) {
-      case "channels":
-        steps = channelsTourSteps;
-        break;
-      case "messages":
-        steps = messagesTourSteps;
-        break;
       case "settings":
         steps = settingsTourSteps;
-        break;
-      case "statistics":
-        steps = statisticsTourSteps;
         break;
       default:
         steps = mainTourSteps;
     }
 
-    // 페이지 투어 완료 시 localStorage에 저장하는 콜백
     const onComplete = () => {
       localStorage.setItem(TOUR_STORAGE.PAGE_SEEN + pageName, "true");
     };
@@ -148,7 +126,6 @@ export function useTour() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // 컴포넌트 언마운트 시 투어 중지
       if (driverInstance?.isActive()) {
         driverInstance.destroy();
       }

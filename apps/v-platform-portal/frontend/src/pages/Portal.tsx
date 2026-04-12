@@ -189,7 +189,7 @@ export default function Portal() {
                   description="PORTAL_APPS 환경변수를 설정하세요."
                 />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div data-tour="app-launcher" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {apps.map((app) => (
                     <AppCard
                       key={app.app_id}
@@ -203,7 +203,7 @@ export default function Portal() {
             </div>
 
             {/* 시스템 상태 */}
-            <div>
+            <div data-tour="system-status">
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-5 h-5 text-content-secondary" />
                 <h2 className="text-heading-md text-content-primary">시스템 상태</h2>
@@ -248,7 +248,7 @@ export default function Portal() {
             </div>
 
             {/* 사이트맵 */}
-            <div>
+            <div data-tour="sitemap">
               <div className="flex items-center gap-2 mb-4">
                 <Map className="w-5 h-5 text-content-secondary" />
                 <h2 className="text-heading-md text-content-primary">사이트맵</h2>

@@ -1,1 +1,1 @@
-export * from '@v-platform/core/lib/tour';
+export * from "./tours";

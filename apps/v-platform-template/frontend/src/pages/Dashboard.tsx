@@ -30,7 +30,7 @@ export default function Dashboard() {
       <div className="page-container">
         <div className="space-y-section-gap">
           {/* 환영 메시지 */}
-          <Card>
+          <Card data-tour="welcome-card">
             <CardBody>
               <h2 className="text-xl font-semibold text-content-primary">
                 환영합니다, {user?.username || "사용자"}님
@@ -42,7 +42,7 @@ export default function Dashboard() {
           </Card>
 
           {/* 시스템 상태 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div data-tour="system-health" className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>플랫폼</CardTitle>

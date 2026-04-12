@@ -21,7 +21,6 @@ import {
   UserManagementPage,
   AuditLogsPage,
   SettingsPage,
-  HelpPage,
   CustomIframePage,
   MenuManagementPage,
   PermissionMatrixPage,
@@ -42,6 +41,7 @@ import { useNotifications } from "./hooks/useNotifications";
 
 // 포탈 전용 페이지
 import Portal from "./pages/Portal";
+import HelpPage from "./pages/Help";
 import AppManagement from "./pages/admin/AppManagement";
 
 function App() {
