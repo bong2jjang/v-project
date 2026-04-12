@@ -101,7 +101,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-channel-bridge}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - FRONTEND_URL=${FRONTEND_URL:-http://127.0.0.1:5173}
       # Slack Provider (Socket Mode)
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
@@ -157,13 +157,13 @@ services:
     environment:
       - DOCKER_ENV=true
       - VITE_API_URL=
-      - NODE_OPTIONS=--max-old-space-size=4096
+      - NODE_OPTIONS=--max-old-space-size=512
     deploy:
       resources:
         limits:
-          memory: 6G
+          memory: 1G
         reservations:
-          memory: 2G
+          memory: 256M
     ulimits:
       nofile:
         soft: 65536
@@ -230,12 +230,12 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
-      - FRONTEND_URL=http://localhost:5180
+      - FRONTEND_URL=http://127.0.0.1:5180
       # SSO (Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
-      - PORTAL_APPS=v-channel-bridge|Channel Bridge|Slack ↔ Teams 메시지 브리지|MessageSquare|http://localhost:5173|http://v-channel-bridge-backend:8000,v-platform-template|Platform Template|플랫폼 템플릿 앱|LayoutDashboard|http://localhost:5174|http://v-platform-template-backend:8000
+      - PORTAL_APPS=v-channel-bridge|Channel Bridge|Slack ↔ Teams 메시지 브리지|MessageSquare|http://127.0.0.1:5173|http://v-channel-bridge-backend:8000,v-platform-template|Platform Template|플랫폼 템플릿 앱|LayoutDashboard|http://127.0.0.1:5174|http://v-platform-template-backend:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -263,7 +263,17 @@ services:
     environment:
       - DOCKER_ENV=true
       - VITE_API_URL=
-      - NODE_OPTIONS=--max-old-space-size=4096
+      - NODE_OPTIONS=--max-old-space-size=512
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     depends_on:
       - portal-backend
     profiles:
@@ -292,7 +302,7 @@ services:
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
-      - FRONTEND_URL=http://localhost:5174
+      - FRONTEND_URL=http://127.0.0.1:5174
       # SSO (Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
@@ -324,7 +334,17 @@ services:
     environment:
       - DOCKER_ENV=true
       - VITE_API_URL=
-      - NODE_OPTIONS=--max-old-space-size=4096
+      - NODE_OPTIONS=--max-old-space-size=512
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     depends_on:
       - template-backend
     profiles:

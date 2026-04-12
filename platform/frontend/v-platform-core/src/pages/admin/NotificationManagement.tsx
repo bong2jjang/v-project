@@ -247,7 +247,9 @@ export default function NotificationManagement() {
     setTitle(n.title); setMessage(n.message); setSeverity(n.severity);
     setScope(n.scope); setTargetRole(n.target_role || "");
     setTargetUserId(n.target_user_id?.toString() || "");
-    setLink(n.link || ""); setExpiresAt(n.expires_at || "");
+    setLink(n.link || "");
+    // datetime-local input은 "YYYY-MM-DDTHH:mm" 형식 필요 — ISO 8601에서 변환
+    setExpiresAt(n.expires_at ? n.expires_at.slice(0, 16) : "");
     setDeliveryType(n.delivery_type || "toast");
     setEditingId(n.id);
     setShowForm(true);

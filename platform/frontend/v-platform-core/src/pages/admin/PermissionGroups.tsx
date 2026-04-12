@@ -14,6 +14,9 @@ import {
   Lock,
   ChevronDown,
   ChevronRight,
+  UserPlus,
+  X,
+  Search,
 } from "lucide-react";
 import { ContentHeader } from "../../components/Layout";
 import { usePermissionStore } from "../../stores/permission";
@@ -132,6 +135,16 @@ export default function PermissionGroups() {
       role: string;
     }>
   >([]);
+
+  // 사용자 추가 모달
+  const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
+  const [addMemberGroupId, setAddMemberGroupId] = useState<number | null>(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [memberSearchResults, setMemberSearchResults] = useState<
+    Array<{ id: number; username: string; email: string; role: string }>
+  >([]);
+  const [memberSearching, setMemberSearching] = useState(false);
+  const [memberAdding, setMemberAdding] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -281,6 +294,75 @@ export default function PermissionGroups() {
       setMembers(res.members);
     } catch {
       setError("소속 사용자를 불러올 수 없습니다");
+    }
+  };
+
+  // 사용자 추가 모달 열기
+  const openAddMemberModal = async (groupId: number) => {
+    setAddMemberGroupId(groupId);
+    setMemberSearchQuery("");
+    setMemberSearchResults([]);
+    setAddMemberModalOpen(true);
+    // 초기 목록 로드
+    try {
+      const res = await groupApi.searchUsersForGroup("", groupId, 20);
+      setMemberSearchResults(res.users);
+    } catch {
+      // 무시
+    }
+  };
+
+  // 사용자 검색
+  const handleMemberSearch = async (query: string) => {
+    setMemberSearchQuery(query);
+    if (!addMemberGroupId) return;
+    setMemberSearching(true);
+    try {
+      const res = await groupApi.searchUsersForGroup(
+        query,
+        addMemberGroupId,
+        20,
+      );
+      setMemberSearchResults(res.users);
+    } catch {
+      // 검색 실패 시 무시
+    } finally {
+      setMemberSearching(false);
+    }
+  };
+
+  // 사용자 추가
+  const handleAddMember = async (userId: number) => {
+    if (!addMemberGroupId) return;
+    setMemberAdding(userId);
+    try {
+      await groupApi.addGroupMember(addMemberGroupId, userId);
+      // 검색 결과에서 제거
+      setMemberSearchResults((prev) => prev.filter((u) => u.id !== userId));
+      // 소속 사용자 목록 갱신
+      if (membersGroupId === addMemberGroupId) {
+        const res = await groupApi.getGroupMembers(addMemberGroupId);
+        setMembers(res.members);
+      }
+      fetchData(); // member_count 갱신
+      setSuccess("사용자가 그룹에 추가되었습니다");
+    } catch {
+      setError("사용자 추가에 실패했습니다");
+    } finally {
+      setMemberAdding(null);
+    }
+  };
+
+  // 사용자 제거
+  const handleRemoveMember = async (groupId: number, userId: number) => {
+    if (!confirm("이 사용자를 그룹에서 제거하시겠습니까?")) return;
+    try {
+      await groupApi.removeGroupMember(groupId, userId);
+      setMembers((prev) => prev.filter((m) => m.user_id !== userId));
+      fetchData(); // member_count 갱신
+      setSuccess("사용자가 그룹에서 제거되었습니다");
+    } catch {
+      setError("사용자 제거에 실패했습니다");
     }
   };
 
@@ -496,9 +578,21 @@ export default function PermissionGroups() {
                 {/* 소속 사용자 패널 */}
                 {membersGroupId === group.id && (
                   <div className="mt-4 border-t border-line pt-4">
-                    <h4 className="text-sm font-medium text-content-primary mb-2">
-                      소속 사용자 ({members.length}명)
-                    </h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-content-primary">
+                        소속 사용자 ({members.length}명)
+                      </h4>
+                      {canEdit && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openAddMemberModal(group.id)}
+                        >
+                          <UserPlus className="w-3.5 h-3.5 mr-1" />
+                          사용자 추가
+                        </Button>
+                      )}
+                    </div>
                     {members.length === 0 ? (
                       <p className="text-sm text-content-tertiary py-4 text-center">
                         소속 사용자가 없습니다
@@ -508,7 +602,7 @@ export default function PermissionGroups() {
                         {members.map((m) => (
                           <div
                             key={m.user_id}
-                            className="flex items-center gap-2 p-2 rounded-lg bg-surface-raised"
+                            className="flex items-center gap-2 p-2 rounded-lg bg-surface-raised group"
                           >
                             <div className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center flex-shrink-0">
                               {m.username.charAt(0).toUpperCase()}
@@ -533,6 +627,17 @@ export default function PermissionGroups() {
                                 {m.email}
                               </div>
                             </div>
+                            {canEdit && (
+                              <button
+                                onClick={() =>
+                                  handleRemoveMember(group.id, m.user_id)
+                                }
+                                className="p-1 rounded text-content-tertiary hover:text-status-error hover:bg-status-error/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                                title="그룹에서 제거"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -603,6 +708,81 @@ export default function PermissionGroups() {
                 onChange={(e) => setFormDesc(e.target.value)}
                 rows={3}
               />
+            </div>
+          </div>
+        </Modal>
+
+        {/* 사용자 추가 모달 */}
+        <Modal
+          isOpen={addMemberModalOpen}
+          onClose={() => setAddMemberModalOpen(false)}
+          title="사용자 추가"
+        >
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-tertiary" />
+              <Input
+                type="text"
+                placeholder="이름 또는 이메일로 검색"
+                value={memberSearchQuery}
+                onChange={(e) => handleMemberSearch(e.target.value)}
+                className="pl-9"
+                autoFocus
+              />
+            </div>
+            <div className="max-h-[300px] overflow-y-auto space-y-1">
+              {memberSearching ? (
+                <div className="py-8 text-center text-sm text-content-tertiary">
+                  검색 중...
+                </div>
+              ) : memberSearchResults.length === 0 ? (
+                <div className="py-8 text-center text-sm text-content-tertiary">
+                  {memberSearchQuery
+                    ? "검색 결과가 없습니다"
+                    : "사용자 이름이나 이메일을 입력하세요"}
+                </div>
+              ) : (
+                memberSearchResults.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-raised transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center flex-shrink-0">
+                      {user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-content-primary truncate">
+                          {user.username}
+                        </span>
+                        <Badge
+                          variant={
+                            user.role === "system_admin" ||
+                            user.role === "org_admin"
+                              ? "warning"
+                              : "info"
+                          }
+                        >
+                          {getRoleDisplayName(user.role)}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-content-tertiary truncate">
+                        {user.email}
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleAddMember(user.id)}
+                      loading={memberAdding === user.id}
+                      disabled={memberAdding !== null}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      추가
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </Modal>

@@ -61,3 +61,41 @@ export async function getGroupMembers(groupId: number): Promise<{
 }> {
   return get(`/api/permission-groups/${groupId}/members`);
 }
+
+/** 그룹에 사용자 추가 */
+export async function addGroupMember(
+  groupId: number,
+  userId: number,
+): Promise<{ message: string }> {
+  return post(`/api/permission-groups/${groupId}/members`, {
+    user_id: userId,
+  });
+}
+
+/** 그룹에서 사용자 제거 */
+export async function removeGroupMember(
+  groupId: number,
+  userId: number,
+): Promise<{ message: string }> {
+  return del(`/api/permission-groups/${groupId}/members/${userId}`);
+}
+
+/** 그룹 멤버 추가를 위한 사용자 검색 (이미 소속된 사용자 제외) */
+export async function searchUsersForGroup(
+  query: string,
+  groupId?: number,
+  limit: number = 20,
+): Promise<{
+  users: Array<{
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+  }>;
+}> {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (groupId) params.set("group_id", String(groupId));
+  params.set("limit", String(limit));
+  return get(`/api/permission-groups/members/search?${params.toString()}`);
+}

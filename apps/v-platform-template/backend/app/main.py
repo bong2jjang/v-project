@@ -15,6 +15,9 @@ import structlog
 from contextlib import asynccontextmanager
 
 from v_platform.app import PlatformApp
+from v_platform.services.websocket_manager import manager
+from v_platform.services.event_broadcaster import EventBroadcaster
+import v_platform.services.event_broadcaster as broadcaster_module
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-8s %(name)s %(message)s")
 logger = structlog.get_logger()
@@ -24,10 +27,18 @@ logger = structlog.get_logger()
 async def lifespan(fastapi_app):
     logger.info("Starting v-platform-template")
     platform.init_platform()
+
+    # EventBroadcaster — WebSocket 알림 전달에 필요
+    broadcaster = EventBroadcaster(manager, None)
+    broadcaster_module.broadcaster = broadcaster
+    await broadcaster.start()
+
     logger.info("v-platform-template ready")
 
     yield
 
+    if broadcaster_module.broadcaster:
+        await broadcaster_module.broadcaster.stop()
     logger.info("v-platform-template stopped")
 
 

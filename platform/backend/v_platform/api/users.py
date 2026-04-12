@@ -7,6 +7,7 @@ User Management API
 from datetime import datetime, timezone
 from math import ceil
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 from typing import Optional
 
@@ -468,10 +469,11 @@ class SetUserGroupsRequest(BaseModel):
 async def set_user_groups(
     user_id: int,
     req: SetUserGroupsRequest,
+    request: Request,
     db: Session = Depends(get_db_session),
     current_admin: User = Depends(require_admin_or_above()),
 ):
-    """사용자의 그룹 소속 일괄 설정"""
+    """사용자의 그룹 소속 일괄 설정 (현재 앱 범위만 변경, 다른 앱 멤버십 유지)"""
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
         raise HTTPException(404, "사용자를 찾을 수 없습니다")
@@ -482,13 +484,34 @@ async def set_user_groups(
             403, "운영관리자는 일반사용자에게만 그룹을 할당할 수 있습니다"
         )
 
-    # 기존 멤버십 삭제
-    db.query(UserGroupMembership).filter(
-        UserGroupMembership.user_id == user_id
-    ).delete()
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
 
-    # 새 멤버십 추가
+    # 현재 앱 범위의 그룹 ID 목록
+    app_group_ids = {
+        g.id
+        for g in db.query(PermissionGroup.id)
+        .filter(or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id))
+        .all()
+    }
+
+    # 현재 앱 범위의 기존 멤버십만 삭제 (다른 앱 멤버십 유지)
+    existing = (
+        db.query(UserGroupMembership)
+        .filter(UserGroupMembership.user_id == user_id)
+        .all()
+    )
+    for m in existing:
+        if m.permission_group_id in app_group_ids:
+            db.delete(m)
+
+    # 새 멤버십 추가 (현재 앱 범위 그룹만)
     for gid in req.group_ids:
+        if gid not in app_group_ids:
+            continue
         group = db.query(PermissionGroup).filter(PermissionGroup.id == gid).first()
         if not group:
             continue
@@ -506,13 +529,20 @@ async def set_user_groups(
 @router.get("/{user_id}/groups")
 async def get_user_groups(
     user_id: int,
+    request: Request,
     db: Session = Depends(get_db_session),
     current_admin: User = Depends(require_admin_or_above()),
 ):
-    """사용자의 소속 그룹 목록"""
+    """사용자의 소속 그룹 목록 (현재 앱 범위)"""
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
         raise HTTPException(404, "사용자를 찾을 수 없습니다")
+
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
 
     memberships = (
         db.query(UserGroupMembership)
@@ -524,7 +554,10 @@ async def get_user_groups(
     for m in memberships:
         group = (
             db.query(PermissionGroup)
-            .filter(PermissionGroup.id == m.permission_group_id)
+            .filter(
+                PermissionGroup.id == m.permission_group_id,
+                or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+            )
             .first()
         )
         if group:

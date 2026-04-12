@@ -4,14 +4,12 @@ import { usePermissionStore } from "../stores/permission";
 import { useNotificationStore } from "../stores/notification";
 import * as usersApi from "../api/users";
 import * as orgApi from "../api/organizations";
-import * as groupApi from "../api/permission-groups";
 import { ApiClientError } from "../api/client";
 import type {
   User,
   UserRole,
   Company,
   Department,
-  PermissionGroup,
   OrgTreeResponse,
   OrgCompanyNode,
   OrgDeptNode,
@@ -355,7 +353,6 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [isActiveFilter, setIsActiveFilter] = useState<string>("");
   const [companyFilter, setCompanyFilter] = useState<string>("");
-  const [groupFilter, setGroupFilter] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -367,9 +364,8 @@ export default function UserManagement() {
   const [orgTreeLoading, setOrgTreeLoading] = useState(false);
   const [orgTreeError, setOrgTreeError] = useState<string | null>(null);
 
-  // 조직/그룹 참조 데이터
+  // 조직 참조 데이터
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [groups, setGroups] = useState<PermissionGroup[]>([]);
 
   // 편집 모달
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -397,12 +393,6 @@ export default function UserManagement() {
   const [newRole, setNewRole] = useState<UserRole>("user");
   const [initialRole, setInitialRole] = useState<UserRole>("user");
   const [isRoleSubmitting, setIsRoleSubmitting] = useState(false);
-  const [roleModalGroupIds, setRoleModalGroupIds] = useState<Set<number>>(
-    new Set(),
-  );
-  const [initialGroupIds, setInitialGroupIds] = useState<Set<number>>(
-    new Set(),
-  );
 
   // 사용자 생성 모달
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -419,7 +409,6 @@ export default function UserManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [isCreateSubmitting, setIsCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createGroupIds, setCreateGroupIds] = useState<Set<number>>(new Set());
 
   const isCreateFormValid =
     createForm.username.length >= 2 &&
@@ -431,10 +420,6 @@ export default function UserManagement() {
     orgApi
       .getCompanies()
       .then(setCompanies)
-      .catch(() => {});
-    groupApi
-      .getGroups()
-      .then(setGroups)
       .catch(() => {});
   }, []);
 
@@ -449,7 +434,6 @@ export default function UserManagement() {
       if (roleFilter) params.role = roleFilter;
       if (isActiveFilter !== "") params.is_active = isActiveFilter === "true";
       if (companyFilter) params.company_id = Number(companyFilter);
-      if (groupFilter) params.group_id = Number(groupFilter);
 
       const response = await usersApi.getUsers(
         params as Parameters<typeof usersApi.getUsers>[0],
@@ -469,7 +453,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     loadUsers();
-  }, [page, search, roleFilter, isActiveFilter, companyFilter, groupFilter]);
+  }, [page, search, roleFilter, isActiveFilter, companyFilter]);
 
   // 조직도 탭 전환 시 데이터 로드
   const loadOrgTree = async () => {
@@ -619,36 +603,16 @@ export default function UserManagement() {
   };
 
   // 역할 변경 모달 열기
-  const openRoleModal = async (user: User) => {
+  const openRoleModal = (user: User) => {
     setChangingRoleUser(user);
     setNewRole(user.role);
     setInitialRole(user.role);
     setIsRoleSubmitting(false);
-    // 사용자 현재 그룹 로드
-    const currentIds = new Set((user.groups ?? []).map((g) => g.id));
-    setRoleModalGroupIds(currentIds);
-    setInitialGroupIds(new Set(currentIds));
     setRoleModalOpen(true);
-    // 백그라운드: 정확한 그룹 목록 가져오기
-    try {
-      const res = await usersApi.getUserGroups(user.id);
-      const ids = new Set(res.groups.map((g) => g.id));
-      setRoleModalGroupIds(ids);
-      setInitialGroupIds(new Set(ids));
-    } catch {
-      // user.groups fallback 유지
-    }
   };
 
   // 역할 변경 감지
-  const isGroupsChanged = (() => {
-    if (roleModalGroupIds.size !== initialGroupIds.size) return true;
-    for (const id of roleModalGroupIds) {
-      if (!initialGroupIds.has(id)) return true;
-    }
-    return false;
-  })();
-  const isRoleChanged = newRole !== initialRole || isGroupsChanged;
+  const isRoleChanged = newRole !== initialRole;
 
   // 역할 변경
   const handleChangeRole = async () => {
@@ -656,15 +620,7 @@ export default function UserManagement() {
 
     setIsRoleSubmitting(true);
     try {
-      if (newRole !== initialRole) {
-        await usersApi.updateUserRole(changingRoleUser.id, { role: newRole });
-      }
-      if (isGroupsChanged) {
-        await usersApi.setUserGroups(
-          changingRoleUser.id,
-          Array.from(roleModalGroupIds),
-        );
-      }
+      await usersApi.updateUserRole(changingRoleUser.id, { role: newRole });
       setRoleModalOpen(false);
       loadUsers();
 
@@ -674,8 +630,8 @@ export default function UserManagement() {
         timestamp: new Date().toISOString(),
         severity: "success",
         category: "user",
-        title: "역할 그룹 변경 완료",
-        message: `${changingRoleUser.username}의 역할 그룹이 ${getRoleDisplayName(newRole)}(으)로 변경되었습니다.`,
+        title: "역할 변경 완료",
+        message: `${changingRoleUser.username}의 역할이 ${getRoleDisplayName(newRole)}(으)로 변경되었습니다.`,
         source: "user_management",
         dismissible: true,
         persistent: false,
@@ -690,7 +646,7 @@ export default function UserManagement() {
           timestamp: new Date().toISOString(),
           severity: "error",
           category: "user",
-          title: "역할 그룹 변경 실패",
+          title: "역할 변경 실패",
           message: err.getUserMessage(),
           source: "user_management",
           dismissible: true,
@@ -719,7 +675,6 @@ export default function UserManagement() {
     setShowPassword(false);
     setCreateError(null);
     setIsCreateSubmitting(false);
-    setCreateGroupIds(new Set());
     setCreateModalOpen(true);
   };
 
@@ -730,15 +685,7 @@ export default function UserManagement() {
     setIsCreateSubmitting(true);
     setCreateError(null);
     try {
-      const newUser = await usersApi.createUser(createForm);
-      // 추가 역할 그룹 할당
-      if (createGroupIds.size > 0) {
-        try {
-          await usersApi.setUserGroups(newUser.id, Array.from(createGroupIds));
-        } catch {
-          // 사용자 생성은 성공, 그룹 할당만 실패 — 무시
-        }
-      }
+      await usersApi.createUser(createForm);
       setCreateModalOpen(false);
       loadUsers();
 
@@ -748,7 +695,7 @@ export default function UserManagement() {
         severity: "success",
         category: "user",
         title: "사용자 생성 완료",
-        message: `${newUser.username} (${newUser.email}) 사용자가 생성되었습니다.`,
+        message: `${createForm.username} (${createForm.email}) 사용자가 생성되었습니다.`,
         source: "user_management",
         dismissible: true,
         persistent: false,
@@ -780,7 +727,7 @@ export default function UserManagement() {
     <>
       <ContentHeader
         title="사용자 관리"
-        description="사용자 계정을 관리하고 역할 그룹을 설정합니다"
+        description="사용자 계정을 관리하고 기본 역할을 설정합니다"
         globalScope
         actions={
           <Button onClick={openCreateModal} disabled={!canEdit}>
@@ -939,17 +886,6 @@ export default function UserManagement() {
                     </option>
                   ))}
                 </Select>
-                <Select
-                  value={groupFilter}
-                  onChange={(e) => setGroupFilter(e.target.value)}
-                >
-                  <option value="">모든 역할 그룹</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </Select>
               </div>
             </div>
 
@@ -972,7 +908,7 @@ export default function UserManagement() {
                         소속
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-content-secondary uppercase tracking-wider">
-                        역할 그룹
+                        역할
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-content-secondary uppercase tracking-wider">
                         상태
@@ -1082,22 +1018,13 @@ export default function UserManagement() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-wrap gap-1">
-                              <Badge
-                                variant={
-                                  isAdminRole(user.role) ? "warning" : "success"
-                                }
-                              >
-                                {getRoleDisplayName(user.role)}
-                              </Badge>
-                              {user.groups
-                                ?.filter((g) => !g.is_default)
-                                .map((g) => (
-                                  <Badge key={g.id} variant="info">
-                                    {g.name}
-                                  </Badge>
-                                ))}
-                            </div>
+                            <Badge
+                              variant={
+                                isAdminRole(user.role) ? "warning" : "success"
+                              }
+                            >
+                              {getRoleDisplayName(user.role)}
+                            </Badge>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Badge
@@ -1129,7 +1056,7 @@ export default function UserManagement() {
                                   !canEdit || user.id === currentUser?.id
                                 }
                               >
-                                역할 그룹
+                                역할 변경
                               </Button>
                               <Button
                                 variant="danger"
@@ -1345,7 +1272,7 @@ export default function UserManagement() {
         <Modal
           isOpen={roleModalOpen}
           onClose={() => setRoleModalOpen(false)}
-          title="역할 그룹 변경"
+          title="역할 변경"
           footer={
             <ModalFooter
               onCancel={() => setRoleModalOpen(false)}
@@ -1360,12 +1287,12 @@ export default function UserManagement() {
         >
           <div className="space-y-4">
             <p className="text-sm text-content-secondary">
-              <strong>{changingRoleUser?.username}</strong>의 역할 그룹을
+              <strong>{changingRoleUser?.username}</strong>의 기본 역할을
               변경합니다.
             </p>
             <div>
               <label className="block text-sm font-medium text-content-primary mb-1">
-                기본 역할 그룹
+                기본 역할
               </label>
               <Select
                 value={newRole}
@@ -1378,56 +1305,13 @@ export default function UserManagement() {
                 )}
               </Select>
               <p className="mt-1 text-xs text-content-tertiary">
-                기본 역할 그룹에 따라 접근 가능한 메뉴 권한이 결정됩니다.
+                기본 역할에 따라 접근 가능한 기본 메뉴 권한이 결정됩니다.
+                앱별 세부 권한은 각 앱의 역할 그룹 관리에서 설정합니다.
               </p>
             </div>
-            {/* 추가 역할 그룹 */}
-            {groups.filter((g) => !g.is_default).length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-content-primary mb-1.5">
-                  추가 역할 그룹
-                </label>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-md border border-line p-2">
-                  {groups
-                    .filter((g) => !g.is_default)
-                    .map((g) => (
-                      <label
-                        key={g.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-surface-raised cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={roleModalGroupIds.has(g.id)}
-                          onChange={(e) => {
-                            setRoleModalGroupIds((prev) => {
-                              const next = new Set(prev);
-                              if (e.target.checked) next.add(g.id);
-                              else next.delete(g.id);
-                              return next;
-                            });
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-sm text-content-primary">
-                          {g.name}
-                        </span>
-                        {g.description && (
-                          <span className="text-xs text-content-tertiary ml-auto truncate max-w-[180px]">
-                            {g.description}
-                          </span>
-                        )}
-                      </label>
-                    ))}
-                </div>
-                <p className="mt-1 text-xs text-content-tertiary">
-                  추가 권한이 필요한 그룹을 선택합니다.
-                </p>
-              </div>
-            )}
             {changingRoleUser && (
               <Alert variant="info">
-                역할 그룹 변경 시 해당 사용자의 접근 가능한 메뉴가 즉시
-                변경됩니다.
+                역할 변경 시 해당 사용자의 기본 접근 권한이 즉시 변경됩니다.
               </Alert>
             )}
           </div>
@@ -1530,52 +1414,9 @@ export default function UserManagement() {
                 )}
               </Select>
               <p className="mt-1 text-xs text-content-tertiary">
-                기본 역할 그룹에 따라 접근 가능한 메뉴 권한이 결정됩니다.
+                역할에 따라 접근 가능한 메뉴 권한이 결정됩니다. 앱별 권한 그룹은 권한 그룹 관리에서 설정합니다.
               </p>
             </div>
-            {/* 추가 역할 그룹 */}
-            {groups.filter((g) => !g.is_default).length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-content-primary mb-1.5">
-                  추가 역할 그룹
-                </label>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-md border border-line p-2">
-                  {groups
-                    .filter((g) => !g.is_default)
-                    .map((g) => (
-                      <label
-                        key={g.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-surface-raised cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={createGroupIds.has(g.id)}
-                          onChange={(e) => {
-                            setCreateGroupIds((prev) => {
-                              const next = new Set(prev);
-                              if (e.target.checked) next.add(g.id);
-                              else next.delete(g.id);
-                              return next;
-                            });
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-sm text-content-primary">
-                          {g.name}
-                        </span>
-                        {g.description && (
-                          <span className="text-xs text-content-tertiary ml-auto truncate max-w-[180px]">
-                            {g.description}
-                          </span>
-                        )}
-                      </label>
-                    ))}
-                </div>
-                <p className="mt-1 text-xs text-content-tertiary">
-                  추가 권한이 필요한 그룹을 선택합니다.
-                </p>
-              </div>
-            )}
             <div>
               <label className="block text-sm font-medium text-content-primary mb-1">
                 회사

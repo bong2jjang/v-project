@@ -30,17 +30,22 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
   const [sessionNotifEnabled, setSessionNotifEnabled] = useState(true);
 
   // 시스템 알림 상태 조회 — 세션 카테고리가 앱에서 비활성이면 알림 억제
+  // 주기적으로 재확인하여 관리자가 비활성화한 경우 반영
   useEffect(() => {
-    getSystemNotificationStatus()
-      .then((statuses) => {
-        const sessionStatus = statuses.find((s) => s.category === "session");
-        if (sessionStatus && !sessionStatus.is_active) {
-          setSessionNotifEnabled(false);
-        }
-      })
-      .catch(() => {
-        // API 실패 시 기본 활성 유지
-      });
+    const checkStatus = () => {
+      getSystemNotificationStatus()
+        .then((statuses) => {
+          const sessionStatus = statuses.find((s) => s.category === "session");
+          setSessionNotifEnabled(sessionStatus ? sessionStatus.is_active : true);
+        })
+        .catch(() => {
+          // API 실패 시 기존 상태 유지
+        });
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   // 사용자 설정과 config prop 병합 (prop이 우선)

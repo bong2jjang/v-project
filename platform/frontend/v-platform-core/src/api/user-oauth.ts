@@ -78,9 +78,7 @@ export const userOAuthApi = {
    */
   getConnectUrl(accountId: number): string {
     const token = localStorage.getItem("token");
-    const baseUrl =
-      import.meta.env.VITE_API_URL ??
-      (import.meta.env.DEV ? `http://${window.location.hostname}:8000` : "");
+    const baseUrl = import.meta.env.VITE_API_URL ?? "";
     return `${baseUrl}/api/users/me/oauth/${accountId}/connect?auth_token=${token}`;
   },
 

@@ -43,6 +43,7 @@ export default defineConfig({
       '/api': {
         target: 'http://portal-backend:8000',
         changeOrigin: true,
+        ws: true,
         configure: (proxy, _options) => {
           proxy.on('proxyRes', (proxyRes, _req, _res) => {
             const location = proxyRes.headers['location'];

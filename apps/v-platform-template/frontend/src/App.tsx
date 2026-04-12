@@ -38,6 +38,7 @@ import { TokenExpiryManager } from "./components/auth/TokenExpiryManager";
 import { useAuthStore } from "./store/auth";
 import { usePermissionStore } from "./store/permission";
 import { useSystemSettingsStore } from "./store/systemSettings";
+import { useNotifications } from "./hooks/useNotifications";
 
 // 앱 전용 페이지
 import Dashboard from "./pages/Dashboard";
@@ -47,6 +48,7 @@ function App() {
     useAuthStore();
   const { fetchSettings } = useSystemSettingsStore();
   const { fetchPermissions, reset: resetPermissions } = usePermissionStore();
+  useNotifications();
 
   useEffect(() => {
     loadUserFromStorage();

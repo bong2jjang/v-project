@@ -13,9 +13,9 @@ import { useBrowserNotification } from "./useBrowserNotification";
 // WebSocket API URL 생성
 const getWebSocketUrl = (token: string): string => {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  // 개발 환경에서는 백엔드 포트(8000) 사용
+  // 각 앱의 Vite 프록시를 경유하여 올바른 백엔드로 연결
   const host = window.location.hostname;
-  const port = import.meta.env.PROD ? window.location.port : "8000";
+  const port = window.location.port;
   const hostWithPort = port ? `${host}:${port}` : host;
   return `${protocol}//${hostWithPort}/api/ws?token=${token}`;
 };

@@ -406,3 +406,146 @@ async def get_group_members(
             )
 
     return {"group_id": group_id, "group_name": group.name, "members": members}
+
+
+class AddMemberRequest(BaseModel):
+    user_id: int = Field(..., description="추가할 사용자 ID")
+
+
+@router.post("/{group_id}/members")
+async def add_group_member(
+    request: Request,
+    group_id: int,
+    req: AddMemberRequest,
+    db: Session = Depends(get_db_session),
+    current_admin: User = Depends(require_admin_or_above()),
+):
+    """그룹에 사용자 추가"""
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    group = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
+        .first()
+    )
+    if not group:
+        raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
+
+    target = db.query(User).filter(User.id == req.user_id).first()
+    if not target:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+
+    # 이미 소속 여부 확인
+    existing = (
+        db.query(UserGroupMembership)
+        .filter(
+            UserGroupMembership.user_id == req.user_id,
+            UserGroupMembership.permission_group_id == group_id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(400, "이미 해당 그룹에 소속된 사용자입니다")
+
+    membership = UserGroupMembership(
+        user_id=req.user_id,
+        permission_group_id=group_id,
+        assigned_by=current_admin.id,
+    )
+    db.add(membership)
+    db.commit()
+
+    return {"message": f"{target.username}이(가) {group.name} 그룹에 추가되었습니다"}
+
+
+@router.delete("/{group_id}/members/{user_id}")
+async def remove_group_member(
+    request: Request,
+    group_id: int,
+    user_id: int,
+    db: Session = Depends(get_db_session),
+    current_admin: User = Depends(require_admin_or_above()),
+):
+    """그룹에서 사용자 제거"""
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    group = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.id == group_id,
+            or_(PermissionGroup.app_id.is_(None), PermissionGroup.app_id == app_id),
+        )
+        .first()
+    )
+    if not group:
+        raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
+
+    membership = (
+        db.query(UserGroupMembership)
+        .filter(
+            UserGroupMembership.user_id == user_id,
+            UserGroupMembership.permission_group_id == group_id,
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(404, "해당 그룹에 소속되지 않은 사용자입니다")
+
+    db.delete(membership)
+    db.commit()
+
+    return {"message": "사용자가 그룹에서 제거되었습니다"}
+
+
+@router.get("/members/search")
+async def search_users_for_group(
+    q: str = "",
+    group_id: Optional[int] = None,
+    limit: int = 20,
+    db: Session = Depends(get_db_session),
+    current_admin: User = Depends(require_admin_or_above()),
+):
+    """그룹 멤버 추가를 위한 사용자 검색 (이미 소속된 사용자 제외)"""
+    query = db.query(User).filter(User.is_active.is_(True))
+
+    if q:
+        query = query.filter(
+            or_(
+                User.username.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+            )
+        )
+
+    # 이미 해당 그룹에 소속된 사용자 제외
+    if group_id:
+        existing_ids = {
+            m.user_id
+            for m in db.query(UserGroupMembership.user_id)
+            .filter(UserGroupMembership.permission_group_id == group_id)
+            .all()
+        }
+        if existing_ids:
+            query = query.filter(User.id.notin_(existing_ids))
+
+    users = query.order_by(User.username).limit(limit).all()
+
+    return {
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "role": u.role.value if hasattr(u.role, "value") else u.role,
+            }
+            for u in users
+        ]
+    }

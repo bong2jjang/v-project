@@ -215,7 +215,7 @@ const Messages = () => {
   );
 
   const wsUrl = token
-    ? `ws://${window.location.hostname}:8000/api/ws?token=${encodeURIComponent(token)}`
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/ws?token=${encodeURIComponent(token)}`
     : "";
 
   const { isConnected, send } = useWebSocket({

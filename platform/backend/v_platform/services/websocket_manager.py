@@ -40,7 +40,7 @@ class ConnectionManager:
         client_id = str(uuid.uuid4())
         self.active_connections[client_id] = websocket
         # 기본적으로 모든 채널 구독
-        self.subscriptions[client_id] = {"status", "logs", "config"}
+        self.subscriptions[client_id] = {"status", "logs", "config", "notifications"}
 
         logger.info(
             f"Client {client_id} connected. Total connections: {len(self.active_connections)}"
