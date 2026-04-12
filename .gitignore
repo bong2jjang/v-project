@@ -51,6 +51,7 @@ sdist/
 
 # Frontend lib 디렉토리는 포함 (Python lib과 구분)
 !frontend/src/lib/
+!**/frontend/src/lib/
 var/
 wheels/
 *.egg-info/
