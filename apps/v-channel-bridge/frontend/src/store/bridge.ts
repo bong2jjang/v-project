@@ -22,6 +22,8 @@ interface BridgeState {
   error: string | null;
 
   // 액션
+  setStatus: (status: Partial<BridgeStatus>) => void;
+  addLogs: (lines: string[]) => void;
   fetchStatus: () => Promise<void>;
   fetchProviders: () => Promise<void>;
   fetchRoutes: () => Promise<void>;
@@ -53,6 +55,20 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
   logs: [],
   isLoading: false,
   error: null,
+
+  // WebSocket에서 받은 상태 직접 반영
+  setStatus: (partial) =>
+    set((state) => ({
+      status: state.status
+        ? { ...state.status, ...partial }
+        : ({ ...partial } as BridgeStatus),
+    })),
+
+  // WebSocket에서 받은 로그 추가
+  addLogs: (lines) =>
+    set((state) => ({
+      logs: [...state.logs, ...lines].slice(-500),
+    })),
 
   // 브리지 상태 조회
   fetchStatus: async () => {

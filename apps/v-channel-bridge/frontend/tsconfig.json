@@ -23,7 +23,9 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@v-platform/core/*": ["../../../platform/frontend/v-platform-core/src/*"],
+      "@v-platform/core": ["../../../platform/frontend/v-platform-core/src/index.ts"]
     }
   },
   "include": ["src"],
