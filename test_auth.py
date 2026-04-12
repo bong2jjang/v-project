@@ -9,7 +9,7 @@ import json
 
 def test_login():
     """로그인 테스트"""
-    url = "http://localhost:8000/api/auth/login"
+    url = "http://127.0.0.1:8000/api/auth/login"
     payload = {
         "email": "admin@example.com",
         "password": "Admin123!"
@@ -52,7 +52,7 @@ def test_login():
 
 def test_register():
     """회원가입 테스트"""
-    url = "http://localhost:8000/api/auth/register"
+    url = "http://127.0.0.1:8000/api/auth/register"
     payload = {
         "email": "test@example.com",
         "username": "testuser",
@@ -91,7 +91,7 @@ def test_register():
 
 def test_get_me(token):
     """현재 사용자 정보 조회 테스트"""
-    url = "http://localhost:8000/api/auth/me"
+    url = "http://127.0.0.1:8000/api/auth/me"
     headers = {"Authorization": f"Bearer {token}"}
 
     print("=" * 60)

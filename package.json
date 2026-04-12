@@ -1,0 +1,12 @@
+{
+  "name": "v-project",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "dev:bridge": "pnpm --filter vms-chat-ops-frontend dev",
+    "dev:template": "pnpm --filter v-platform-template-frontend dev",
+    "dev:portal": "pnpm --filter v-platform-portal-frontend dev",
+    "lint:all": "pnpm -r run lint",
+    "type-check:all": "pnpm -r run type-check"
+  }
+}

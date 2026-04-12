@@ -1,24 +1,22 @@
-# Vite Development Environment with pnpm
+# pnpm Workspace Development Environment
 FROM node:18-alpine
 
-# Enable Corepack and activate pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Install wget for healthcheck
 RUN apk add --no-cache wget
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy dependency files (cache layer)
-COPY package.json pnpm-lock.yaml* ./
+# Workspace config
+COPY .npmrc pnpm-workspace.yaml package.json ./
+COPY platform/frontend/v-platform-core/package.json ./platform/frontend/v-platform-core/
+COPY apps/v-platform-portal/frontend/package.json ./apps/v-platform-portal/frontend/
+COPY pnpm-lock.yaml* ./
 
-# Install dependencies (allow lockfile update)
+# Install dependencies (workspace-aware)
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --no-frozen-lockfile --prefer-offline
+    pnpm install --filter v-platform-portal-frontend... --no-frozen-lockfile --prefer-offline
 
-# Copy source files
-COPY . .
+WORKDIR /workspace/apps/v-platform-portal/frontend
 
 EXPOSE 5173
-
 CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]

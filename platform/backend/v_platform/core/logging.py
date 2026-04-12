@@ -33,7 +33,8 @@ def configure_platform_logging(
             structlog.processors.StackInfoRenderer(),
             structlog.processors.UnicodeDecoder(),
             _add_app_name(app_name),
-            structlog.processors.JSONRenderer() if os.environ.get("LOG_FORMAT") != "console"
+            structlog.processors.JSONRenderer()
+            if os.environ.get("LOG_FORMAT") != "console"
             else structlog.dev.ConsoleRenderer(),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
@@ -54,7 +55,9 @@ def configure_platform_logging(
 
 def _add_app_name(app_name: str):
     """Structlog processor that adds app name to every log entry."""
+
     def processor(logger, method_name, event_dict):
         event_dict["app"] = app_name
         return event_dict
+
     return processor

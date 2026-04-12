@@ -60,26 +60,38 @@ SYSTEM_NOTIFICATIONS = [
 def migrate(engine):
     with engine.connect() as conn:
         # Add is_system column
-        result = conn.execute(text(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='notifications' AND column_name='is_system'"
-        ))
+        result = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name='notifications' AND column_name='is_system'"
+            )
+        )
         if not result.fetchone():
-            conn.execute(text(
-                "ALTER TABLE notifications ADD COLUMN is_system BOOLEAN NOT NULL DEFAULT FALSE"
-            ))
+            conn.execute(
+                text(
+                    "ALTER TABLE notifications ADD COLUMN is_system BOOLEAN NOT NULL DEFAULT FALSE"
+                )
+            )
             logger.info("Added is_system column to notifications")
 
         # Seed system notifications (idempotent)
         for notif in SYSTEM_NOTIFICATIONS:
-            existing = conn.execute(text(
-                "SELECT id FROM notifications WHERE title = :title AND is_system = TRUE"
-            ), {"title": notif["title"]}).fetchone()
+            existing = conn.execute(
+                text(
+                    "SELECT id FROM notifications WHERE title = :title AND is_system = TRUE"
+                ),
+                {"title": notif["title"]},
+            ).fetchone()
             if not existing:
-                conn.execute(text("""
-                    INSERT INTO notifications (title, message, severity, category, scope, source, is_system, is_active)
-                    VALUES (:title, :message, :severity, :category, :scope, :source, TRUE, TRUE)
-                """), notif)
+                conn.execute(
+                    text(
+                        """
+                    INSERT INTO notifications (title, message, severity, category, scope, source, is_system, is_active, delivery_type, created_at)
+                    VALUES (:title, :message, :severity, :category, :scope, :source, TRUE, TRUE, 'toast', NOW())
+                """
+                    ),
+                    notif,
+                )
                 logger.info(f"Seeded system notification: {notif['title']}")
 
         conn.commit()

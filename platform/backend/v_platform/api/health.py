@@ -26,6 +26,7 @@ router = APIRouter()
 # Models
 # ---------------------------------------------------------------------------
 
+
 class ServiceHealth(BaseModel):
     """개별 서비스 상태"""
 
@@ -46,6 +47,7 @@ class HealthResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # HealthRegistry — apps register their own checks here
 # ---------------------------------------------------------------------------
+
 
 class HealthRegistry:
     """Registry for health-check functions.
@@ -85,9 +87,7 @@ class HealthRegistry:
                 results[name] = result
             except Exception as exc:
                 logger.warning("Health check %s failed: %s", name, exc)
-                results[name] = ServiceHealth(
-                    status="unhealthy", error=str(exc)[:120]
-                )
+                results[name] = ServiceHealth(status="unhealthy", error=str(exc)[:120])
         return results
 
 
@@ -98,6 +98,7 @@ health_registry = HealthRegistry()
 # ---------------------------------------------------------------------------
 # Platform default checks
 # ---------------------------------------------------------------------------
+
 
 async def _check_db() -> ServiceHealth:
     t = time.monotonic()
@@ -143,6 +144,7 @@ health_registry.register("redis", _check_redis)
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:

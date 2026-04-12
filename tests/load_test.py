@@ -14,7 +14,7 @@ import statistics
 
 
 class LoadTest:
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://127.0.0.1:8000"):
         self.base_url = base_url
         self.results: List[Dict] = []
 
@@ -217,7 +217,7 @@ class LoadTest:
 
 async def main():
     """메인 실행 함수"""
-    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     num_users = int(sys.argv[2]) if len(sys.argv) > 2 else 50
 
     test = LoadTest(base_url)

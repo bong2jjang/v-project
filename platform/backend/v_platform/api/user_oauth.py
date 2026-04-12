@@ -236,7 +236,7 @@ async def start_user_oauth(
     if override:
         redirect_uri = override
     else:
-        backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+        backend_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
         redirect_uri = f"{backend_url}/api/auth/microsoft/callback"
 
     params = {

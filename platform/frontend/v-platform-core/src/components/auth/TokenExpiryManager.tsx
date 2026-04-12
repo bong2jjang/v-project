@@ -14,6 +14,7 @@ import { useSessionSettingsStore } from "../../stores/sessionSettings";
 import { useActivityDetection } from "../../hooks/useActivityDetection";
 import { useIdleTimeout } from "../../hooks/useIdleTimeout";
 import { useTabSync } from "../../hooks/useTabSync";
+import { getSystemNotificationStatus } from "../../api/persistentNotifications";
 
 export interface TokenExpiryManagerProps {
   config?: {
@@ -26,6 +27,21 @@ export interface TokenExpiryManagerProps {
 export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
   const navigate = useNavigate();
   const { settings } = useSessionSettingsStore();
+  const [sessionNotifEnabled, setSessionNotifEnabled] = useState(true);
+
+  // 시스템 알림 상태 조회 — 세션 카테고리가 앱에서 비활성이면 알림 억제
+  useEffect(() => {
+    getSystemNotificationStatus()
+      .then((statuses) => {
+        const sessionStatus = statuses.find((s) => s.category === "session");
+        if (sessionStatus && !sessionStatus.is_active) {
+          setSessionNotifEnabled(false);
+        }
+      })
+      .catch(() => {
+        // API 실패 시 기본 활성 유지
+      });
+  }, []);
 
   // 사용자 설정과 config prop 병합 (prop이 우선)
   const finalConfig = {
@@ -86,18 +102,20 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
 
     logout();
 
-    addNotification({
-      id: "session-idle-timeout",
-      timestamp: new Date().toISOString(),
-      severity: "warning",
-      category: "session",
-      title: "비활성으로 인한 로그아웃",
-      message: `${settings.idleTimeoutMinutes}분 동안 활동이 없어 자동으로 로그아웃되었습니다.`,
-      source: "token_expiry_manager",
-      dismissible: true,
-      persistent: false,
-      read: false,
-    });
+    if (sessionNotifEnabled) {
+      addNotification({
+        id: "session-idle-timeout",
+        timestamp: new Date().toISOString(),
+        severity: "warning",
+        category: "session",
+        title: "비활성으로 인한 로그아웃",
+        message: `${settings.idleTimeoutMinutes}분 동안 활동이 없어 자동으로 로그아웃되었습니다.`,
+        source: "token_expiry_manager",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+    }
 
     broadcastLogout();
     navigate("/login");
@@ -107,6 +125,7 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
     navigate,
     settings.idleTimeoutMinutes,
     broadcastLogout,
+    sessionNotifEnabled,
   ]);
 
   useIdleTimeout({
@@ -129,19 +148,21 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
         // 경고 해제
         removeNotification("session-warning");
 
-        // 성공 알림 (선택적 - info로 표시)
-        addNotification({
-          id: `session-auto-refreshed-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          severity: "info",
-          category: "session",
-          title: "세션 자동 연장됨",
-          message: "세션이 자동으로 연장되었습니다.",
-          source: "token_expiry_manager",
-          dismissible: true,
-          persistent: false,
-          read: false,
-        });
+        if (sessionNotifEnabled) {
+          // 성공 알림 (선택적 - info로 표시)
+          addNotification({
+            id: `session-auto-refreshed-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            severity: "info",
+            category: "session",
+            title: "세션 자동 연장됨",
+            message: "세션이 자동으로 연장되었습니다.",
+            source: "token_expiry_manager",
+            dismissible: true,
+            persistent: false,
+            read: false,
+          });
+        }
       }
     }
 
@@ -171,18 +192,20 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
           removeNotification("session-warning");
           broadcastTokenRefresh({ autoExtend: true });
 
-          addNotification({
-            id: `session-auto-extended-${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            severity: "info",
-            category: "session",
-            title: "활동 감지로 세션 자동 연장",
-            message: "사용자 활동이 감지되어 세션이 자동으로 연장되었습니다.",
-            source: "token_expiry_manager",
-            dismissible: true,
-            persistent: false,
-            read: false,
-          });
+          if (sessionNotifEnabled) {
+            addNotification({
+              id: `session-auto-extended-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              severity: "info",
+              category: "session",
+              title: "활동 감지로 세션 자동 연장",
+              message: "사용자 활동이 감지되어 세션이 자동으로 연장되었습니다.",
+              source: "token_expiry_manager",
+              dismissible: true,
+              persistent: false,
+              read: false,
+            });
+          }
 
           // 다음 자동 연장을 위해 플래그 리셋
           setTimeout(() => {
@@ -232,20 +255,22 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
       // 경고 알림 제거
       removeNotification("session-warning");
 
-      // 만료 알림 표시
-      addNotification({
-        id: "session-expired",
-        timestamp: new Date().toISOString(),
-        severity: "error",
-        category: "session",
-        title: "세션 만료",
-        message:
-          "로그인이 만료되어 자동으로 로그아웃되었습니다. 다시 로그인해주세요.",
-        source: "token_expiry_manager",
-        dismissible: true,
-        persistent: false,
-        read: false,
-      });
+      if (sessionNotifEnabled) {
+        // 만료 알림 표시
+        addNotification({
+          id: "session-expired",
+          timestamp: new Date().toISOString(),
+          severity: "error",
+          category: "session",
+          title: "세션 만료",
+          message:
+            "로그인이 만료되어 자동으로 로그아웃되었습니다. 다시 로그인해주세요.",
+          source: "token_expiry_manager",
+          dismissible: true,
+          persistent: false,
+          read: false,
+        });
+      }
 
       // 탭 동기화: 다른 탭에도 로그아웃 브로드캐스트
       broadcastLogout();
@@ -266,7 +291,7 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
 
   // 경고 알림 표시
   useEffect(() => {
-    if (!settings.warningEnabled) return;
+    if (!settings.warningEnabled || !sessionNotifEnabled) return;
 
     if (shouldShowWarning && !isExpired) {
       const minutes = Math.floor(timeLeft / 60);
@@ -352,6 +377,7 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
     }
   }, [
     settings.warningEnabled,
+    sessionNotifEnabled,
     shouldShowWarning,
     timeLeft,
     isExpired,

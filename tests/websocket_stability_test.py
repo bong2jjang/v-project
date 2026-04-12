@@ -14,7 +14,7 @@ import json
 
 
 class WebSocketStabilityTest:
-    def __init__(self, ws_url: str = "ws://localhost:8000/ws/status"):
+    def __init__(self, ws_url: str = "ws://127.0.0.1:8000/ws/status"):
         self.ws_url = ws_url
         self.test_duration = 300  # 5 minutes
         self.results: List[Dict] = []
@@ -142,7 +142,7 @@ class WebSocketStabilityTest:
 
 async def main():
     """메인 실행 함수"""
-    ws_url = sys.argv[1] if len(sys.argv) > 1 else "ws://localhost:8000/ws/status"
+    ws_url = sys.argv[1] if len(sys.argv) > 1 else "ws://127.0.0.1:8000/ws/status"
     num_connections = int(sys.argv[2]) if len(sys.argv) > 2 else 10
 
     test = WebSocketStabilityTest(ws_url)

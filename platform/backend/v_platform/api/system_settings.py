@@ -37,18 +37,22 @@ async def get_system_settings(
     Raises:
         HTTPException: 설정 조회 실패 시
     """
-    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+    app_id = request.app.state.app_id if hasattr(request.app.state, "app_id") else None
 
     # Try app-specific settings first, then fall back to global
     settings = None
     if app_id:
-        settings = db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
+        settings = (
+            db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
+        )
     if not settings:
-        settings = db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
+        settings = (
+            db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
+        )
     if not settings:
         # 기본 설정 생성
         settings = SystemSettings(
-            manual_enabled=True, manual_url="http://localhost:3000"
+            manual_enabled=True, manual_url="http://127.0.0.1:3000"
         )
         db.add(settings)
         db.commit()
@@ -77,14 +81,18 @@ async def update_system_settings(
     Raises:
         HTTPException: 권한 없음 (403) 또는 잘못된 URL 형식 (400)
     """
-    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+    app_id = request.app.state.app_id if hasattr(request.app.state, "app_id") else None
 
     # Try app-specific settings first, then fall back to global
     settings = None
     if app_id:
-        settings = db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
+        settings = (
+            db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
+        )
     if not settings:
-        settings = db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
+        settings = (
+            db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
+        )
     if not settings:
         settings = SystemSettings()
         db.add(settings)

@@ -781,6 +781,7 @@ export default function UserManagement() {
       <ContentHeader
         title="사용자 관리"
         description="사용자 계정을 관리하고 역할 그룹을 설정합니다"
+        globalScope
         actions={
           <Button onClick={openCreateModal} disabled={!canEdit}>
             <UserPlus className="w-4 h-4 mr-1.5" />

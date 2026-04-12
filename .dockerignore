@@ -1,0 +1,9 @@
+.git
+**/node_modules
+**/.vite
+**/dist
+**/build
+**/__pycache__
+**/*.pyc
+monitoring
+docusaurus

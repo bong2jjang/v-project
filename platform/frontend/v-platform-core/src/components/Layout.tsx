@@ -28,6 +28,7 @@ import { usePermissionStore } from "../stores/permission";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { NotificationBell } from "./notifications/NotificationBell";
 import { ToastContainer } from "./notifications/ToastContainer";
+import { AnnouncementPopup } from "./notifications/AnnouncementPopup";
 
 interface LayoutContentProps {
   children: ReactNode;
@@ -188,6 +189,9 @@ function LayoutContent({ children }: LayoutContentProps) {
 
       {/* Toast Container - 화면 우측 하단 고정 */}
       <ToastContainer />
+
+      {/* Announcement Popup - 미읽은 공지사항 팝업 */}
+      <AnnouncementPopup />
     </div>
   );
 }

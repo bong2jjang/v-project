@@ -89,9 +89,7 @@ def _run_migrations():
     import pathlib
 
     # 1) Platform migrations (v_platform/migrations/)
-    platform_dir = (
-        pathlib.Path(__file__).resolve().parent.parent / "migrations"
-    )
+    platform_dir = pathlib.Path(__file__).resolve().parent.parent / "migrations"
     # 2) App migrations (backend/migrations/) — /app/migrations in Docker
     app_dir = pathlib.Path("/app/migrations")
     if not app_dir.is_dir():

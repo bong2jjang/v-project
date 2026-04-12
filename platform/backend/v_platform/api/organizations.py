@@ -113,7 +113,10 @@ async def create_company(
         .filter((Company.name == data.name) | (Company.code == data.code))
         .first()
     ):
-        raise HTTPException(400, "동일한 회사명 또는 코드가 이미 등록되어 있습니다. 다른 이름이나 코드를 사용해 주세요.")
+        raise HTTPException(
+            400,
+            "동일한 회사명 또는 코드가 이미 등록되어 있습니다. 다른 이름이나 코드를 사용해 주세요.",
+        )
 
     company = Company(**data.model_dump())
     db.add(company)
@@ -235,7 +238,10 @@ async def create_department(
         .first()
     )
     if existing:
-        raise HTTPException(400, "같은 회사 내에 동일한 부서명이 이미 등록되어 있습니다. 다른 이름을 사용해 주세요.")
+        raise HTTPException(
+            400,
+            "같은 회사 내에 동일한 부서명이 이미 등록되어 있습니다. 다른 이름을 사용해 주세요.",
+        )
 
     dept = Department(company_id=company_id, **data.model_dump())
     db.add(dept)

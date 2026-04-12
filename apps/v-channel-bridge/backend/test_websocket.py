@@ -12,7 +12,7 @@ import json
 
 async def test_websocket():
     """WebSocket 연결 테스트"""
-    uri = "ws://localhost:8000/api/ws"
+    uri = "ws://127.0.0.1:8000/api/ws"
 
     try:
         print(f"Connecting to {uri}...")

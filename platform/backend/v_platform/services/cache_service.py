@@ -19,7 +19,7 @@ class CacheService:
 
     def __init__(self):
         self.redis_url = os.getenv(
-            "REDIS_URL", "redis://:redispassword@localhost:6379/0"
+            "REDIS_URL", "redis://:redispassword@127.0.0.1:6379/0"
         )
         self.client: Optional[Redis] = None
         self._connect()

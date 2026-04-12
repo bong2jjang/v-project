@@ -4,7 +4,7 @@
 (이전 TOML 기반 ConfigManager는 제거되었습니다.)
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 

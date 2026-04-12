@@ -108,6 +108,14 @@ def migrate(engine) -> bool:
                     "ON menu_items(sort_order)"
                 )
             )
+            # Ensure UNIQUE index on permission_key exists
+            # (create_all may have created the table without UNIQUE constraint)
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_menu_items_permission_key "
+                    "ON menu_items(permission_key)"
+                )
+            )
             conn.commit()
             logger.info("Created menu_items table")
 

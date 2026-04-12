@@ -41,7 +41,7 @@ def _get_redirect_uri() -> str:
         return override
 
     # 백엔드 URL 기반 생성
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    backend_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
     return f"{backend_url}/api/auth/microsoft/callback"
 
 

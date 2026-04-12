@@ -76,27 +76,43 @@ class PermissionService:
         return user_level >= required
 
     @staticmethod
-    def get_user_permissions(db: Session, user: User) -> dict[str, str]:
+    def get_user_permissions(
+        db: Session, user: User, app_id: str | None = None
+    ) -> dict[str, str]:
         """
         사용자의 전체 유효 권한 맵 반환 (그룹 + 개인 MAX)
+
+        Args:
+            app_id: 앱 ID (None이면 공통 메뉴만, 값이 있으면 공통 + 해당 앱 메뉴)
 
         Returns:
             { permission_key: access_level } 딕셔너리
         """
+        app_filter = or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
+
         if user.role == UserRole.SYSTEM_ADMIN:
-            menus = db.query(MenuItem).filter(MenuItem.is_active.is_(True)).all()
+            menus = (
+                db.query(MenuItem)
+                .filter(MenuItem.is_active.is_(True), app_filter)
+                .all()
+            )
             return {m.permission_key: "write" for m in menus}
 
         effective = PermissionService.get_effective_permissions_for_user(db, user.id)
+        menus = (
+            db.query(MenuItem).filter(MenuItem.is_active.is_(True), app_filter).all()
+        )
         result = {}
-        for menu_id, info in effective.items():
-            menu = db.query(MenuItem).filter(MenuItem.id == menu_id).first()
-            if menu and menu.is_active:
+        for menu in menus:
+            info = effective.get(menu.id)
+            if info:
                 result[menu.permission_key] = info["level"]
         return result
 
     @staticmethod
-    def get_accessible_menus(db: Session, user: User, app_id: str | None = None) -> list[dict]:
+    def get_accessible_menus(
+        db: Session, user: User, app_id: str | None = None
+    ) -> list[dict]:
         """
         사용자가 접근 가능한 메뉴 목록 (권한 필터링 + 정렬)
 
@@ -177,14 +193,17 @@ class PermissionService:
         return result
 
     @staticmethod
-    def get_permissions_for_user(db: Session, target_user_id: int) -> list[dict]:
+    def get_permissions_for_user(
+        db: Session, target_user_id: int, app_id: str | None = None
+    ) -> list[dict]:
         """
-        특정 사용자의 권한 상세 목록 (관리용)
+        특정 사용자의 권한 상세 목록 (관리용, 현재 앱 범위만)
         """
+        app_filter = or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
         rows = (
             db.query(UserPermission, MenuItem)
             .join(MenuItem)
-            .filter(UserPermission.user_id == target_user_id)
+            .filter(UserPermission.user_id == target_user_id, app_filter)
             .order_by(MenuItem.sort_order)
             .all()
         )
@@ -204,6 +223,7 @@ class PermissionService:
         target_user_id: int,
         grants: list[dict],
         current_user: User,
+        app_id: str | None = None,
     ) -> list[dict]:
         """
         사용자 권한 일괄 설정 (위임 검증 포함)
@@ -213,6 +233,7 @@ class PermissionService:
             target_user_id: 대상 사용자 ID
             grants: [{"menu_item_id": int, "access_level": str}, ...]
             current_user: 권한 부여자
+            app_id: 앱 ID (현재 앱 범위의 메뉴만 허용)
 
         Returns:
             업데이트된 권한 목록
@@ -224,6 +245,17 @@ class PermissionService:
         target_user = db.query(User).filter(User.id == target_user_id).first()
         if not target_user:
             raise ValueError("대상 사용자를 찾을 수 없습니다")
+
+        # 현재 앱 범위의 메뉴 ID 집합 (검증용)
+        app_filter = or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
+        app_menu_ids = {m.id for m in db.query(MenuItem.id).filter(app_filter).all()}
+
+        # 메뉴 범위 검증
+        for grant in grants:
+            if grant["menu_item_id"] not in app_menu_ids:
+                raise ValueError(
+                    f"메뉴 ID {grant['menu_item_id']}은(는) 현재 앱에서 접근할 수 없습니다"
+                )
 
         # system_admin → 모든 사용자에게 모든 권한 부여 가능
         if current_user.role == UserRole.SYSTEM_ADMIN:
@@ -238,7 +270,9 @@ class PermissionService:
                     "운영관리자는 일반사용자에게만 권한을 부여할 수 있습니다"
                 )
 
-            my_perms = PermissionService.get_user_permissions(db, current_user)
+            my_perms = PermissionService.get_user_permissions(
+                db, current_user, app_id=app_id
+            )
             for grant in grants:
                 menu = (
                     db.query(MenuItem)
@@ -353,8 +387,15 @@ class PermissionService:
         else:
             return {"menus": [], "users": []}
 
-        # 전체 permission 로드
-        all_perms = db.query(UserPermission).all()
+        # 현재 앱 범위의 메뉴에 해당하는 permission만 로드
+        menu_ids = {m.id for m in menus}
+        all_perms = (
+            db.query(UserPermission)
+            .filter(UserPermission.menu_item_id.in_(menu_ids))
+            .all()
+            if menu_ids
+            else []
+        )
         perm_map: dict[int, dict[int, str]] = {}
         for p in all_perms:
             perm_map.setdefault(p.user_id, {})[p.menu_item_id] = p.access_level
@@ -569,7 +610,9 @@ class PermissionService:
         return result
 
     @staticmethod
-    def get_effective_matrix(db: Session, requester: User, app_id: str | None = None) -> dict:
+    def get_effective_matrix(
+        db: Session, requester: User, app_id: str | None = None
+    ) -> dict:
         """
         유효 권한 매트릭스 (그룹+개인 통합) — 각 셀에 source 포함
 

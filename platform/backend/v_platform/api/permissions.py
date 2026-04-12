@@ -29,13 +29,19 @@ class SetPermissionsRequest(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────────
 @router.get("/me")
 async def get_my_permissions(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
     """내 권한 목록"""
     from v_platform.services.permission_service import PermissionService
 
-    perms = PermissionService.get_user_permissions(db, current_user)
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    perms = PermissionService.get_user_permissions(db, current_user, app_id=app_id)
     return {
         "role": current_user.role.value
         if hasattr(current_user.role, "value")
@@ -46,6 +52,7 @@ async def get_my_permissions(
 
 @router.get("/user/{user_id}")
 async def get_user_permissions(
+    request: Request,
     user_id: int,
     current_user: User = Depends(require_admin_or_above()),
     db: Session = Depends(get_db_session),
@@ -53,6 +60,11 @@ async def get_user_permissions(
     """특정 사용자의 권한 목록 (system_admin, org_admin)"""
     from v_platform.services.permission_service import PermissionService
 
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
         raise HTTPException(404, "사용자를 찾을 수 없습니다")
@@ -61,7 +73,7 @@ async def get_user_permissions(
     if current_user.role == UserRole.ORG_ADMIN and target_user.role != UserRole.USER:
         raise HTTPException(403, "운영관리자는 일반사용자의 권한만 조회할 수 있습니다")
 
-    perms = PermissionService.get_permissions_for_user(db, user_id)
+    perms = PermissionService.get_permissions_for_user(db, user_id, app_id=app_id)
     return {
         "user_id": user_id,
         "role": target_user.role.value
@@ -89,9 +101,14 @@ async def set_user_permissions(
     if not target_user:
         raise HTTPException(404, "사용자를 찾을 수 없습니다")
 
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     try:
         results = PermissionService.set_user_permissions(
-            db, user_id, grants, current_user
+            db, user_id, grants, current_user, app_id=app_id
         )
 
         log_permission_update(
@@ -120,7 +137,11 @@ async def get_permission_matrix(
     """전체 사용자×메뉴 권한 매트릭스 (개인 권한만)"""
     from v_platform.services.permission_service import PermissionService
 
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     matrix = PermissionService.get_permission_matrix(db, current_user, app_id=app_id)
     return matrix
 
@@ -134,7 +155,11 @@ async def get_effective_matrix(
     """유효 권한 매트릭스 (그룹+개인 통합, source 포함)"""
     from v_platform.services.permission_service import PermissionService
 
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     return PermissionService.get_effective_matrix(db, current_user, app_id=app_id)
 
 
@@ -150,11 +175,19 @@ async def get_permissions_by_menu(
     from v_platform.models.menu_item import MenuItem
     from sqlalchemy import or_
 
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
-    menu = db.query(MenuItem).filter(
-        MenuItem.id == menu_item_id,
-        or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
-    ).first()
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    menu = (
+        db.query(MenuItem)
+        .filter(
+            MenuItem.id == menu_item_id,
+            or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id),
+        )
+        .first()
+    )
     if not menu:
         raise HTTPException(404, "메뉴를 찾을 수 없습니다")
 
@@ -180,11 +213,19 @@ async def set_permissions_by_menu(
     from v_platform.models.user_permission import UserPermission
     from sqlalchemy import or_
 
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
-    menu = db.query(MenuItem).filter(
-        MenuItem.id == menu_item_id,
-        or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)
-    ).first()
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    menu = (
+        db.query(MenuItem)
+        .filter(
+            MenuItem.id == menu_item_id,
+            or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id),
+        )
+        .first()
+    )
     if not menu:
         raise HTTPException(404, "메뉴를 찾을 수 없습니다")
 
@@ -246,9 +287,15 @@ async def bulk_assign_group(
     """그룹 템플릿을 여러 사용자에게 일괄 적용"""
     from v_platform.services.permission_service import PermissionService
 
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     try:
-        PermissionService.apply_group_template(db, group_id, req.user_ids, current_user, app_id=app_id)
+        PermissionService.apply_group_template(
+            db, group_id, req.user_ids, current_user, app_id=app_id
+        )
         return {
             "message": "그룹 일괄 할당 완료",
             "group_id": group_id,

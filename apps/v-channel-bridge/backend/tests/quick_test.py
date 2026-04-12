@@ -8,7 +8,7 @@ import requests
 import time
 from datetime import datetime
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 
 # Colors
 GREEN = "\033[0;32m"
@@ -144,12 +144,12 @@ def main():
     if fail_count == 0:
         print(f"\n{GREEN}✅ All tests passed!{NC}")
         print("\nNext steps:")
-        print("1. Open http://localhost:8000/docs for API documentation")
+        print("1. Open http://127.0.0.1:8000/docs for API documentation")
         print("2. Test WebSocket:")
         print("   cd backend && python test_websocket.py")
         print("3. Start Frontend (if npm install works):")
         print("   cd frontend && npm run dev")
-        print("4. Access Frontend: http://localhost:5173")
+        print("4. Access Frontend: http://127.0.0.1:5173")
         print("5. Full test guide: See TEST-GUIDE.md")
     else:
         print(f"\n{RED}❌ Some tests failed. Please check the errors above.{NC}")

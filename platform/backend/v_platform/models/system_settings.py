@@ -24,7 +24,7 @@ class SystemSettings(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     manual_enabled = Column(Boolean, default=True, nullable=False)
-    manual_url = Column(String, default="http://localhost:3000", nullable=False)
+    manual_url = Column(String, default="http://127.0.0.1:3000", nullable=False)
     support_email = Column(String, nullable=True)
     support_url = Column(String, nullable=True)
     default_start_page = Column(

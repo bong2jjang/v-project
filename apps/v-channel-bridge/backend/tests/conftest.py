@@ -194,7 +194,7 @@ def mock_config_manager():
 @pytest.fixture
 def mock_bridge():
     """모킹된 WebSocketBridge"""
-    from app.services.websocket_bridge import get_bridge, set_bridge
+    from app.services.websocket_bridge import set_bridge
 
     bridge = Mock()
     bridge.is_running = True

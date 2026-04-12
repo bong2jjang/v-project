@@ -9,12 +9,16 @@ logger = logging.getLogger(__name__)
 def migrate(engine):
     with engine.connect() as conn:
         # notifications table
-        result = conn.execute(text(
-            "SELECT table_name FROM information_schema.tables "
-            "WHERE table_name='notifications' AND table_schema='public'"
-        ))
+        result = conn.execute(
+            text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_name='notifications' AND table_schema='public'"
+            )
+        )
         if not result.fetchone():
-            conn.execute(text("""
+            conn.execute(
+                text(
+                    """
                 CREATE TABLE notifications (
                     id SERIAL PRIMARY KEY,
                     title VARCHAR(200) NOT NULL,
@@ -33,26 +37,46 @@ def migrate(engine):
                     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
                 )
-            """))
-            conn.execute(text("CREATE INDEX idx_notifications_scope_app ON notifications(scope, app_id)"))
-            conn.execute(text("CREATE INDEX idx_notifications_active_created ON notifications(is_active, created_at DESC)"))
+            """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX idx_notifications_scope_app ON notifications(scope, app_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX idx_notifications_active_created ON notifications(is_active, created_at DESC)"
+                )
+            )
             logger.info("Created notifications table")
 
         # notification_reads table
-        result = conn.execute(text(
-            "SELECT table_name FROM information_schema.tables "
-            "WHERE table_name='notification_reads' AND table_schema='public'"
-        ))
+        result = conn.execute(
+            text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_name='notification_reads' AND table_schema='public'"
+            )
+        )
         if not result.fetchone():
-            conn.execute(text("""
+            conn.execute(
+                text(
+                    """
                 CREATE TABLE notification_reads (
                     id SERIAL PRIMARY KEY,
                     notification_id INTEGER NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
                     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     read_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
                 )
-            """))
-            conn.execute(text("CREATE UNIQUE INDEX uq_notification_user_read ON notification_reads(notification_id, user_id)"))
+            """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX uq_notification_user_read ON notification_reads(notification_id, user_id)"
+                )
+            )
             logger.info("Created notification_reads table")
 
         conn.commit()

@@ -1,0 +1,3 @@
+packages:
+  - 'platform/frontend/v-platform-core'
+  - 'apps/*/frontend'

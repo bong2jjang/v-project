@@ -21,7 +21,7 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@vms-chat-ops.com")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "v-channel-bridge")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5173")
 
 # Jinja2 템플릿 환경 설정
 template_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "emails")

@@ -36,6 +36,7 @@ from v_platform.api import (
     metrics,
     websocket,
     persistent_notifications,
+    uploads,
 )
 
 
@@ -70,7 +71,7 @@ class PlatformApp:
 
     def _setup_middleware(self, cors_origins: Optional[list[str]] = None):
         """CORS, CSRF, Metrics middleware"""
-        default_origins = ["http://localhost:3000", "http://localhost:5173"]
+        default_origins = ["http://127.0.0.1:3000", "http://127.0.0.1:5173"]
         extra = os.getenv("CORS_ORIGINS", "")
         origins = (cors_origins or default_origins) + [
             o.strip() for o in extra.split(",") if o.strip()
@@ -113,10 +114,9 @@ class PlatformApp:
             tags=["notifications"],
         )
         self.fastapi.include_router(metrics.router, tags=["metrics"])
-        self.fastapi.include_router(
-            websocket.router, prefix="/api", tags=["websocket"]
-        )
+        self.fastapi.include_router(websocket.router, prefix="/api", tags=["websocket"])
         self.fastapi.include_router(persistent_notifications.router)
+        self.fastapi.include_router(uploads.router)
 
     def register_app_routers(self, *routers):
         """Register app-specific routers"""

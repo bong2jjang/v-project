@@ -81,7 +81,11 @@ async def export_audit_logs_csv(
 
     현재 필터 조건에 맞는 로그를 CSV로 내보냅니다. 최대 10,000건.
     """
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     query = db.query(AuditLog)
     query = query.filter(or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)))
     filters = _build_audit_filters(
@@ -172,7 +176,11 @@ async def get_audit_logs(
 
     다양한 필터와 페이징을 지원하여 감사 로그를 조회합니다.
     """
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     query = db.query(AuditLog)
     query = query.filter(or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)))
     filters = _build_audit_filters(
@@ -215,11 +223,19 @@ async def get_audit_log(
     """
     특정 감사 로그 조회 (관리자 전용)
     """
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
-    log = db.query(AuditLog).filter(
-        AuditLog.id == log_id,
-        or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)),
-    ).first()
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    log = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.id == log_id,
+            or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None)),
+        )
+        .first()
+    )
 
     if not log:
         raise HTTPException(status_code=404, detail="Audit log not found")
@@ -239,14 +255,20 @@ async def get_audit_stats(
 
     지정된 기간 동안의 액션별, 상태별 통계를 제공합니다.
     """
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     app_filter = or_(AuditLog.app_id == app_id, AuditLog.app_id.is_(None))
 
     # 기간 계산
     start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     # 전체 로그 수
-    total_logs = db.query(AuditLog).filter(AuditLog.timestamp >= start_date, app_filter).count()
+    total_logs = (
+        db.query(AuditLog).filter(AuditLog.timestamp >= start_date, app_filter).count()
+    )
 
     # 상태별 통계
     status_stats = (
@@ -269,7 +291,10 @@ async def get_audit_stats(
     # 사용자별 상위 10개
     user_stats = (
         db.query(AuditLog.user_email, func.count(AuditLog.id).label("count"))
-        .filter(and_(AuditLog.timestamp >= start_date, AuditLog.user_email.isnot(None)), app_filter)
+        .filter(
+            and_(AuditLog.timestamp >= start_date, AuditLog.user_email.isnot(None)),
+            app_filter,
+        )
         .group_by(AuditLog.user_email)
         .order_by(desc("count"))
         .limit(10)

@@ -78,8 +78,10 @@ class GroupResponse(BaseModel):
 # ── Helper ───────────────────────────────────────────────────────────
 
 
-def _group_to_response(group: PermissionGroup, db: Session) -> dict:
-    """PermissionGroup → 응답 dict 변환"""
+def _group_to_response(
+    group: PermissionGroup, db: Session, app_id: str | None = None
+) -> dict:
+    """PermissionGroup → 응답 dict 변환 (현재 앱 범위의 grants만 포함)"""
     member_count = (
         db.query(UserGroupMembership)
         .filter(UserGroupMembership.permission_group_id == group.id)
@@ -87,13 +89,22 @@ def _group_to_response(group: PermissionGroup, db: Session) -> dict:
     )
     grants = []
     for g in group.grants:
-        menu = db.query(MenuItem).filter(MenuItem.id == g.menu_item_id).first()
+        menu = (
+            db.query(MenuItem)
+            .filter(
+                MenuItem.id == g.menu_item_id,
+                or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id),
+            )
+            .first()
+        )
+        if not menu:
+            continue  # 다른 앱의 메뉴는 건너뜀
         grants.append(
             {
                 "id": g.id,
                 "menu_item_id": g.menu_item_id,
-                "permission_key": menu.permission_key if menu else None,
-                "menu_label": menu.label if menu else None,
+                "permission_key": menu.permission_key,
+                "menu_label": menu.label,
                 "access_level": g.access_level,
             }
         )
@@ -121,7 +132,11 @@ async def list_groups(
     current_user: User = Depends(require_admin_or_above()),
 ):
     """권한 그룹 목록 (grants 포함)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     groups = (
         db.query(PermissionGroup)
         .options(joinedload(PermissionGroup.grants))
@@ -137,7 +152,7 @@ async def list_groups(
             seen.add(g.id)
             unique_groups.append(g)
 
-    return [_group_to_response(g, db) for g in unique_groups]
+    return [_group_to_response(g, db, app_id=app_id) for g in unique_groups]
 
 
 @router.get("/{group_id}", response_model=GroupResponse)
@@ -148,7 +163,11 @@ async def get_group(
     current_user: User = Depends(require_admin_or_above()),
 ):
     """특정 권한 그룹 조회"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     group = (
         db.query(PermissionGroup)
         .options(joinedload(PermissionGroup.grants))
@@ -160,7 +179,7 @@ async def get_group(
     )
     if not group:
         raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
-    return _group_to_response(group, db)
+    return _group_to_response(group, db, app_id=app_id)
 
 
 @router.post("", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
@@ -171,17 +190,28 @@ async def create_group(
     current_user: User = Depends(require_system_admin()),
 ):
     """커스텀 그룹 생성 (system_admin 전용)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     # 같은 앱 내에서 중복 이름 체크 (다른 앱에서는 같은 이름 허용)
-    existing = db.query(PermissionGroup).filter(
-        PermissionGroup.name == data.name,
-        or_(
-            PermissionGroup.app_id == app_id,
-            PermissionGroup.app_id.is_(None),
+    existing = (
+        db.query(PermissionGroup)
+        .filter(
+            PermissionGroup.name == data.name,
+            or_(
+                PermissionGroup.app_id == app_id,
+                PermissionGroup.app_id.is_(None),
+            ),
         )
-    ).first()
+        .first()
+    )
     if existing:
-        raise HTTPException(400, "이 앱에 동일한 이름의 권한 그룹이 이미 존재합니다. 다른 이름을 사용해 주세요.")
+        raise HTTPException(
+            400,
+            "이 앱에 동일한 이름의 권한 그룹이 이미 존재합니다. 다른 이름을 사용해 주세요.",
+        )
 
     group = PermissionGroup(
         name=data.name,
@@ -193,7 +223,7 @@ async def create_group(
     db.add(group)
     db.commit()
     db.refresh(group)
-    return _group_to_response(group, db)
+    return _group_to_response(group, db, app_id=app_id)
 
 
 @router.put("/{group_id}", response_model=GroupResponse)
@@ -205,7 +235,11 @@ async def update_group(
     current_user: User = Depends(require_system_admin()),
 ):
     """그룹 수정 (is_default=true면 403)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     group = (
         db.query(PermissionGroup)
         .filter(
@@ -226,7 +260,7 @@ async def update_group(
 
     db.commit()
     db.refresh(group)
-    return _group_to_response(group, db)
+    return _group_to_response(group, db, app_id=app_id)
 
 
 @router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -237,7 +271,11 @@ async def delete_group(
     current_user: User = Depends(require_system_admin()),
 ):
     """그룹 삭제 (is_default=true면 403)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     group = (
         db.query(PermissionGroup)
         .filter(
@@ -264,7 +302,11 @@ async def set_group_grants(
     current_user: User = Depends(require_system_admin()),
 ):
     """그룹 메뉴 권한 일괄 설정 (system_admin은 디폴트 그룹도 수정 가능)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     group = (
         db.query(PermissionGroup)
         .filter(
@@ -276,14 +318,33 @@ async def set_group_grants(
     if not group:
         raise HTTPException(404, "권한 그룹을 찾을 수 없습니다")
 
-    # 기존 grants 삭제 후 재생성
-    db.query(PermissionGroupGrant).filter(
-        PermissionGroupGrant.permission_group_id == group_id
-    ).delete()
+    # 현재 앱 범위의 메뉴 ID 목록 조회
+    app_menu_ids = {
+        m.id
+        for m in db.query(MenuItem.id)
+        .filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
+        .all()
+    }
+
+    # 현재 앱 범위의 기존 grants만 삭제 (다른 앱의 grants는 유지)
+    existing_grants = (
+        db.query(PermissionGroupGrant)
+        .filter(PermissionGroupGrant.permission_group_id == group_id)
+        .all()
+    )
+    for g in existing_grants:
+        if g.menu_item_id in app_menu_ids:
+            db.delete(g)
 
     for item in req.grants:
         if item.access_level not in ("none", "read", "write"):
             raise HTTPException(400, f"잘못된 권한 수준입니다: {item.access_level}")
+        # 메뉴가 현재 앱 범위에 속하는지 검증
+        if item.menu_item_id not in app_menu_ids:
+            raise HTTPException(
+                400,
+                f"메뉴 ID {item.menu_item_id}은(는) 현재 앱에서 접근할 수 없습니다",
+            )
         grant = PermissionGroupGrant(
             permission_group_id=group_id,
             menu_item_id=item.menu_item_id,
@@ -305,7 +366,11 @@ async def get_group_members(
     current_user: User = Depends(require_admin_or_above()),
 ):
     """그룹 소속 사용자 목록"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     group = (
         db.query(PermissionGroup)
         .filter(

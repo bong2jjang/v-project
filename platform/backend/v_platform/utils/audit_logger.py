@@ -57,8 +57,13 @@ def create_audit_log(
         user_email = user.email
 
     # Extract app_id from request if not explicitly provided
-    if app_id is None and request and hasattr(request, 'app') and hasattr(request.app, 'state'):
-        app_id = getattr(request.app.state, 'app_id', None)
+    if (
+        app_id is None
+        and request
+        and hasattr(request, "app")
+        and hasattr(request.app, "state")
+    ):
+        app_id = getattr(request.app.state, "app_id", None)
 
     # details를 JSON 문자열로 변환
     details_json = None

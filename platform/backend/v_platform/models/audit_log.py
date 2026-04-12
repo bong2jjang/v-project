@@ -101,7 +101,9 @@ class AuditLog(Base):
     # 요청 정보
     ip_address = Column(String(45), nullable=True)  # IPv6 지원
     user_agent = Column(String(500), nullable=True)
-    app_id = Column(String(50), nullable=True, index=True)  # App that generated this log
+    app_id = Column(
+        String(50), nullable=True, index=True
+    )  # App that generated this log
 
     # 관계
     user = relationship("User", back_populates="audit_logs")

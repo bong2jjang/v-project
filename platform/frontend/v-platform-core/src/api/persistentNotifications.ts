@@ -18,6 +18,7 @@ export interface PersistentNotification {
   link: string | null;
   is_active: boolean;
   is_system: boolean;
+  delivery_type: "toast" | "announcement" | "both";
   expires_at: string | null;
   created_by: number | null;
   created_at: string;
@@ -40,6 +41,7 @@ export interface NotificationCreate {
   target_user_id?: number;
   link?: string;
   expires_at?: string;
+  delivery_type?: "toast" | "announcement" | "both";
 }
 
 export interface NotificationUpdate {
@@ -52,6 +54,7 @@ export interface NotificationUpdate {
   is_active?: boolean;
   expires_at?: string;
   link?: string;
+  delivery_type?: "toast" | "announcement" | "both";
 }
 
 const BASE = "/api/notifications-v2";
@@ -91,4 +94,39 @@ export async function markAllRead(): Promise<void> {
 
 export async function deleteNotification(id: number): Promise<void> {
   await apiClient.delete(`${BASE}/${id}`);
+}
+
+export async function listAnnouncements(): Promise<PersistentNotification[]> {
+  const resp = await apiClient.get<PersistentNotification[]>(
+    `${BASE}/announcements`,
+  );
+  return resp.data;
+}
+
+export interface SystemNotificationStatus {
+  id: number;
+  title: string;
+  category: string;
+  scope: string;
+  is_active: boolean;
+}
+
+export async function getSystemNotificationStatus(): Promise<
+  SystemNotificationStatus[]
+> {
+  const resp = await apiClient.get<SystemNotificationStatus[]>(
+    `${BASE}/system-status`,
+  );
+  return resp.data;
+}
+
+/** 이미지 파일 업로드 → 마크다운용 URL 반환 */
+export async function uploadNotificationImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const resp = await apiClient.post<{ url: string }>(
+    "/api/uploads/image",
+    formData,
+  );
+  return resp.data.url;
 }

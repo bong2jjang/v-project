@@ -97,6 +97,14 @@ export default function Login() {
         if (!popup) {
           setError("팝업이 차단되었습니다. 팝업 차단을 해제해주세요.");
           setSsoLoading(false);
+        } else {
+          // 팝업이 메시지 없이 닫힌 경우 (사용자가 X 클릭) ssoLoading 리셋
+          const pollTimer = setInterval(() => {
+            if (popup.closed) {
+              clearInterval(pollTimer);
+              setSsoLoading(false);
+            }
+          }, 500);
         }
       } catch {
         setError("SSO 로그인 준비 중 오류가 발생했습니다.");

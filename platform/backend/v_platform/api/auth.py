@@ -80,7 +80,11 @@ async def register(
     db.refresh(new_user)
 
     # 감사 로그 생성
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_register(
         db=db,
         user=new_user,
@@ -140,7 +144,11 @@ async def login(
     db.commit()
 
     # 감사 로그 생성
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_login(
         db=db,
         user=user,
@@ -243,7 +251,11 @@ async def login_form(
     db.commit()
 
     # 감사 로그 생성
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_login(
         db=db,
         user=user,

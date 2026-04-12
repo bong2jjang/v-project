@@ -176,7 +176,11 @@ async def create_user(
     db.refresh(new_user)
 
     # 감사 로그 생성
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_register(
         db=db,
         user=new_user,
@@ -263,7 +267,11 @@ async def update_me(
 
     # 감사 로그 생성 (변경 사항이 있는 경우에만)
     if changes:
-        app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+        app_id = (
+            getattr(request.app.state, "app_id", None)
+            if hasattr(request.app, "state")
+            else None
+        )
         log_user_update(
             db=db,
             user=user,
@@ -318,7 +326,11 @@ async def change_password(
     db.commit()
 
     # 감사 로그 생성
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_password_change(
         db=db,
         user=user,
@@ -427,7 +439,11 @@ async def update_user(
 
     # 감사 로그 생성 (변경 사항이 있는 경우에만)
     if changes:
-        app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+        app_id = (
+            getattr(request.app.state, "app_id", None)
+            if hasattr(request.app, "state")
+            else None
+        )
         log_user_update(
             db=db,
             user=user,
@@ -617,7 +633,11 @@ async def delete_user(
 
     # 감사 로그 생성 (삭제 전에 정보 저장)
     user_email = user.email
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_delete(
         db=db,
         user_email=user_email,
@@ -699,7 +719,11 @@ async def update_user_role(
     db.refresh(user)
 
     # 감사 로그 생성
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
     log_user_role_change(
         db=db,
         user=user,

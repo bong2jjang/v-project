@@ -17,7 +17,7 @@ import { SidebarProvider } from "../hooks/useSidebar";
 // ── Config ──
 
 export interface PlatformConfig {
-  /** API base URL (e.g. "" for same-origin, "http://localhost:8000") */
+  /** API base URL (e.g. "" for same-origin, "http://127.0.0.1:8000") */
   apiBaseUrl?: string;
   /** Application identifier */
   appName: string;

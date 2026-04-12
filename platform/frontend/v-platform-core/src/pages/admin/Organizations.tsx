@@ -963,6 +963,7 @@ export default function Organizations() {
         <ContentHeader
           title="조직 관리"
           description="회사 및 부서 조직 구조를 관리합니다"
+          globalScope
         />
         <div className="page-container space-y-section-gap">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -978,6 +979,7 @@ export default function Organizations() {
       <ContentHeader
         title="조직 관리"
         description="회사 및 부서 조직 구조를 관리합니다"
+        globalScope
         actions={
           <Button onClick={openCreateCompany} disabled={!canEdit}>
             <Plus className="w-4 h-4 mr-1.5" />

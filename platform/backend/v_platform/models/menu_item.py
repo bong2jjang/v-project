@@ -39,7 +39,9 @@ class MenuItem(Base):
     parent_key = Column(String(100), nullable=True)  # 그룹핑용
     sort_order = Column(Integer, default=0)
     section = Column(String(20), default="custom")  # basic | admin | custom
-    app_id = Column(String(50), nullable=True, index=True)  # NULL = platform common, 'v-channel-bridge' = app-specific
+    app_id = Column(
+        String(50), nullable=True, index=True
+    )  # NULL = platform common, 'v-channel-bridge' = app-specific
     is_active = Column(Boolean, default=True, nullable=False)
 
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)

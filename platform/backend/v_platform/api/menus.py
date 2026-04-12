@@ -89,7 +89,7 @@ async def get_my_menus(
     """현재 사용자가 접근 가능한 메뉴 목록"""
     from v_platform.services.permission_service import PermissionService
 
-    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+    app_id = request.app.state.app_id if hasattr(request.app.state, "app_id") else None
     menus = PermissionService.get_accessible_menus(db, current_user, app_id=app_id)
     return {"menus": menus}
 
@@ -101,7 +101,7 @@ async def get_all_menus(
     db: Session = Depends(get_db_session),
 ):
     """전체 메뉴 목록 (관리용, system_admin + org_admin)"""
-    app_id = request.app.state.app_id if hasattr(request.app.state, 'app_id') else None
+    app_id = request.app.state.app_id if hasattr(request.app.state, "app_id") else None
     query = db.query(MenuItem)
     query = query.filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
     menus = query.order_by(MenuItem.sort_order).all()
@@ -116,15 +116,25 @@ async def create_menu(
     db: Session = Depends(get_db_session),
 ):
     """커스텀 메뉴 등록 (system_admin 전용)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
 
-    # 중복 체크
+    # 중복 체크 (같은 앱 범위 내에서만)
     existing = (
-        db.query(MenuItem).filter(MenuItem.permission_key == req.permission_key).first()
+        db.query(MenuItem)
+        .filter(
+            MenuItem.permission_key == req.permission_key,
+            or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id),
+        )
+        .first()
     )
     if existing:
         raise HTTPException(
-            400, f"메뉴 키 '{req.permission_key}'이(가) 이미 존재합니다. 다른 키를 사용해 주세요."
+            400,
+            f"메뉴 키 '{req.permission_key}'이(가) 이미 존재합니다. 다른 키를 사용해 주세요.",
         )
 
     menu = MenuItem(
@@ -171,10 +181,19 @@ async def reorder_menus(
     db: Session = Depends(get_db_session),
 ):
     """메뉴 순서 변경 (system_admin 전용)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
 
     for item in req.orders:
-        menu = db.query(MenuItem).filter(MenuItem.id == item["id"]).filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)).first()
+        menu = (
+            db.query(MenuItem)
+            .filter(MenuItem.id == item["id"])
+            .filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
+            .first()
+        )
         if menu:
             menu.sort_order = item["sort_order"]
             menu.updated_by = current_user.id
@@ -201,9 +220,18 @@ async def update_menu(
     db: Session = Depends(get_db_session),
 ):
     """메뉴 수정 (system_admin 전용)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
 
-    menu = db.query(MenuItem).filter(MenuItem.id == menu_id).filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)).first()
+    menu = (
+        db.query(MenuItem)
+        .filter(MenuItem.id == menu_id)
+        .filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
+        .first()
+    )
     if not menu:
         raise HTTPException(404, "메뉴를 찾을 수 없습니다")
 
@@ -236,9 +264,18 @@ async def delete_menu(
     db: Session = Depends(get_db_session),
 ):
     """커스텀 메뉴 삭제 (built_in 삭제 불가)"""
-    app_id = getattr(request.app.state, 'app_id', None) if hasattr(request.app, 'state') else None
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
 
-    menu = db.query(MenuItem).filter(MenuItem.id == menu_id).filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)).first()
+    menu = (
+        db.query(MenuItem)
+        .filter(MenuItem.id == menu_id)
+        .filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
+        .first()
+    )
     if not menu:
         raise HTTPException(404, "메뉴를 찾을 수 없습니다")
     if menu.menu_type == "built_in":
@@ -252,7 +289,10 @@ async def delete_menu(
     # 메뉴 그룹 삭제 시 하위 메뉴의 parent_key를 null로 리셋
     if menu.menu_type == "menu_group":
         children = (
-            db.query(MenuItem).filter(MenuItem.parent_key == menu.permission_key).filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id)).all()
+            db.query(MenuItem)
+            .filter(MenuItem.parent_key == menu.permission_key)
+            .filter(or_(MenuItem.app_id.is_(None), MenuItem.app_id == app_id))
+            .all()
         )
         for child in children:
             child.parent_key = None

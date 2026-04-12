@@ -24,44 +24,53 @@ import { resolveStartPage } from "../../lib/resolveStartPage";
 import { apiClient } from "../../api/client";
 
 // 헬스 응답 타입
-interface HealthResponse {
+interface HealthServiceDetail {
   status: string;
-  bridge_running: boolean;
-  version: string;
-  services: {
-    database?: { status: string; response_time_ms?: number; error?: string };
-    redis?: { status: string; response_time_ms?: number; error?: string };
-  };
+  response_time_ms?: number;
+  error?: string;
 }
 
-// 초기 서비스 목록 (status는 이후 체크로 채워짐)
-const INITIAL_SERVICES: Omit<ServiceStatus, "status">[] = [
+interface HealthResponse {
+  status: string;
+  version: string;
+  services: Record<string, HealthServiceDetail>;
+}
+
+// 고정 서비스 (항상 표시)
+const FIXED_SERVICES: Omit<ServiceStatus, "status">[] = [
   {
     name: "WebSocket",
     description: "실시간 업데이트를 위한 서버 연결",
     icon: <Wifi className="w-5 h-5" />,
   },
   {
-    name: "App Service",
-    description: "앱 서비스",
-    icon: <Server className="w-5 h-5" />,
-  },
-  {
     name: "Backend API",
     description: "FastAPI 백엔드 서버",
     icon: <Activity className="w-5 h-5" />,
   },
-  {
+];
+
+// health API 서비스 키 → 표시 이름/아이콘 매핑
+const SERVICE_META: Record<
+  string,
+  { name: string; description: string; icon: React.ReactNode }
+> = {
+  database: {
     name: "Database",
     description: "PostgreSQL 데이터베이스 서버",
     icon: <Database className="w-5 h-5" />,
   },
-  {
+  redis: {
     name: "Redis Cache",
     description: "Redis 캐시 및 세션 스토어",
     icon: <Zap className="w-5 h-5" />,
   },
-];
+  bridge: {
+    name: "Message Bridge",
+    description: "Slack ↔ Teams 메시지 브리지",
+    icon: <Server className="w-5 h-5" />,
+  },
+};
 
 export function TopBar() {
   const navigate = useNavigate();
@@ -81,7 +90,7 @@ export function TopBar() {
   const abortRef = useRef<AbortController | null>(null);
 
   const [services, setServices] = useState<ServiceStatus[]>(
-    INITIAL_SERVICES.map((s) => ({
+    FIXED_SERVICES.map((s) => ({
       ...s,
       status: "connecting" as const,
       isChecking: false,
@@ -103,7 +112,7 @@ export function TopBar() {
   // 서비스별 개별 체크
   const checkAllServices = useCallback(
     async (signal?: AbortSignal) => {
-      // 모든 서비스 checking 상태로
+      // 고정 서비스를 checking 상태로
       setServices((prev) => prev.map((s) => ({ ...s, isChecking: true })));
       setIsRefreshing(true);
 
@@ -117,7 +126,7 @@ export function TopBar() {
             : "stopped",
       });
 
-      // 2. Backend API + DB + Redis — 한 번의 /api/health 호출로 커버
+      // 2. Backend API + 동적 서비스 — /api/health 호출
       const t = performance.now();
       try {
         const res = await apiClient.get<HealthResponse>("/api/health", {
@@ -134,42 +143,45 @@ export function TopBar() {
           responseTimeMs: apiMs,
           error: undefined,
         });
-        updateService("Message Bridge", {
-          isChecking: false,
-          status: data.bridge_running ? "running" : "stopped",
-          responseTimeMs: apiMs,
-          error: undefined,
+
+        // health API가 반환한 서비스를 동적으로 반영
+        const dynamicServices: ServiceStatus[] = Object.entries(
+          data.services || {},
+        ).map(([key, svc]) => {
+          const meta = SERVICE_META[key] || {
+            name: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
+            description: key,
+            icon: <Server className="w-5 h-5" />,
+          };
+          return {
+            ...meta,
+            status: svc.status === "healthy" ? "running" : "error",
+            isChecking: false,
+            responseTimeMs: svc.response_time_ms,
+            error: svc.error ?? undefined,
+          };
         });
-        updateService("Database", {
-          isChecking: false,
-          status:
-            data.services?.database?.status === "healthy" ? "running" : "error",
-          responseTimeMs: data.services?.database?.response_time_ms,
-          error: data.services?.database?.error ?? undefined,
-        });
-        updateService("Redis Cache", {
-          isChecking: false,
-          status:
-            data.services?.redis?.status === "healthy" ? "running" : "error",
-          responseTimeMs: data.services?.redis?.response_time_ms,
-          error: data.services?.redis?.error ?? undefined,
+
+        // 고정 서비스 + 동적 서비스 병합
+        setServices((prev) => {
+          const fixed = prev.filter((s) =>
+            FIXED_SERVICES.some((f) => f.name === s.name),
+          );
+          return [...fixed, ...dynamicServices];
         });
       } catch {
         if (signal?.aborted) return;
         const errMs = Math.round(performance.now() - t);
-        for (const name of [
-          "Backend API",
-          "Message Bridge",
-          "Database",
-          "Redis Cache",
-        ]) {
-          updateService(name, {
-            isChecking: false,
-            status: "error",
-            responseTimeMs: errMs,
-            error: "연결 실패",
-          });
-        }
+        updateService("Backend API", {
+          isChecking: false,
+          status: "error",
+          responseTimeMs: errMs,
+          error: "연결 실패",
+        });
+        // health 실패 시 동적 서비스 제거 (상태 모름)
+        setServices((prev) =>
+          prev.filter((s) => FIXED_SERVICES.some((f) => f.name === s.name)),
+        );
       }
 
       setLastUpdated(new Date());

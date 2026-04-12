@@ -8,15 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@v-platform/core': path.resolve(__dirname, '../../../platform/frontend/v-platform-core/src'),
     },
     dedupe: ['react', 'react-dom', 'react-router-dom', 'zustand', '@tanstack/react-query'],
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2020',
-      logLimit: 0,
-    },
   },
   server: {
     port: 5173,
@@ -26,9 +19,6 @@ export default defineConfig({
     },
     fs: {
       allow: [
-        path.resolve(__dirname, './src'),
-        path.resolve(__dirname, '../../../platform/frontend/v-platform-core/src'),
-        path.resolve(__dirname, './node_modules'),
         path.resolve(__dirname, '../../..'),
       ],
     },

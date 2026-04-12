@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 
 from v_platform.app import PlatformApp
+from v_platform.api.health import health_registry, ServiceHealth
 from v_platform.services.websocket_manager import manager
 from v_platform.core.database import init_db
 from v_platform.sso import init_sso_providers
@@ -30,7 +31,7 @@ from app.api import (
     teams_notifications,
     monitoring,
 )
-from app.services.websocket_bridge import WebSocketBridge, set_bridge
+from app.services.websocket_bridge import WebSocketBridge, set_bridge, get_bridge
 from app.services.route_manager import RouteManager
 from app.services.message_queue import MessageQueue, set_message_queue
 from app.services.teams_subscription_manager import (
@@ -79,7 +80,10 @@ async def migrate_env_to_db() -> int:
 
         if slack_bot_token and slack_app_token:
             slack_account = Account(
-                name="slack-default", platform="slack", enabled=True, is_valid=True,
+                name="slack-default",
+                platform="slack",
+                enabled=True,
+                is_valid=True,
             )
             slack_account.token_decrypted = slack_bot_token
             slack_account.app_token_decrypted = slack_app_token
@@ -92,8 +96,12 @@ async def migrate_env_to_db() -> int:
 
         if teams_app_id and teams_app_password and teams_tenant_id:
             teams_account = Account(
-                name="teams-default", platform="teams", enabled=True,
-                tenant_id=teams_tenant_id, app_id=teams_app_id, is_valid=True,
+                name="teams-default",
+                platform="teams",
+                enabled=True,
+                tenant_id=teams_tenant_id,
+                app_id=teams_app_id,
+                is_valid=True,
             )
             teams_account.app_password_decrypted = teams_app_password
             db.add(teams_account)
@@ -155,14 +163,19 @@ async def init_bridge() -> WebSocketBridge:
                         token = account.token_decrypted
                         app_token = account.app_token_decrypted
                         if token and app_token:
-                            message_mode = os.getenv("SLACK_MESSAGE_MODE", "sender_info")
+                            message_mode = os.getenv(
+                                "SLACK_MESSAGE_MODE", "sender_info"
+                            )
                             provider = SlackProvider(
-                                bot_token=token, app_token=app_token,
+                                bot_token=token,
+                                app_token=app_token,
                                 message_mode=message_mode,
                             )
                             success = await bridge.add_provider(provider)
                             if success:
-                                logger.info(f"Slack Provider registered: {account.name}")
+                                logger.info(
+                                    f"Slack Provider registered: {account.name}"
+                                )
 
                     elif account.platform == "teams":
                         app_password = account.app_password_decrypted
@@ -170,7 +183,8 @@ async def init_bridge() -> WebSocketBridge:
                         app_id = account.app_id_decrypted
                         if tenant_id and app_id and app_password:
                             provider = TeamsProvider(
-                                app_id=app_id, app_password=app_password,
+                                app_id=app_id,
+                                app_password=app_password,
                                 tenant_id=tenant_id,
                                 team_id=account.team_id_decrypted,
                                 account_id=account.id,
@@ -178,7 +192,9 @@ async def init_bridge() -> WebSocketBridge:
                             )
                             success = await bridge.add_provider(provider)
                             if success:
-                                logger.info(f"Teams Provider registered: {account.name}")
+                                logger.info(
+                                    f"Teams Provider registered: {account.name}"
+                                )
 
                 except Exception as e:
                     logger.warning(f"Failed to process account {account.name}: {e}")
@@ -240,6 +256,7 @@ async def lifespan(fastapi_app):
     logger.info("Stopping v-channel-bridge")
 
     from app.services.teams_subscription_manager import get_subscription_manager
+
     sub_mgr = get_subscription_manager()
     if sub_mgr:
         try:
@@ -266,6 +283,16 @@ async def lifespan(fastapi_app):
 
     logger.info("Shutdown complete")
 
+
+# Register bridge health check
+def _check_bridge() -> ServiceHealth:
+    b = get_bridge()
+    if b and b.is_running:
+        return ServiceHealth(status="healthy")
+    return ServiceHealth(status="unhealthy", error="Bridge not running")
+
+
+health_registry.register("bridge", _check_bridge)
 
 # Create app via PlatformApp
 platform = PlatformApp(
@@ -303,6 +330,7 @@ async def root() -> dict[str, str]:
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     from fastapi import HTTPException
+
     if isinstance(exc, HTTPException):
         raise exc
     logger.error("Unhandled exception", error=str(exc), path=request.url.path)
@@ -314,4 +342,5 @@ async def global_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

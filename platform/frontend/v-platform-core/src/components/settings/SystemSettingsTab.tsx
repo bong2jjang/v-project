@@ -23,7 +23,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
     settings?.manual_enabled ?? true,
   );
   const [manualUrl, setManualUrl] = useState(
-    settings?.manual_url ?? "http://localhost:3000",
+    settings?.manual_url ?? "http://127.0.0.1:3000",
   );
   const [defaultStartPage, setDefaultStartPage] = useState(
     settings?.default_start_page ?? "/",
@@ -231,7 +231,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                   type="url"
                   value={manualUrl}
                   onChange={(e) => handleManualUrlChange(e.target.value)}
-                  placeholder="http://localhost:3000"
+                  placeholder="http://127.0.0.1:3000"
                   disabled={readOnly}
                   className="
                     w-full px-3 py-2 bg-surface-base border border-line rounded-input
@@ -356,7 +356,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
         <ul className="list-disc list-inside space-y-1 text-body-sm">
           <li>메뉴얼 링크는 모든 사용자에게 표시됩니다.</li>
           <li>URL은 http:// 또는 https://로 시작해야 합니다.</li>
-          <li>개발 환경에서는 localhost:3000을 사용합니다.</li>
+          <li>개발 환경에서는 127.0.0.1:3000을 사용합니다.</li>
           <li>설정 변경은 즉시 적용되며, 관리자만 수정할 수 있습니다.</li>
         </ul>
       </InfoBox>

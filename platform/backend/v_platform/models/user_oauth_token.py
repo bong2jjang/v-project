@@ -77,6 +77,7 @@ class UserOAuthToken(Base):
     def _configure_account_relationship():
         """Called by app after Account model is loaded"""
         from sqlalchemy.orm import relationship as rel
+
         UserOAuthToken.account = rel("Account", back_populates="user_tokens")
 
     # Constraints

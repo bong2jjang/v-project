@@ -13,14 +13,16 @@ def migrate(engine):
             ("app_description", "VARCHAR(500)"),
             ("app_logo_url", "VARCHAR(500)"),
         ]:
-            result = conn.execute(text(
-                "SELECT column_name FROM information_schema.columns "
-                f"WHERE table_name='system_settings' AND column_name='{col}'"
-            ))
+            result = conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    f"WHERE table_name='system_settings' AND column_name='{col}'"
+                )
+            )
             if not result.fetchone():
-                conn.execute(text(
-                    f"ALTER TABLE system_settings ADD COLUMN {col} {col_type}"
-                ))
+                conn.execute(
+                    text(f"ALTER TABLE system_settings ADD COLUMN {col} {col_type}")
+                )
                 logger.info(f"Added {col} to system_settings")
 
         conn.commit()

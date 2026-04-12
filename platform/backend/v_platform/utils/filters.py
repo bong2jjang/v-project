@@ -9,7 +9,6 @@ Usage:
     options = get_distinct_values(db, MyModel.category, MyModel.is_active == True)
 """
 
-from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session

@@ -65,7 +65,22 @@ def migrate(engine) -> bool:
                 )
             )
 
-            # 4. DB-level 기본값 설정 (SQLAlchemy create_all이 server_default 없이 만들었을 수 있음)
+            # 4. Ensure UNIQUE indexes exist
+            # (create_all may have created tables without UNIQUE constraints)
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_permission_groups_name "
+                    "ON permission_groups(name)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_pgg_group_menu "
+                    "ON permission_group_grants(permission_group_id, menu_item_id)"
+                )
+            )
+
+            # 5. DB-level 기본값 설정 (SQLAlchemy create_all이 server_default 없이 만들었을 수 있음)
             defaults = [
                 ("permission_groups", "is_default", "FALSE"),
                 ("permission_groups", "is_active", "TRUE"),
@@ -84,7 +99,7 @@ def migrate(engine) -> bool:
                 except Exception:
                     pass
 
-            # 5. 디폴트 그룹 시드 데이터
+            # 6. 디폴트 그룹 시드 데이터
             conn.execute(
                 text(
                     """
@@ -98,7 +113,7 @@ def migrate(engine) -> bool:
                 )
             )
 
-            # 6. 디폴트 그룹에 메뉴 권한 매핑
+            # 7. 디폴트 그룹에 메뉴 권한 매핑
             # 전체 관리자: 모든 메뉴 write
             conn.execute(
                 text(
