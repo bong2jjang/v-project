@@ -506,6 +506,60 @@ async def remove_group_member(
     return {"message": "사용자가 그룹에서 제거되었습니다"}
 
 
+@router.get("/user/{user_id}/groups")
+async def get_user_groups(
+    request: Request,
+    user_id: int,
+    db: Session = Depends(get_db_session),
+    current_admin: User = Depends(require_admin_or_above()),
+):
+    """특정 사용자가 소속된 그룹 목록"""
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+
+    memberships = (
+        db.query(UserGroupMembership)
+        .filter(UserGroupMembership.user_id == user_id)
+        .all()
+    )
+
+    groups = []
+    for m in memberships:
+        group = (
+            db.query(PermissionGroup)
+            .filter(
+                PermissionGroup.id == m.permission_group_id,
+                or_(
+                    PermissionGroup.app_id.is_(None),
+                    PermissionGroup.app_id == app_id,
+                ),
+            )
+            .first()
+        )
+        if group:
+            groups.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "description": group.description,
+                    "is_default": group.is_default,
+                    "assigned_at": m.created_at,
+                }
+            )
+
+    return {
+        "user_id": user_id,
+        "username": target.username,
+        "groups": groups,
+    }
+
+
 @router.get("/members/search")
 async def search_users_for_group(
     q: str = "",

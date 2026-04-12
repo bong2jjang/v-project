@@ -80,6 +80,21 @@ export async function removeGroupMember(
   return del(`/api/permission-groups/${groupId}/members/${userId}`);
 }
 
+/** 특정 사용자가 소속된 그룹 목록 */
+export async function getUserGroups(userId: number): Promise<{
+  user_id: number;
+  username: string;
+  groups: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    is_default: boolean;
+    assigned_at: string;
+  }>;
+}> {
+  return get(`/api/permission-groups/user/${userId}/groups`);
+}
+
 /** 그룹 멤버 추가를 위한 사용자 검색 (이미 소속된 사용자 제외) */
 export async function searchUsersForGroup(
   query: string,
