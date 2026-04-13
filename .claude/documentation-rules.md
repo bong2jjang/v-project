@@ -2,7 +2,7 @@
 
 v-project의 모든 문서는 Docusaurus 기반으로 관리합니다.
 
-> **최종 업데이트**: 2026-04-08 · **버전**: 2.0
+> **최종 업데이트**: 2026-04-13 · **버전**: 3.0
 
 ## 기본 원칙
 
@@ -18,15 +18,23 @@ v-project의 모든 문서는 Docusaurus 기반으로 관리합니다.
 ```
 docusaurus/
 ├── blog/
-│   └── work-history/           # 작업 이력 (날짜순)
+│   └── work-history/                # 작업 이력 (날짜순)
 ├── docs/
-│   ├── intro.md                # 문서 사이트 랜딩
-│   ├── design/                 # 설계 문서
-│   ├── developer-guide/        # 개발자 가이드
-│   ├── admin-guide/            # 관리자 가이드
-│   ├── api/                    # API 레퍼런스
-│   ├── user-guide/             # 사용자 가이드
-│   └── tech-portfolio/         # 기술 포트폴리오
+│   ├── intro.md                     # 문서 사이트 랜딩
+│   ├── platform/                    # 플랫폼(v-platform) 문서
+│   │   ├── admin-guide/             #   관리자 가이드
+│   │   ├── developer-guide/         #   개발자 가이드
+│   │   └── design/                  #   플랫폼 설계 문서
+│   ├── apps/                        # 앱별 문서
+│   │   ├── v-channel-bridge/        #   채널 브리지 앱
+│   │   │   ├── admin-guide/
+│   │   │   ├── developer-guide/
+│   │   │   └── design/
+│   │   └── v-platform-template/     #   템플릿 앱
+│   ├── design/                      # 공유 설계 문서
+│   ├── api/                         # API 레퍼런스
+│   ├── user-guide/                  # 사용자 가이드
+│   └── tech-portfolio/              # 기술 포트폴리오
 ```
 
 ---
@@ -39,17 +47,7 @@ docusaurus/
 
 **파일명 규칙**: `YYYY-MM-DD-{kebab-case-title}.md`
 
-**현재 파일 목록**:
-```
-work-history/
-├── 2026-03-30-claude-code-optimization.md
-├── 2026-03-31-light-zowe-week1-3-complete.md
-├── 2026-04-02-light-zowe-route-management-and-encryption.md
-├── 2026-04-02-token-optimization-setup.md
-├── 2026-04-04-bidirectional-routes-sender-name-fix.md
-├── 2026-04-06-audit-log-ux-improvement.md
-└── 2026-04-07-docusaurus-docs-refresh.md
-```
+**현재 파일 목록**: `docusaurus/blog/work-history/` 하위 (날짜순 블로그 포스트)
 
 **프론트매터 템플릿**:
 ```markdown
@@ -97,33 +95,54 @@ tags: [{태그1}, {태그2}, ...]
 
 ## 2. 설계 문서 (Design Documents)
 
-**위치**: `docusaurus/docs/design/`
+**위치**: 범위에 따라 3곳에 분리
+
+| 범위 | 위치 |
+|------|------|
+| 플랫폼 공통 | `docusaurus/docs/platform/design/` |
+| 앱 전용 (v-channel-bridge) | `docusaurus/docs/apps/v-channel-bridge/design/` |
+| 공유/크로스커팅 | `docusaurus/docs/design/` |
 
 **용도**: 기능 설계, 개선 계획, 기술 검토, 아키텍처 결정
 
 **파일명 규칙**: `{UPPER_SNAKE_CASE_TOPIC}.md`
 
-- 주제를 명확히 나타내는 이름 사용
-- 타입 접미사(`_PLAN`, `_REVIEW` 등)는 내용에 맞게 선택적 사용
-
 **현재 파일 목록**:
 ```
-design/
-├── ADVANCED_MESSAGE_FEATURES.md
+platform/design/               # 플랫폼 설계 (16개)
+├── APP_BRANDING_AND_CONTENT_SEPARATION.md
 ├── AUDIT_LOG_UX_IMPROVEMENT.md
+├── CLAUDE_CODE_TOKEN_OPTIMIZATION.md
+├── HYBRID_SSO_LOGIN_PLAN.md
+├── MENU_GROUP_AND_TAB_LAYOUT.md
+├── MODULE_BOUNDARY_MAP.md
+├── MULTI_APP_DATA_ISOLATION.md
+├── NOTIFICATION_AND_MESSAGING_SYSTEM.md
+├── PLATFORM_APP_SEPARATION_ARCHITECTURE.md
+├── PLATFORM_CONSOLIDATION_PLAN.md
+├── PLATFORM_FEATURE_PERMISSIONS_PLAN.md
+├── PLATFORM_MONITORING_CENTRALIZATION.md
+├── RBAC_AND_CUSTOM_MENU_PLAN.md
+├── SELF_CORRECTION_LOOP_REVIEW.md
+├── V_PLATFORM_PORTAL_DESIGN.md
+└── V_PROJECT_MIGRATION_PLAN.md
+
+apps/v-channel-bridge/design/  # 앱 설계 (9개)
+├── ADVANCED_MESSAGE_FEATURES.md
 ├── CHAT_EXPERIENCE_IMPROVEMENT_PLAN.md
 ├── CHAT_SUPPORT.md
-├── CLAUDE_CODE_TOKEN_OPTIMIZATION.md
 ├── ENV_VS_DATABASE_PROVIDERS.md
 ├── MESSAGE_HISTORY_IMPROVEMENT.md
 ├── MESSAGE_LATENCY_OPTIMIZATION.md
 ├── MONITORING_IMPROVEMENT.md
 ├── PHASE1_PROVIDER_UI_PLAN.md
-├── PLATFORM_FEATURE_PERMISSIONS_PLAN.md
-├── REMAINING_TASKS_ROADMAP.md
-├── SELF_CORRECTION_LOOP_REVIEW.md
+└── REMAINING_TASKS_ROADMAP.md
+
+design/                        # 공유 설계 (5개)
+├── PNPM_WORKSPACE_MIGRATION_PLAN.md
 ├── STATISTICS_DASHBOARD_IMPROVEMENT.md
 ├── TEAMS_DELEGATED_AUTH.md
+├── USER_PERMISSION_REDESIGN_PLAN.md
 └── USER_PROVIDER_MANAGEMENT.md
 ```
 
@@ -151,42 +170,49 @@ title: {제목}
 
 ## 3. 개발자 가이드 (Developer Guide)
 
-**위치**: `docusaurus/docs/developer-guide/`
+**위치**: 플랫폼/앱별 분리
 
-**용도**: 개발 환경 설정, 아키텍처 설명, 코딩 규칙, 테스트 가이드, 마이그레이션 계획
+**용도**: 개발 환경 설정, 아키텍처 설명, 코딩 규칙, 테스트 가이드
 
 **현재 파일 목록**:
 ```
-developer-guide/
-├── ARCHITECTURE.md              # 시스템 아키텍처
-├── DESIGN_SYSTEM.md             # 프론트엔드 디자인 시스템
-├── DEVELOPMENT.md               # 개발 환경 설정
-├── EXECUTION_PLAN.md            # 실행 계획
-├── MIGRATION_PLAN.md            # 마이그레이션 계획
-├── PAGE_LAYOUT_GUIDE.md         # 페이지 레이아웃 규칙
-├── TESTING_GUIDE.md             # 테스트 작성 가이드
-└── ZOWE_CHAT_MIGRATION_PLAN.md  # Zowe Chat 마이그레이션
+platform/developer-guide/         # 플랫폼 (6개)
+├── ARCHITECTURE.md               # 시스템 아키텍처
+├── DESIGN_SYSTEM.md              # 프론트엔드 디자인 시스템
+├── PAGE_LAYOUT_GUIDE.md          # 페이지 레이아웃 규칙
+├── SEED_DATA_GUIDE.md            # 시드 데이터 가이드
+├── SSO_USAGE_AND_TESTING.md      # SSO 사용 및 테스트
+└── SYSTEM_STATUS_GUIDE.md        # 시스템 상태 가이드
+
+apps/v-channel-bridge/developer-guide/  # 앱 (5개)
+├── DEVELOPMENT.md                # 개발 환경 설정
+├── EXECUTION_PLAN.md             # 실행 계획
+├── MIGRATION_PLAN.md             # 마이그레이션 계획
+├── TESTING_GUIDE.md              # 테스트 작성 가이드
+└── ZOWE_CHAT_MIGRATION_PLAN.md   # Zowe Chat 마이그레이션
 ```
 
 ---
 
 ## 4. 관리자 가이드 (Admin Guide)
 
-**위치**: `docusaurus/docs/admin-guide/`
+**위치**: 플랫폼/앱별 분리
 
 **용도**: 배포, 플랫폼 연동, 모니터링, 보안, 트러블슈팅
 
 **현재 파일 목록**:
 ```
-admin-guide/
-├── ADMIN_GUIDE.md         # 관리자 종합 가이드
-├── DEPLOYMENT.md          # 배포 가이드
-├── EMAIL_SETUP.md         # 이메일 설정
-├── MONITORING_SETUP.md    # 모니터링 설정
-├── SLACK_SETUP.md         # Slack 연동 설정
-├── SSL_TLS_SETUP.md       # SSL/TLS 설정
-├── TEAMS_SETUP.md         # Teams 연동 설정
-└── TROUBLESHOOTING.md     # 트러블슈팅
+platform/admin-guide/             # 플랫폼 (5개)
+├── ADMIN_GUIDE.md                # 관리자 종합 가이드
+├── DEPLOYMENT.md                 # 배포 가이드
+├── EMAIL_SETUP.md                # 이메일 설정
+├── MONITORING_SETUP.md           # 모니터링 설정
+└── SSL_TLS_SETUP.md              # SSL/TLS 설정
+
+apps/v-channel-bridge/admin-guide/  # 앱 (3개)
+├── SLACK_SETUP.md                # Slack 연동 설정
+├── TEAMS_SETUP.md                # Teams 연동 설정
+└── TROUBLESHOOTING.md            # 트러블슈팅
 ```
 
 ---
@@ -280,3 +306,4 @@ tech-portfolio/
 |------|------|-----------|
 | 2026-03-30 | 1.0 | 초기 작성 |
 | 2026-04-08 | 2.0 | 실제 구조 기준 전면 갱신: tech-portfolio 추가, 파일 목록 현행화, 마이그레이션 섹션 제거, 태그 가이드 확장 |
+| 2026-04-13 | 3.0 | 멀티앱 구조 반영: platform/, apps/ 분리된 디렉토리 구조 갱신, 전체 파일 목록 현행화 |

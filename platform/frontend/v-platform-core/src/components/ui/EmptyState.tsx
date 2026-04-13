@@ -15,6 +15,7 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  actions?: ReactNode;
 }
 
 export function EmptyState({
@@ -22,6 +23,7 @@ export function EmptyState({
   title,
   description,
   action,
+  actions,
 }: EmptyStateProps) {
   return (
     <div className="text-center py-12">
@@ -34,13 +36,15 @@ export function EmptyState({
           {description}
         </p>
       )}
-      {action && (
+      {actions ? (
+        <div className="mt-4">{actions}</div>
+      ) : action ? (
         <div className="mt-4">
           <Button variant="primary" size="sm" onClick={action.onClick}>
             {action.label}
           </Button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

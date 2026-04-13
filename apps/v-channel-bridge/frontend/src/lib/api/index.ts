@@ -11,8 +11,11 @@ export * from "./config";
 export * from "./messages";
 export * from "./providers";
 
-// Types
-export * from "./types";
+// Types (exclude BridgeStatus which is already exported from ./bridge)
+export {
+  type BridgeRouteConfig,
+  type BridgeControlResponse,
+} from "./types";
 
 // Named exports for convenience
 export { bridgeApi } from "./bridge";

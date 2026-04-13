@@ -21,7 +21,6 @@ import {
   UserManagementPage,
   AuditLogsPage,
   SettingsPage,
-  HelpPage,
   CustomIframePage,
   MenuManagementPage,
   PermissionMatrixPage,
@@ -42,6 +41,7 @@ import { useNotifications } from "./hooks/useNotifications";
 
 // 앱 전용 페이지
 import Dashboard from "./pages/Dashboard";
+import Help from "./pages/Help";
 
 function App() {
   const { loadUserFromStorage, isAuthenticated, isInitialized } =
@@ -91,7 +91,7 @@ function App() {
 
           {/* 플랫폼 공통 페이지 */}
           <Route path="/settings" element={<ProtectedRoute permissionKey="settings"><Layout><SettingsPage /></Layout></ProtectedRoute>} />
-          <Route path="/help" element={<ProtectedRoute permissionKey="help"><Layout><HelpPage /></Layout></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute permissionKey="help"><Layout><Help /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>} />
           <Route path="/password-change" element={<ProtectedRoute><Layout><PasswordChangePage /></Layout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute permissionKey="users"><Layout><UserManagementPage /></Layout></ProtectedRoute>} />

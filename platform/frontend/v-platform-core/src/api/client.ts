@@ -17,7 +17,6 @@ import { authLogger } from "../lib/utils/authLogger";
 // Docker 환경: Vite proxy가 /api → backend로 전달하므로 빈 문자열 사용
 // 로컬 환경: VITE_API_URL로 명시 지정
 const _envUrl = import.meta.env.VITE_API_URL;
-const _dockerEnv = import.meta.env.VITE_DOCKER_ENV || (typeof window !== "undefined" && window.location.port !== "");
 const API_BASE_URL =
   _envUrl && _envUrl.length > 0
     ? _envUrl
@@ -44,6 +43,10 @@ export class ApiClientError extends Error {
   public status: number;
   public detail: ApiErrorDetail | string;
   public originalError: AxiosError;
+
+  get statusCode(): number {
+    return this.status;
+  }
 
   constructor(error: AxiosError) {
     const apiError = error.response?.data as ApiError | undefined;
@@ -371,11 +374,8 @@ function createApiClient(): AxiosInstance {
               if (originalRequest) {
                 const token = localStorage.getItem("token");
 
-                // Headers 객체를 새로 생성하여 토큰 업데이트
-                originalRequest.headers = {
-                  ...originalRequest.headers,
-                  Authorization: `Bearer ${token}`,
-                };
+                // 토큰 업데이트
+                originalRequest.headers.set("Authorization", `Bearer ${token}`);
 
                 authLogger.logTokenEvent(
                   "Retrying original request after refresh",

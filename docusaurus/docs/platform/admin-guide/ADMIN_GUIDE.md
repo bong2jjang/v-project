@@ -1,14 +1,14 @@
 ---
 id: admin-guide
-title: VMS Chat Ops 관리자 가이드
+title: v-project 관리자 가이드
 sidebar_position: 1
 tags: [guide, admin]
 ---
 
-# VMS Chat Ops 관리자 가이드
+# v-project 관리자 가이드
 
-**버전**: 3.1.0
-**최종 업데이트**: 2026-04-10
+**버전**: 4.0.0
+**최종 업데이트**: 2026-04-13
 
 ---
 

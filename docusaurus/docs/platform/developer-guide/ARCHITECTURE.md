@@ -192,7 +192,7 @@ backend/
 │   │   ├── base.py            # BasePlatformProvider 인터페이스
 │   │   ├── slack_provider.py  # Slack Socket Mode
 │   │   └── teams_provider.py  # MS Graph API + Bot Framework
-│   ├── api/                   # API 엔드포인트 (22개 라우터)
+│   ├── api/                   # API 엔드포인트 (18개 라우터)
 │   │   ├── auth.py            # JWT 인증
 │   │   ├── auth_microsoft.py  # Microsoft OAuth2
 │   │   ├── auth_sso.py        # SSO 인증 (Microsoft Entra ID, OIDC)
@@ -253,7 +253,7 @@ backend/
 
 frontend/
 ├── src/
-│   ├── pages/                 # 페이지 컴포넌트 (20개)
+│   ├── pages/                 # 페이지 컴포넌트 (18개)
 │   │   ├── Dashboard.tsx      # 대시보드 (통계, 상태)
 │   │   ├── Routes.tsx         # Route 관리
 │   │   ├── Messages.tsx       # 메시지 히스토리

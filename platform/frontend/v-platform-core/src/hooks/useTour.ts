@@ -10,6 +10,7 @@ export function useTour() {
   return {
     startMainTour: () => {},
     startPageTour: (_page: string) => {},
+    resetAllTours: () => {},
     isRunning: false,
   };
 }

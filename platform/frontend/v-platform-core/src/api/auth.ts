@@ -11,9 +11,7 @@ import type {
   Token,
   User,
   DeviceInfo,
-  PasswordResetRequest,
   PasswordResetVerifyResponse,
-  PasswordResetConfirm,
   MessageResponse,
   SSOProviderInfo,
 } from "./types";

@@ -21,16 +21,18 @@ v-project는 **v-platform**(재사용 가능한 플랫폼 프레임워크)과 **
 
 | 컴포넌트 | 상태 | 비고 |
 |---|---|---|
-| v-platform Backend | ✅ 완성 | PlatformApp, 15 라우터, 12 서비스, 11 모델 |
-| v-platform Frontend | ✅ 완성 | 17 페이지, 6 스토어, 11 훅, 60+ 컴포넌트 |
-| v-channel-bridge | ✅ 완성 | Slack/Teams 양방향 브리지 |
-| v-platform-template | ✅ 완성 | 새 앱 스캐폴딩 템플릿 |
-| v-platform-portal | ✅ 완성 | 앱 런처, SSO Relay, 사이트맵 |
+| v-platform Backend | ✅ 완성 | PlatformApp, 18 라우터, 14 서비스, 14 모델, 24 마이그레이션 |
+| v-platform Frontend | ✅ 완성 | 18 페이지, 6 스토어, 12 훅, 65+ 컴포넌트 |
+| v-channel-bridge | ✅ 완성 | Slack/Teams 양방향 브리지, 24 페이지 (앱+플랫폼) |
+| v-platform-template | ✅ 완성 | 새 앱 스캐폴딩 템플릿, 앱별 투어/도움말 |
+| v-platform-portal | ✅ 완성 | 앱 런처, SSO Relay, 사이트맵, 앱 관리 CRUD, 앱별 투어/도움말 |
 | Multi-app 데이터 격리 | ✅ 완성 | app_id 기반 메뉴/감사로그/설정 분리 |
 | Token Relay SSO | ✅ 완성 | 포털 → 앱 JWT 자동 인증 |
+| 알림 시스템 | ✅ 완성 | 시스템/앱 알림, 배너, 팝업, active 토글 |
+| Product Tour | ✅ 완성 | Driver.js 기반 앱별 맞춤 투어 |
 
-**마이그레이션 계획**: `docusaurus/docs/design/V_PROJECT_MIGRATION_PLAN.md`  
-**분리 아키텍처 설계**: `docusaurus/docs/design/PLATFORM_APP_SEPARATION_ARCHITECTURE.md`
+**마이그레이션 계획**: `docusaurus/docs/platform/design/V_PROJECT_MIGRATION_PLAN.md`  
+**분리 아키텍처 설계**: `docusaurus/docs/platform/design/PLATFORM_APP_SEPARATION_ARCHITECTURE.md`
 
 ---
 
@@ -81,23 +83,23 @@ v-project/
 │   ├── backend/v_platform/            # Python 패키지: v_platform
 │   │   ├── app.py                     # PlatformApp (프레임워크 진입점)
 │   │   ├── core/                      # database, logging, exceptions
-│   │   ├── models/                    # 플랫폼 모델 11개 (app_id 분리 포함)
-│   │   ├── api/                       # 플랫폼 라우터 15개 + HealthRegistry
-│   │   ├── services/                  # 12개 (export, stats, event_broadcaster, log_buffer, feature_checker...)
+│   │   ├── models/                    # 플랫폼 모델 14개 (app_id 분리 포함)
+│   │   ├── api/                       # 플랫폼 라우터 18개 + HealthRegistry
+│   │   ├── services/                  # 14개 (export, stats, event_broadcaster, log_buffer, feature_checker, notification, cache, permission...)
 │   │   ├── monitoring/                # 메트릭 레지스트리
 │   │   ├── middleware/                # CSRF, Prometheus metrics
 │   │   ├── sso/                       # Microsoft, Generic OIDC
 │   │   ├── utils/                     # auth, audit_logger, encryption, filters
 │   │   ├── schemas/                   # user, audit_log, system_settings (with branding)
-│   │   └── migrations/                # p001~p016
+│   │   └── migrations/                # p001~p024
 │   └── frontend/v-platform-core/      # npm 패키지: @v-platform/core
 │       └── src/
-│           ├── pages/                 # ★ 17개 플랫폼 페이지 (Login, Settings, Admin...)
+│           ├── pages/                 # ★ 18개 플랫폼 페이지 (Login, Settings, Admin, Notifications...)
 │           ├── providers/             # PlatformProvider (Config, QueryClient)
 │           ├── api/                   # client, auth, users, permissions...
 │           ├── stores/                # 6개 (auth, permission, notification, systemSettings, sessionSettings, user-oauth)
-│           ├── hooks/                 # 11개 (useTheme, useWebSocket, useNotifications, useApiErrorHandler...)
-│           ├── components/            # ui(24), layout(10), settings(5), profile(2), oauth(3), admin(7), auth(2), common(2), notifications(5)
+│           ├── hooks/                 # 12개 (useTheme, useWebSocket, useNotifications, useRealtimeStatus, useTour...)
+│           ├── components/            # ui(25), layout(11), settings(6), profile(2), oauth(3), admin(7), auth(3), common(3), notifications(6)
 │           └── lib/                   # navigation, resolveStartPage, tour, websocket, utils
 │
 ├── apps/
@@ -116,18 +118,28 @@ v-project/
 │   ├── v-platform-template/           # 새 앱 시작 템플릿
 │   │   ├── backend/app/main.py        # PlatformApp만 (~30줄)
 │   │   └── frontend/src/
-│   │       ├── App.tsx                # 플랫폼 페이지 import (~100줄)
-│   │       └── pages/Dashboard.tsx    # 유일한 앱 전용 페이지
+│   │       ├── App.tsx                # 플랫폼 페이지 import + 앱 전용 라우트
+│   │       ├── pages/                 # Dashboard, NotificationManagement
+│   │       ├── hooks/useTour.ts       # 앱별 맞춤 투어
+│   │       └── lib/tour/             # 앱별 투어 스텝 정의
 │   │
 │   └── v-platform-portal/             # 통합 앱 포털
-│       ├── backend/                   # AppRegistry, Portal API
-│       └── frontend/                  # App Launcher, SSO Relay, Sitemap
+│       ├── backend/                   # AppRegistry, Portal API, 앱 CRUD
+│       └── frontend/src/
+│           ├── pages/                 # Portal, Help, AppManagement, NotificationManagement
+│           ├── hooks/useTour.ts       # 앱별 맞춤 투어
+│           └── lib/                   # 포털 API 클라이언트, 앱별 투어 스텝
 │
 ├── docker-compose.yml                 # 모든 서비스 (프로필 지원)
 ├── monitoring/                        # Prometheus, Grafana, Promtail
-└── docusaurus/docs/
-    ├── platform/                      # 플랫폼 문서
-    └── apps/                          # 앱별 문서
+└── docusaurus/                        # 문서 사이트 (프로필: docs, 포트 3000)
+    └── docs/
+        ├── platform/                  # 플랫폼 문서 (admin-guide, developer-guide, design)
+        ├── apps/                      # 앱별 문서 (v-channel-bridge, v-platform-template)
+        ├── design/                    # 공통 설계 문서
+        ├── tech-portfolio/            # 기술 포트폴리오
+        ├── api/                       # API 레퍼런스
+        └── user-guide/               # 사용자 가이드
 ```
 
 ---
@@ -188,6 +200,7 @@ Teams 채널 ID는 `{teamId}:{channelId}` 형식으로 저장 (`_parse_channel_r
 | v-platform-portal Frontend | 5180 |
 | PostgreSQL | 5432 |
 | Redis | 6379 |
+| Docusaurus (docs 프로필) | 3000 |
 | MailHog Web UI | 8025 |
 | debugpy (debug 모드) | 5678 |
 
@@ -214,7 +227,8 @@ TEAMS_APP_PASSWORD=...           # Azure Client Secret
 BRIDGE_TYPE=native
 
 # v-platform-portal (포털)
-PORTAL_APPS=v-channel-bridge,v-platform-template  # 포털에 등록할 앱 목록
+# PORTAL_APPS 환경변수는 초기 시드용. 실제 앱 관리는 포털 Admin UI (DB-backed CRUD)로 수행
+PORTAL_APPS=v-channel-bridge,v-platform-template
 ```
 
 **.env 파일은 절대 커밋하지 마세요.**
@@ -302,5 +316,5 @@ Teams Provider 코드는 완성됐지만, 실제 동작을 위해 Azure에서 Bo
 
 ---
 
-**문서 버전**: 6.0 (v-project — 멀티 앱 포털 완료)
-**최종 업데이트**: 2026-04-11
+**문서 버전**: 7.0 (v-project — 앱별 투어/도움말, 알림 관리, 문서 최신화)
+**최종 업데이트**: 2026-04-13

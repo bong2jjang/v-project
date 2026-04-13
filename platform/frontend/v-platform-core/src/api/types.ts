@@ -155,7 +155,7 @@ export interface LoadingState {
 // 인증 타입
 // ============================================================
 
-export type UserRole = "system_admin" | "org_admin" | "user";
+export type UserRole = "system_admin" | "org_admin" | "admin" | "user";
 
 /**
  * 관리자 역할 여부 확인 (system_admin 또는 org_admin)

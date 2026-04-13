@@ -168,7 +168,7 @@ element-gap: 0.75rem                    ← 요소 간 간격
 
 **Border Radius**: card(12px), button/input(8px), badge(pill), modal(16px)
 
-#### UI 컴포넌트 라이브러리 (23개)
+#### UI 컴포넌트 라이브러리 (25개)
 
 | 카테고리 | 컴포넌트 | 비고 |
 |----------|----------|------|
@@ -520,7 +520,7 @@ VMS Chat Ops는 원래 분리된 여러 도구(CLI, 설정 파일, 별도 모니
 │ (ChannelInputField, SearchBar,       │
 │  FiltersPanel, StatusBadge)          │
 ├──────────────────────────────────────┤
-│ Layer 1: UI Primitives (23개)        │  기본 빌딩 블록
+│ Layer 1: UI Primitives (25개)        │  기본 빌딩 블록
 │ (Button, Input, Card, Modal,         │
 │  Badge, Table, Tabs, Alert)          │
 └──────────────────────────────────────┘

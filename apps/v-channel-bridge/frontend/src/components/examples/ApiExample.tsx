@@ -14,9 +14,8 @@ export function ApiExample() {
     isLoading: bridgeLoading,
     error: bridgeError,
     fetchStatus,
-    start,
-    stop,
-    restart,
+    startBridge,
+    stopBridge,
     fetchLogs,
     clearError: clearBridgeError,
   } = useBridgeStore();
@@ -44,27 +43,28 @@ export function ApiExample() {
 
   const handleStart = async () => {
     try {
-      await start();
+      await startBridge();
       alert("v-channel-bridge started successfully!");
-    } catch (error) {
+    } catch {
       // 에러는 store에서 자동으로 처리됨
     }
   };
 
   const handleStop = async () => {
     try {
-      await stop();
+      await stopBridge();
       alert("v-channel-bridge stopped successfully!");
-    } catch (error) {
+    } catch {
       // 에러는 store에서 자동으로 처리됨
     }
   };
 
   const handleRestart = async () => {
     try {
-      await restart();
+      await stopBridge();
+      await startBridge();
       alert("v-channel-bridge restarted successfully!");
-    } catch (error) {
+    } catch {
       // 에러는 store에서 자동으로 처리됨
     }
   };
@@ -124,28 +124,19 @@ export function ApiExample() {
                   <span className="font-medium">Running:</span>{" "}
                   <span
                     className={
-                      status.running ? "text-green-600" : "text-red-600"
+                      status.is_running ? "text-green-600" : "text-red-600"
                     }
                   >
-                    {status.running ? "Yes" : "No"}
+                    {status.is_running ? "Yes" : "No"}
                   </span>
                 </p>
-                {status.pid && (
-                  <p>
-                    <span className="font-medium">PID:</span> {status.pid}
-                  </p>
-                )}
-                {status.uptime && (
-                  <p>
-                    <span className="font-medium">Uptime:</span> {status.uptime}
-                  </p>
-                )}
                 <p>
-                  <span className="font-medium">Version:</span> {status.version}
+                  <span className="font-medium">Active Tasks:</span>{" "}
+                  {status.active_tasks}
                 </p>
                 <p>
-                  <span className="font-medium">Container Status:</span>{" "}
-                  {status.container_status}
+                  <span className="font-medium">Providers:</span>{" "}
+                  {status.providers.length}
                 </p>
               </div>
             ) : (

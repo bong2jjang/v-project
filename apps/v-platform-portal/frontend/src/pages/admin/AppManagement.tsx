@@ -36,7 +36,7 @@ import { Input } from "../../components/ui/Input";
 import { Textarea } from "../../components/ui/Textarea";
 import { Toggle } from "../../components/ui/Toggle";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { Skeleton, SkeletonCard } from "../../components/ui/Skeleton";
+import { SkeletonCard } from "../../components/ui/Skeleton";
 import type {
   PortalApp,
   AppCreateRequest,

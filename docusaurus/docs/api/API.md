@@ -1,15 +1,15 @@
 ---
 id: api
-title: VMS Chat Ops API 문서
+title: v-project API 문서
 sidebar_position: 99
 tags: [api, reference]
 ---
 
-# VMS Chat Ops API 문서
+# v-project API 문서
 
 ## 개요
 
-VMS Chat Ops는 Light-Zowe 아키텍처 기반 RESTful API와 WebSocket을 제공합니다. 22개 라우터로 브리지 제어, 메시지 관리, 인증, SSO, RBAC, 모니터링 등을 지원합니다.
+v-project는 v-platform 기반 RESTful API와 WebSocket을 제공합니다. 18개 라우터로 브리지 제어, 메시지 관리, 인증, SSO, RBAC, 모니터링 등을 지원합니다.
 
 - **Base URL**: `http://localhost:8000/api`
 - **Swagger UI**: `http://localhost:8000/docs`

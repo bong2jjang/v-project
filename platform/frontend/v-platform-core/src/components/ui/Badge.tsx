@@ -11,12 +11,17 @@ export type BadgeVariant =
   | "danger"
   | "warning"
   | "info"
-  | "default";
+  | "default"
+  | "error"
+  | "secondary";
+
+type BadgeSize = "sm" | "md" | "lg";
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   children: ReactNode;
   dot?: boolean;
+  size?: BadgeSize;
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
@@ -28,6 +33,9 @@ const variantClasses: Record<BadgeVariant, string> = {
     "bg-status-warning-light text-status-warning border-status-warning-border",
   info: "bg-status-info-light text-status-info border-status-info-border",
   default: "bg-surface-raised text-content-secondary border-line",
+  error:
+    "bg-status-danger-light text-status-danger border-status-danger-border",
+  secondary: "bg-surface-raised text-content-secondary border-line",
 };
 
 const dotClasses: Record<BadgeVariant, string> = {
@@ -36,16 +44,25 @@ const dotClasses: Record<BadgeVariant, string> = {
   warning: "bg-status-warning",
   info: "bg-status-info",
   default: "bg-content-tertiary",
+  error: "bg-status-danger",
+  secondary: "bg-content-tertiary",
+};
+
+const sizeClasses: Record<BadgeSize, string> = {
+  sm: "px-1.5 py-0.5 text-xs",
+  md: "px-2.5 py-0.5 text-caption",
+  lg: "px-3 py-1 text-sm",
 };
 
 export function Badge({
   variant = "default",
   dot = false,
+  size = "md",
   children,
   className = "",
   ...props
 }: BadgeProps) {
-  const classes = `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-badge text-caption font-medium border ${variantClasses[variant]} ${className}`;
+  const classes = `inline-flex items-center gap-1.5 rounded-badge font-medium border ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 
   return (
     <span className={classes} {...props}>

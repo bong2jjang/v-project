@@ -21,7 +21,9 @@ export type NotificationCategory =
   | "config"
   | "user"
   | "system"
-  | "session";
+  | "session"
+  | "auth"
+  | "api";
 
 export interface NotificationAction {
   label: string;

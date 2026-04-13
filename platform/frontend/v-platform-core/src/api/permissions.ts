@@ -12,7 +12,6 @@ import type {
   PermissionGrant,
   MenuItemResponse,
   AccessLevel,
-  EffectivePermission,
   User,
 } from "./types";
 

@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  Rocket, Activity, CheckCircle, XCircle, AlertCircle, Clock,
+  Rocket, Activity, CheckCircle, XCircle, Clock,
   ExternalLink, RefreshCw, Map, LayoutDashboard, Server,
   MessageSquare, Ticket, Settings, ChevronRight,
 } from "lucide-react";

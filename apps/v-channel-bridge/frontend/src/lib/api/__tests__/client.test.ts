@@ -2,7 +2,7 @@
  * API Client 테스트
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { apiClient, ApiClientError } from "../client";
 import type { AxiosError } from "axios";
 

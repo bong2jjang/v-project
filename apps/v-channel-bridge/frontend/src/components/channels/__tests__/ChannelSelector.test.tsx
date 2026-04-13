@@ -4,7 +4,7 @@
  * 작성일: 2026-04-02
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { ChannelSelector } from "../ChannelSelector";
 import { useRoutesStore } from "@/store/routes";

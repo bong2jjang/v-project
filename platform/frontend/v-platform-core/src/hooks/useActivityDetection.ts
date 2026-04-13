@@ -25,7 +25,7 @@ export function useActivityDetection(options?: ActivityDetectionOptions) {
 
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [isActive, setIsActive] = useState(true);
-  const throttleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Throttled activity handler
   const handleActivity = useCallback(() => {

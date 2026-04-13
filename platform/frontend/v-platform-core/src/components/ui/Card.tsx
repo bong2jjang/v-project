@@ -29,11 +29,17 @@ export function Card({
 }
 
 interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
+  children?: ReactNode;
+  title?: string;
+  description?: string;
+  action?: ReactNode;
 }
 
 export function CardHeader({
   children,
+  title,
+  description,
+  action,
   className = "",
   ...props
 }: CardHeaderProps) {
@@ -42,7 +48,24 @@ export function CardHeader({
       className={`px-card-x py-card-y border-b border-line bg-surface-raised/50 ${className}`}
       {...props}
     >
-      {children}
+      {(title || action) ? (
+        <div className="flex items-center justify-between">
+          <div>
+            {title && <h3 className="text-heading-md text-content-primary">{title}</h3>}
+            {description && (
+              <p className="mt-1 text-body-sm text-content-secondary">{description}</p>
+            )}
+          </div>
+          {action}
+        </div>
+      ) : (
+        <>
+          {children}
+          {description && (
+            <p className="mt-1 text-body-sm text-content-secondary">{description}</p>
+          )}
+        </>
+      )}
     </div>
   );
 }

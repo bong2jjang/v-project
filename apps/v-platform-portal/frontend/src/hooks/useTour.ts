@@ -35,7 +35,6 @@ function createDriver(onComplete?: () => void): Driver {
     nextBtnText: "다음",
     prevBtnText: "이전",
     doneBtnText: "완료",
-    closeBtnText: "×",
     popoverClass: "vms-tour",
     stagePadding: 8,
     stageRadius: 8,

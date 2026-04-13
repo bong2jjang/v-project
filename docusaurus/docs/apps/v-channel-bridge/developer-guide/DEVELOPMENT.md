@@ -79,7 +79,7 @@ vms-chat-ops/
 │   │   │   ├── base.py             # BasePlatformProvider 인터페이스
 │   │   │   ├── slack_provider.py   # Slack Socket Mode Provider
 │   │   │   └── teams_provider.py   # MS Graph API + Bot Framework Provider
-│   │   ├── api/                    # API 라우터 (22개)
+│   │   ├── api/                    # API 라우터 (18개)
 │   │   │   ├── auth.py             # JWT 인증
 │   │   │   ├── auth_sso.py         # SSO 인증 (Microsoft Entra, OIDC)
 │   │   │   ├── bridge.py           # 브리지 제어 + Route CRUD
@@ -120,7 +120,7 @@ vms-chat-ops/
 │   └── Dockerfile
 ├── frontend/                       # React 18 / TypeScript 5 / Vite
 │   ├── src/
-│   │   ├── pages/                  # 20개 페이지
+│   │   ├── pages/                  # 18개 페이지
 │   │   ├── components/
 │   │   │   ├── channels/           # RouteList, RouteModal
 │   │   │   ├── providers/          # ProviderCard, ProviderModal

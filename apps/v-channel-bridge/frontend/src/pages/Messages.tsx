@@ -30,7 +30,6 @@ import { useTour } from "../hooks/useTour";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useAuthStore } from "../store/auth";
 import { usePermissionStore } from "../store/permission";
-import { isAdminRole } from "../lib/api/types";
 import type { WebSocketMessage } from "../lib/websocket/types";
 
 // ── 상태 탭 정의 ────────────────────────────────────────────────────────────
@@ -126,9 +125,8 @@ function MiniStatsBar({
 // ── 메인 컴포넌트 ────────────────────────────────────────────────────────────
 const Messages = () => {
   const { startPageTour } = useTour();
-  const { token, user } = useAuthStore();
+  const { token } = useAuthStore();
 
-  const isAdmin = isAdminRole(user?.role);
   const canEdit = usePermissionStore().canWrite("messages");
 
   const [searchQuery, setSearchQuery] = useState("");

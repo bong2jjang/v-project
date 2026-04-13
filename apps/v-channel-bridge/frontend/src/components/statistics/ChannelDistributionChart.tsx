@@ -87,14 +87,14 @@ export const ChannelDistributionChart = memo(function ChannelDistributionChart({
           }}
           labelStyle={{ color: "var(--color-content-primary)" }}
           itemStyle={{ color: "var(--color-content-secondary)" }}
-          formatter={(value: number, name: string, props: any) => [
+          formatter={(value: number, _name: string, props: any) => [
             value,
             `${props.payload.fullChannel}: ${value}`,
           ]}
         />
         <Legend wrapperStyle={{ paddingTop: "20px" }} />
         <Bar dataKey="messages" name="메시지" radius={[8, 8, 0, 0]}>
-          {chartData.map((entry, index) => (
+          {chartData.map((_entry, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Bar>

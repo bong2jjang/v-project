@@ -11,6 +11,13 @@ export interface BridgeStatus {
   is_running: boolean;
   providers: ProviderStatus[];
   active_tasks: number;
+  // Runtime fields from WebSocket status updates
+  running?: boolean;
+  pid?: number;
+  uptime?: string;
+  version?: string;
+  container_status?: string;
+  last_restart?: string;
 }
 
 export interface ProviderStatus {

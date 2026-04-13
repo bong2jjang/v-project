@@ -522,7 +522,7 @@ export function RouteModal({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                  title="양방향"
+                  aria-label="양방향"
                 >
                   <path
                     strokeLinecap="round"
@@ -537,7 +537,7 @@ export function RouteModal({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                  title="단방향 (채널 1 → 채널 2)"
+                  aria-label="단방향 (채널 1 → 채널 2)"
                 >
                   <path
                     strokeLinecap="round"

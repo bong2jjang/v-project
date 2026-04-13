@@ -1,20 +1,20 @@
 ---
 id: user-guide
-title: VMS Chat Ops 사용자 가이드
+title: v-project 사용자 가이드
 sidebar_position: 1
 tags: [guide, user]
 ---
 
-# VMS Chat Ops 사용자 가이드
+# v-project 사용자 가이드
 
-**버전**: 3.1.0
-**최종 업데이트**: 2026-04-10
+**버전**: 4.0.0
+**최종 업데이트**: 2026-04-13
 
 ---
 
 ## 소개
 
-VMS Chat Ops는 Slack과 Microsoft Teams 간 메시지를 양방향으로 브리지하는 서비스입니다. Light-Zowe Provider Pattern 아키텍처를 기반으로 하며, 웹 관리 UI를 통해 Route 관리, 메시지 모니터링, 통계 조회 등을 제공합니다.
+v-project는 v-platform(재사용 가능한 플랫폼 프레임워크) 기반의 멀티 앱 시스템입니다. v-channel-bridge 앱은 Slack과 Microsoft Teams 간 메시지를 양방향으로 브리지하며, 웹 관리 UI를 통해 Route 관리, 메시지 모니터링, 통계 조회 등을 제공합니다.
 
 ### 주요 기능
 

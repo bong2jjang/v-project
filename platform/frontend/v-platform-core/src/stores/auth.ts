@@ -10,7 +10,7 @@ import * as authApi from "../api/auth";
 import { authLogger } from "../lib/utils/authLogger";
 
 // 자동 갱신 타이머 참조 (전역)
-let refreshTimerId: NodeJS.Timeout | null = null;
+let refreshTimerId: ReturnType<typeof setTimeout> | null = null;
 
 interface AuthState {
   user: User | null;
@@ -21,6 +21,7 @@ interface AuthState {
   isInitialized: boolean; // 초기 로드 완료 여부
 
   // Actions
+  setUser: (user: User) => void;
   login: (credentials: {
     email: string;
     password: string;
@@ -47,6 +48,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   isInitialized: false,
+
+  /**
+   * 사용자 정보 업데이트
+   */
+  setUser: (user: User) => {
+    authApi.saveUser(user);
+    set({ user });
+  },
 
   /**
    * 로그인
@@ -211,7 +220,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const relayToken = params.get("auth_token");
       if (relayToken) {
         authLogger.logAuthState("Token relay received from portal");
-        authApi.setToken(relayToken);
+        authApi.saveToken(relayToken);
         // URL에서 토큰 파라미터 제거 (보안)
         const url = new URL(window.location.href);
         url.searchParams.delete("auth_token");
