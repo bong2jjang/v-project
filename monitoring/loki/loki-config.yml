@@ -1,4 +1,4 @@
-# Loki 설정 - VMS Chat Ops 로그 저장소
+# Loki 설정 - VMS Channel Bridge 로그 저장소
 # 인증 비활성화 (개발 환경)
 auth_enabled: false
 

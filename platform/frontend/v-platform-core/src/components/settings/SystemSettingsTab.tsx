@@ -14,7 +14,7 @@ import { Button } from "../ui/Button";
 import { InfoBox } from "../ui/InfoBox";
 
 export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
-  const { settings, isLoading, error, updateSettings, clearError } =
+  const { settings, error, updateSettings, clearError } =
     useSystemSettingsStore();
   const { menus, isLoaded: permissionsLoaded } = usePermissionStore();
   const { addToast } = useNotificationStore();
@@ -36,6 +36,11 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
   const [brandingDirty, setBrandingDirty] = useState(false);
   const [startPageDirty, setStartPageDirty] = useState(false);
   const [manualDirty, setManualDirty] = useState(false);
+
+  // 섹션별 saving 상태 (글로벌 isLoading은 카드 간 간섭을 일으키므로 분리)
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [savingStartPage, setSavingStartPage] = useState(false);
+  const [savingManual, setSavingManual] = useState(false);
 
   // 시스템에서 사용 가능한 모든 페이지 목록 (menu_group 및 외부 링크 제외)
   const pageOptions = useMemo(() => {
@@ -81,6 +86,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
   };
 
   const handleSaveBranding = async () => {
+    setSavingBranding(true);
     try {
       await updateSettings({
         app_title: appTitle,
@@ -91,20 +97,26 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
       setBrandingDirty(false);
     } catch {
       // Error handled by store
+    } finally {
+      setSavingBranding(false);
     }
   };
 
   const handleSaveStartPage = async () => {
+    setSavingStartPage(true);
     try {
       await updateSettings({ default_start_page: defaultStartPage });
       notifySaved("기본 시작 페이지");
       setStartPageDirty(false);
     } catch {
       // Error handled by store
+    } finally {
+      setSavingStartPage(false);
     }
   };
 
   const handleSaveManual = async () => {
+    setSavingManual(true);
     try {
       await updateSettings({
         manual_enabled: manualEnabled,
@@ -114,6 +126,8 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
       setManualDirty(false);
     } catch {
       // Error handled by store
+    } finally {
+      setSavingManual(false);
     }
   };
 
@@ -211,12 +225,12 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   onClick={handleSaveBranding}
-                  disabled={readOnly || !brandingDirty || isLoading}
+                  disabled={readOnly || !brandingDirty || savingBranding}
                   variant="primary"
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  {isLoading ? "저장 중..." : "저장"}
+                  {savingBranding ? "저장 중..." : "저장"}
                 </Button>
               </div>
             </div>
@@ -284,12 +298,12 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   onClick={handleSaveStartPage}
-                  disabled={readOnly || !startPageDirty || isLoading}
+                  disabled={readOnly || !startPageDirty || savingStartPage}
                   variant="primary"
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  {isLoading ? "저장 중..." : "저장"}
+                  {savingStartPage ? "저장 중..." : "저장"}
                 </Button>
               </div>
             </div>
@@ -358,7 +372,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                 />
                 <p className="text-xs text-content-tertiary mt-2">
                   프로덕션 환경에서는 실제 도메인으로 변경하세요. (예:
-                  https://docs.vms-chat-ops.com)
+                  https://docs.vms-channel-bridge.com)
                 </p>
               </div>
 
@@ -366,12 +380,12 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   onClick={handleSaveManual}
-                  disabled={readOnly || !manualDirty || isLoading}
+                  disabled={readOnly || !manualDirty || savingManual}
                   variant="primary"
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  {isLoading ? "저장 중..." : "저장"}
+                  {savingManual ? "저장 중..." : "저장"}
                 </Button>
               </div>
             </div>

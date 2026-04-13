@@ -8,13 +8,13 @@
 
 | 구분 | 기존 (모놀리스) | 신규 (분리 후) |
 |------|----------------|---------------|
-| 프로젝트 | VMS Chat Ops | **v-project** |
+| 프로젝트 | VMS Channel Bridge | **v-project** |
 | 플랫폼 레이어 | (없음 — 혼재) | **v-platform** |
 | 앱 레이어 | (없음 — 혼재) | **v-channel-bridge** |
-| GitHub 리포 | bong2jjang/vms-chat-ops | **bong2jjang/v-project** |
+| GitHub 리포 | bong2jjang/vms-channel-bridge | **bong2jjang/v-project** |
 | Python 패키지 | (없음) | **v_platform** |
 | npm 패키지 | (없음) | **@v-platform/core** |
-| DB 이름 | vms_chat_ops | **v_project** |
+| DB 이름 | vms_channel_bridge | **v_project** |
 
 ---
 
@@ -40,11 +40,11 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 
 | 변경 항목 | 상세 |
 |-----------|------|
-| 프로젝트 개요 | "VMS Chat Ops" → "v-project" / 플랫폼-앱 분리 아키텍처 설명 추가 |
+| 프로젝트 개요 | "VMS Channel Bridge" → "v-project" / 플랫폼-앱 분리 아키텍처 설명 추가 |
 | 시스템 상태 표 | 현재 Phase 0 상태 반영, 분리 진행도 표시 |
 | 프로젝트 구조 | 모놀리스 구조 → `v-platform/` + `v-channel-bridge/` 목표 구조 병기 |
-| Docker 명령어 | 컨테이너명 `vms-chatops-*` → `v-project-*` 로 변경 예고 |
-| 환경 변수 | DB명 `vms_chat_ops` → `v_project` 변경 예고 |
+| Docker 명령어 | 컨테이너명 `vms-channel-bridge-*` → `v-project-*` 로 변경 예고 |
+| 환경 변수 | DB명 `vms_channel_bridge` → `v_project` 변경 예고 |
 | 커밋 규칙 scope | `adapters`, `docs` → `v-platform`, `v-channel-bridge`, `migration` 추가 |
 
 ### 0-2. .claude/ 파일 일괄 업데이트
@@ -52,7 +52,7 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 #### Agents (6개 파일)
 | 파일 | 변경 내용 |
 |------|----------|
-| `agent-coach.md` | "VMS Chat Ops" → "v-project", Light-Zowe 참조 정리 |
+| `agent-coach.md` | "VMS Channel Bridge" → "v-project", Light-Zowe 참조 정리 |
 | `code-standards-enforcer.md` | 프로젝트명 + 아키텍처명 변경 |
 | `docker-expert.md` | 프로젝트명 변경, 컨테이너명 매핑 추가 |
 | `migration-helper.md` | Light-Zowe 완성 → v-platform 분리 컨텍스트로 전환 |
@@ -85,10 +85,10 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 #### Root 설정 파일
 | 파일 | 변경 내용 |
 |------|----------|
-| `coding_conventions.md` | "VMS Chat Ops" → "v-project", Light-Zowe → v-platform 용어 전환 |
+| `coding_conventions.md` | "VMS Channel Bridge" → "v-project", Light-Zowe → v-platform 용어 전환 |
 | `dev_workflow.md` | 프로젝트명 전환, Docker 명령어 매핑 |
 | `documentation-rules.md` | 프로젝트명 변경 |
-| `settings.json` | 경로 `vms-chat-ops` → `v-project` |
+| `settings.json` | 경로 `vms-channel-bridge` → `v-project` |
 
 ### 0-3. README.md 업데이트
 
@@ -98,7 +98,7 @@ Phase 5  검증 및 안정화                               🔄 진행 중
 
 ### 0-4. .env.example 업데이트
 
-- `DATABASE_URL`의 DB명 `vms_chat_ops` → `v_project`
+- `DATABASE_URL`의 DB명 `vms_channel_bridge` → `v_project`
 - 주석에서 프로젝트명 변경
 
 ---
@@ -321,10 +321,10 @@ function App() {
 
 | 변경 항목 | Before | After |
 |-----------|--------|-------|
-| 컨테이너명 | `vms-chatops-backend` | `v-project-backend` |
-| 컨테이너명 | `vms-chatops-frontend` | `v-project-frontend` |
-| 네트워크 | `vms-chat-ops-network` | `v-project-network` |
-| DB 이름 | `vms_chat_ops` | `v_project` |
+| 컨테이너명 | `vms-channel-bridge-backend` | `v-project-backend` |
+| 컨테이너명 | `vms-channel-bridge-frontend` | `v-project-frontend` |
+| 네트워크 | `vms-channel-bridge-network` | `v-project-network` |
+| DB 이름 | `vms_channel_bridge` | `v_project` |
 | DB 사용자 | `vmsuser` | 유지 또는 변경 |
 | 빌드 경로 | `backend/` 단일 | `platform/backend/` + `backend/` |
 

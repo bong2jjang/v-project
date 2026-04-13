@@ -6,7 +6,7 @@ Migration: users 테이블에 theme, color_preset 컬럼 추가
 - color_preset: "blue" | "indigo" | "rose" (기본값: "blue")
 
 Usage:
-    docker exec vms-chatops-backend python migrations/022_user_theme_settings.py
+    docker exec vms-channel-bridge-backend python migrations/022_user_theme_settings.py
 """
 
 import logging

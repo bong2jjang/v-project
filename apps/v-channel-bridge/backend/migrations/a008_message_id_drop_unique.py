@@ -6,7 +6,7 @@ Migration: messages.message_id UNIQUE 제약 제거
 UNIQUE 제약을 일반 INDEX로 변경합니다.
 
 Usage:
-    docker exec vms-chatops-backend python migrations/019_message_id_drop_unique.py
+    docker exec vms-channel-bridge-backend python migrations/019_message_id_drop_unique.py
 """
 
 import logging

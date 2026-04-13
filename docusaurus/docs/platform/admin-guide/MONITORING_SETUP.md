@@ -9,7 +9,7 @@ tags: [guide, admin]
 
 ## 개요
 
-VMS Chat Ops 프로덕션 환경을 위한 종합 모니터링 시스템 구축 가이드입니다.
+VMS Channel Bridge 프로덕션 환경을 위한 종합 모니터링 시스템 구축 가이드입니다.
 
 이 가이드는 다음 모니터링 스택을 다룹니다:
 - **Prometheus**: 메트릭 수집 및 저장
@@ -73,7 +73,7 @@ services:
       - prometheus_data:/prometheus
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 
   # Grafana - 시각화 및 대시보드
   grafana:
@@ -95,7 +95,7 @@ services:
       - prometheus
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 
   # Loki - 로그 수집 및 저장
   loki:
@@ -109,7 +109,7 @@ services:
       - loki_data:/loki
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 
   # Promtail - 로그 수집 에이전트
   promtail:
@@ -124,7 +124,7 @@ services:
       - loki
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 
   # cAdvisor - 컨테이너 메트릭 수집
   cadvisor:
@@ -143,7 +143,7 @@ services:
       - /dev/kmsg
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 
   # Node Exporter - 호스트 메트릭 수집
   node_exporter:
@@ -162,7 +162,7 @@ services:
       - /:/rootfs:ro
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 
 volumes:
   prometheus_data:
@@ -170,8 +170,8 @@ volumes:
   loki_data:
 
 networks:
-  vms-chat-ops-network:
-    name: vms-chat-ops_vms-chat-ops-network
+  vms-channel-bridge-network:
+    name: vms-channel-bridge_vms-channel-bridge-network
     external: true
 ```
 
@@ -187,7 +187,7 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: 'vms-chat-ops'
+    cluster: 'vms-channel-bridge'
     environment: 'production'
 
 # 알림 규칙 파일
@@ -381,7 +381,7 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: label
-            values: ["com.docker.compose.project=vms-chat-ops"]
+            values: ["com.docker.compose.project=vms-channel-bridge"]
     relabel_configs:
       - source_labels: ['__meta_docker_container_name']
         regex: '/(.*)'
@@ -443,7 +443,7 @@ datasources:
 apiVersion: 1
 
 providers:
-  - name: 'VMS Chat Ops'
+  - name: 'VMS Channel Bridge'
     orgId: 1
     folder: ''
     type: file
@@ -454,14 +454,14 @@ providers:
       path: /var/lib/grafana/dashboards
 ```
 
-### 4.3 VMS Chat Ops 대시보드
+### 4.3 VMS Channel Bridge 대시보드
 
 `monitoring/grafana/dashboards/vms-overview.json`:
 
 ```json
 {
   "dashboard": {
-    "title": "VMS Chat Ops Overview",
+    "title": "VMS Channel Bridge Overview",
     "tags": ["vms", "backend"],
     "timezone": "browser",
     "panels": [
@@ -649,7 +649,7 @@ sudo chown -R 472:472 monitoring/grafana
 
 ### 6.2 서비스 시작
 
-VMS Chat Ops의 `docker-compose.yml`에는 모니터링 서비스(Prometheus, Grafana, Loki, Promtail)가 이미 포함되어 있습니다.
+VMS Channel Bridge의 `docker-compose.yml`에는 모니터링 서비스(Prometheus, Grafana, Loki, Promtail)가 이미 포함되어 있습니다.
 
 ```bash
 # 모든 서비스 시작 (모니터링 포함)
@@ -696,7 +696,7 @@ docker compose logs -f prometheus grafana loki promtail
 
 ### 7.4 커스텀 대시보드 생성
 
-**VMS Chat Ops 전용 대시보드**:
+**VMS Channel Bridge 전용 대시보드**:
 
 1. Dashboards → New Dashboard
 2. Add Panel 클릭
@@ -747,7 +747,7 @@ rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
       - alertmanager_data:/alertmanager
     restart: unless-stopped
     networks:
-      - vms-chat-ops-network
+      - vms-channel-bridge-network
 ```
 
 ### 8.2 Alertmanager 설정
@@ -962,7 +962,7 @@ ls -la /var/run/docker.sock
 ```yaml
 # 모니터링 전용 네트워크 사용
 networks:
-  vms-chat-ops-network:
+  vms-channel-bridge-network:
     internal: false  # 외부 접근 필요 시
   monitoring-network:
     internal: true   # 모니터링 내부 통신만

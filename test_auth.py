@@ -127,7 +127,7 @@ def test_get_me(token):
 if __name__ == "__main__":
     print()
     print("=" * 60)
-    print("VMS Chat Ops - Auth API Test")
+    print("VMS Channel Bridge - Auth API Test")
     print("=" * 60)
     print()
 

@@ -1,11 +1,11 @@
 ---
 id: design-system
-title: VMS Chat Ops 디자인 시스템
+title: VMS Channel Bridge 디자인 시스템
 sidebar_position: 4
 tags: [guide, developer]
 ---
 
-# VMS Chat Ops 디자인 시스템
+# VMS Channel Bridge 디자인 시스템
 
 이 문서는 프론트엔드 UI의 일관성을 유지하기 위한 디자인 시스템 규칙을 정의합니다.
 새로운 페이지나 컴포넌트를 만들 때 반드시 이 규칙을 따르세요.

@@ -1,10 +1,10 @@
 @echo off
-REM VMS Chat Ops Docs - Cleanup Script
+REM VMS Channel Bridge Docs - Cleanup Script
 
 cd /d "%~dp0\.."
 
 echo ================================================
-echo   VMS Chat Ops Docs - Cleanup
+echo   VMS Channel Bridge Docs - Cleanup
 echo ================================================
 echo.
 echo This will remove:

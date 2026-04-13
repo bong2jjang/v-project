@@ -1,5 +1,5 @@
 #!/bin/bash
-# VMS Chat Ops Docs - View Logs Script
+# VMS Channel Bridge Docs - View Logs Script
 
 set -e
 
@@ -9,7 +9,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 echo "================================================"
-echo "  VMS Chat Ops Docs - Live Logs"
+echo "  VMS Channel Bridge Docs - Live Logs"
 echo "================================================"
 echo ""
 echo "📋 Showing live logs (Ctrl+C to exit)..."

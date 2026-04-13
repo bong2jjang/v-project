@@ -14,7 +14,7 @@ tags: [guide, admin]
 
 ## 소개
 
-이 가이드는 VMS Chat Ops 시스템의 관리자를 위한 문서입니다. Provider 계정 관리, 사용자 관리, 백업, 보안, 모니터링 등 시스템 운영에 필요한 전반적인 내용을 다룹니다.
+이 가이드는 VMS Channel Bridge 시스템의 관리자를 위한 문서입니다. Provider 계정 관리, 사용자 관리, 백업, 보안, 모니터링 등 시스템 운영에 필요한 전반적인 내용을 다룹니다.
 
 ---
 
@@ -103,7 +103,7 @@ TEAMS_APP_ID=your-app-id
 TEAMS_APP_PASSWORD=your-client-secret
 
 # Database
-DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops
+DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_channel_bridge
 
 # Redis
 REDIS_URL=redis://:redispassword@redis:6379/0
@@ -216,7 +216,7 @@ curl -X PUT http://localhost:8000/api/users/2/reset-password \
 
 ## SSO 관리
 
-VMS Chat Ops는 **Microsoft Entra ID**와 **Generic OIDC** SSO 인증을 지원합니다.
+VMS Channel Bridge는 **Microsoft Entra ID**와 **Generic OIDC** SSO 인증을 지원합니다.
 
 ### SSO 활성화
 
@@ -473,7 +473,7 @@ curl http://localhost:8000/api/health/detailed \
 docker compose logs -f
 
 # Backend 로그
-docker logs vms-chatops-backend -f --tail=100
+docker logs vms-channel-bridge-backend -f --tail=100
 
 # 에러 로그만 필터링
 docker compose logs | grep ERROR
@@ -524,9 +524,9 @@ curl "http://localhost:8000/api/audit-logs?action=update&from_date=2026-01-01" \
 
 ```bash
 # PostgreSQL 백업
-docker exec vms-chatops-postgres pg_dump \
+docker exec vms-channel-bridge-postgres pg_dump \
   -U vmsuser \
-  -d vms_chat_ops \
+  -d vms_channel_bridge \
   -F c \
   -f /backups/backup_$(date +%Y%m%d_%H%M%S).dump
 ```
@@ -540,14 +540,14 @@ BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # PostgreSQL 백업
-docker exec vms-chatops-postgres pg_dump \
+docker exec vms-channel-bridge-postgres pg_dump \
   -U vmsuser \
-  -d vms_chat_ops \
+  -d vms_channel_bridge \
   -F c \
   -f /backups/postgres_$TIMESTAMP.dump
 
 # Redis 백업
-docker exec vms-chatops-redis redis-cli --rdb /data/dump_$TIMESTAMP.rdb
+docker exec vms-channel-bridge-redis redis-cli --rdb /data/dump_$TIMESTAMP.rdb
 
 # 환경 변수 백업
 cp .env $BACKUP_DIR/env_$TIMESTAMP.env
@@ -569,15 +569,15 @@ echo "Backup completed: $TIMESTAMP"
 
 ```bash
 # PostgreSQL 복원
-docker exec -i vms-chatops-postgres pg_restore \
+docker exec -i vms-channel-bridge-postgres pg_restore \
   -U vmsuser \
-  -d vms_chat_ops \
+  -d vms_channel_bridge \
   -c \
   /backups/postgres_20260401_020000.dump
 
 # Redis 복원
-docker cp backups/dump_20260401_020000.rdb vms-chatops-redis:/data/dump.rdb
-docker restart vms-chatops-redis
+docker cp backups/dump_20260401_020000.rdb vms-channel-bridge-redis:/data/dump.rdb
+docker restart vms-channel-bridge-redis
 
 # 환경 변수 복원
 cp backups/env_20260401_020000.env .env
@@ -637,10 +637,10 @@ sudo ufw enable
 
 | 서비스 | 컨테이너명 | 포트 | 역할 |
 |--------|-----------|------|------|
-| backend | vms-chatops-backend | 8000 | FastAPI + Provider 연결 |
-| frontend | vms-chatops-frontend | 5173 | React 관리 UI |
-| postgres | vms-chatops-postgres | 5432 | PostgreSQL 16 |
-| redis | vms-chatops-redis | 6379 | Redis 7 (라우팅 + 캐시) |
+| backend | vms-channel-bridge-backend | 8000 | FastAPI + Provider 연결 |
+| frontend | vms-channel-bridge-frontend | 5173 | React 관리 UI |
+| postgres | vms-channel-bridge-postgres | 5432 | PostgreSQL 16 |
+| redis | vms-channel-bridge-redis | 6379 | Redis 7 (라우팅 + 캐시) |
 | prometheus | prometheus | 9090 | 메트릭 수집 |
 | grafana | grafana | 3000 | 모니터링 대시보드 |
 | loki | loki | 3100 | 로그 수집 |

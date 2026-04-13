@@ -10,7 +10,7 @@ title: 사용자별 Provider 관리
 
 ## 개요
 
-현재 VMS Chat Ops의 Provider(Slack/Teams 계정)는 **시스템 레벨에서만** 관리됩니다.
+현재 VMS Channel Bridge의 Provider(Slack/Teams 계정)는 **시스템 레벨에서만** 관리됩니다.
 관리자가 Settings > 플랫폼 연동에서 등록하고, 모든 사용자가 해당 Provider를 공유합니다.
 
 이 설계는 **사용자별 Provider 등록 및 OAuth 연동**을 지원하여,

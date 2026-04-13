@@ -13,7 +13,7 @@
 #   ./scripts/backup.sh /path/to/backup/dir
 #
 # Cron 설정 예시 (매일 오전 2시):
-#   0 2 * * * /path/to/vms-chat-ops/scripts/backup.sh >> /var/log/vms-backup.log 2>&1
+#   0 2 * * * /path/to/vms-channel-bridge/scripts/backup.sh >> /var/log/vms-backup.log 2>&1
 ################################################################################
 
 set -e  # 에러 발생 시 즉시 종료

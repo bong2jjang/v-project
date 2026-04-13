@@ -1,6 +1,6 @@
-# VMS Chat Ops 문서
+# VMS Channel Bridge 문서
 
-Docusaurus 기반 VMS Chat Ops 프로젝트 문서 사이트
+Docusaurus 기반 VMS Channel Bridge 프로젝트 문서 사이트
 
 ## 🚀 빠른 시작
 
@@ -85,7 +85,7 @@ python migrate-to-docusaurus.py
 ## 🏗️ 프로젝트 구조
 
 ```
-vms-chat-ops-docs/
+vms-channel-bridge-docs/
 ├── docs/                    # 문서 마크다운 파일
 │   ├── intro.md
 │   ├── user-guide/
@@ -114,7 +114,7 @@ vms-chat-ops-docs/
 
 ### 메인 프로젝트와 분리된 독립 실행
 
-이 문서 프로젝트는 메인 VMS Chat Ops 프로젝트와 완전히 독립적으로 실행됩니다.
+이 문서 프로젝트는 메인 VMS Channel Bridge 프로젝트와 완전히 독립적으로 실행됩니다.
 
 **메인 프로젝트 개발 시:**
 - 메인 프로젝트만 실행하면 docs는 빌드되지 않음

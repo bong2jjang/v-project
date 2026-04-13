@@ -1,10 +1,10 @@
 @echo off
-REM VMS Chat Ops Docs - View Logs Script
+REM VMS Channel Bridge Docs - View Logs Script
 
 cd /d "%~dp0\.."
 
 echo ================================================
-echo   VMS Chat Ops Docs - Live Logs
+echo   VMS Channel Bridge Docs - Live Logs
 echo ================================================
 echo.
 echo Showing live logs ^(Ctrl+C to exit^)...

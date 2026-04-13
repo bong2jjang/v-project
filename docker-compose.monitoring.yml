@@ -158,5 +158,5 @@ volumes:
 
 networks:
   v-project-network:
-    name: vms-chat-ops_v-project-network
+    name: vms-channel-bridge_v-project-network
     external: true

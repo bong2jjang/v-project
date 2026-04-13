@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# VMS Chat Ops Quick Test Script
+# VMS Channel Bridge Quick Test Script
 # Phase 2 주요 기능 빠른 테스트
 
 echo "=================================="
-echo "VMS Chat Ops Quick Test"
+echo "VMS Channel Bridge Quick Test"
 echo "=================================="
 echo ""
 

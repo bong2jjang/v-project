@@ -1,10 +1,10 @@
 @echo off
-REM VMS Chat Ops Docs - Development Server Start Script
+REM VMS Channel Bridge Docs - Development Server Start Script
 
 cd /d "%~dp0\.."
 
 echo ================================================
-echo   VMS Chat Ops Docs - Development Mode
+echo   VMS Channel Bridge Docs - Development Mode
 echo ================================================
 echo.
 

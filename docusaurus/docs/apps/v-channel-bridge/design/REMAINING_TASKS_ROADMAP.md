@@ -214,7 +214,7 @@ def token_decrypted(self, value: str):
 ```
 Step 1/4: Welcome
 ┌─────────────────────────────────┐
-│ 🚀 Welcome to VMS Chat Ops!    │
+│ 🚀 Welcome to VMS Channel Bridge!    │
 │                                 │
 │ This wizard will help you:     │
 │ • Configure Slack Provider     │
@@ -474,5 +474,5 @@ Phase 6 → Phase 7 → Phase 8 → 배포
 
 **문서 버전**: 1.0
 **최종 업데이트**: 2026-04-02
-**작성자**: VMS Chat Ops Team
+**작성자**: VMS Channel Bridge Team
 **상태**: 📋 계획 수립 완료

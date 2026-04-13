@@ -131,7 +131,7 @@ export const usageGuides: UsageGuide[] = [
       },
       {
         title: "JSON 로그 파싱",
-        query: '{container_name="vms-chat-ops-dev"} | json',
+        query: '{container_name="vms-channel-bridge-dev"} | json',
         description: "v-channel-bridge JSON 로그 파싱 (Loki)",
       },
     ],

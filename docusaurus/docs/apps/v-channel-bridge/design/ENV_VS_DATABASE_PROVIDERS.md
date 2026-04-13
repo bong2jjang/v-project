@@ -498,5 +498,5 @@ UI에서만 Provider 관리 (DB)
 
 **문서 버전**: 1.0
 **최종 업데이트**: 2026-04-02
-**작성자**: VMS Chat Ops Team
+**작성자**: VMS Channel Bridge Team
 **상태**: 🚧 구현 진행 중

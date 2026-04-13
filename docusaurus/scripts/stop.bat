@@ -1,10 +1,10 @@
 @echo off
-REM VMS Chat Ops Docs - Stop Development Server Script
+REM VMS Channel Bridge Docs - Stop Development Server Script
 
 cd /d "%~dp0\.."
 
 echo ================================================
-echo   VMS Chat Ops Docs - Stop Server
+echo   VMS Channel Bridge Docs - Stop Server
 echo ================================================
 echo.
 

@@ -1,11 +1,11 @@
 ---
 id: execution-plan
-title: VMS Chat Ops 실행 계획 (완료)
+title: VMS Channel Bridge 실행 계획 (완료)
 sidebar_position: 99
 tags: [guide, developer]
 ---
 
-# VMS Chat Ops 실행 계획
+# VMS Channel Bridge 실행 계획
 
 **작성일**: 2026-03-21
 **완료일**: 2026-04-05
@@ -15,7 +15,7 @@ tags: [guide, developer]
 
 ## 개요
 
-이 문서는 VMS Chat Ops 프로젝트의 초기 실행 계획을 기록한 아카이브 문서입니다.
+이 문서는 VMS Channel Bridge 프로젝트의 초기 실행 계획을 기록한 아카이브 문서입니다.
 
 원래 외부 브리지 기반으로 Phase 1~3 단계별 구현 계획이 수립되었으나, 프로젝트 진행 중 **v-channel-bridge (Light-Zowe 아키텍처)** 로 전면 전환되었습니다. 외부 의존성을 제거하고 자체 Provider Pattern + CommonMessage Schema 기반으로 재구축하였습니다.
 

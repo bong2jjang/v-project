@@ -548,7 +548,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\"vms-chatops.*\",cpu=\"total\"}[5m]) * 100",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\"vms-channel-bridge.*\",cpu=\"total\"}[5m]) * 100",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -643,7 +643,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "container_memory_usage_bytes{name=~\"vms-chatops.*\"}",
+          "expr": "container_memory_usage_bytes{name=~\"vms-channel-bridge.*\"}",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -700,8 +700,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "VMS Chat Ops - 시스템 현황",
-  "uid": "vms-chat-ops-overview",
+  "title": "VMS Channel Bridge - 시스템 현황",
+  "uid": "vms-channel-bridge-overview",
   "version": 1,
   "weekStart": ""
 }

@@ -418,7 +418,7 @@ class TeamsProvider(BasePlatformProvider):
         """OneDrive에 파일 업로드 (Delegated Auth) — DM 파일 전송용
 
         채팅(DM)에서는 SharePoint Drive가 없으므로, 사용자의 OneDrive에
-        VMS-ChatOps 폴더로 업로드한 뒤 공유 링크를 반환합니다.
+        VMS-Channel-Bridge 폴더로 업로드한 뒤 공유 링크를 반환합니다.
 
         Args:
             file_path: 업로드할 파일의 로컬 경로
@@ -448,11 +448,11 @@ class TeamsProvider(BasePlatformProvider):
             if not self.session:
                 self.session = aiohttp.ClientSession()
 
-            # OneDrive /me/drive에 업로드 (VMS-ChatOps 폴더)
+            # OneDrive /me/drive에 업로드 (VMS-Channel-Bridge 폴더)
             safe_filename = filename.replace("/", "_").replace("\\", "_")
             upload_url = (
                 f"{self.graph_base_url}/me/drive"
-                f"/root:/VMS-ChatOps/{safe_filename}:/content"
+                f"/root:/VMS-Channel-Bridge/{safe_filename}:/content"
             )
 
             async with aiofiles.open(file_path, "rb") as f:

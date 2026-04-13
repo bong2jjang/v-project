@@ -1,15 +1,15 @@
 ---
 id: architecture
-title: VMS Chat Ops 아키텍처
+title: VMS Channel Bridge 아키텍처
 sidebar_position: 3
 tags: [guide, developer]
 ---
 
-# VMS Chat Ops 아키텍처
+# VMS Channel Bridge 아키텍처
 
 ## 시스템 개요
 
-VMS Chat Ops는 **Light-Zowe 아키텍처** 기반 Slack ↔ Microsoft Teams 양방향 메시지 브리지 시스템입니다. Zowe Chat의 핵심 개념(Common Message Schema, Provider Pattern, Command Processor)을 Docker + FastAPI로 직접 구현합니다.
+VMS Channel Bridge는 **Light-Zowe 아키텍처** 기반 Slack ↔ Microsoft Teams 양방향 메시지 브리지 시스템입니다. Zowe Chat의 핵심 개념(Common Message Schema, Provider Pattern, Command Processor)을 Docker + FastAPI로 직접 구현합니다.
 
 ### 핵심 설계 철학
 
@@ -339,7 +339,7 @@ frontend/
 
 ### 네트워크
 
-모든 서비스는 `vms-chat-ops-network` Docker 네트워크에서 통신합니다.
+모든 서비스는 `vms-channel-bridge-network` Docker 네트워크에서 통신합니다.
 
 ---
 

@@ -19,7 +19,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@vms-chat-ops.com")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@vms-channel-bridge.com")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "v-channel-bridge")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5173")
 

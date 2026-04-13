@@ -3,7 +3,7 @@
 > **문서 버전**: 1.0  
 > **작성일**: 2026-04-11  
 > **상태**: 검토 대기 (Draft)  
-> **목적**: 현재 VMS Chat Ops 코드베이스를 **재사용 가능한 플랫폼 프레임워크**와 **앱별 비즈니스 로직**으로 분리하기 위한 아키텍처 설계
+> **목적**: 현재 VMS Channel Bridge 코드베이스를 **재사용 가능한 플랫폼 프레임워크**와 **앱별 비즈니스 로직**으로 분리하기 위한 아키텍처 설계
 
 ---
 
@@ -11,7 +11,7 @@
 
 ### 1.1 현재 상태
 
-VMS Chat Ops는 단일 모놀리식 구조로, 인증/RBAC/조직도/감사로그 같은 **범용 플랫폼 기능**과 Slack-Teams 메시지 브리지 같은 **앱 고유 기능**이 같은 디렉토리에 혼재되어 있다.
+VMS Channel Bridge는 단일 모놀리식 구조로, 인증/RBAC/조직도/감사로그 같은 **범용 플랫폼 기능**과 Slack-Teams 메시지 브리지 같은 **앱 고유 기능**이 같은 디렉토리에 혼재되어 있다.
 
 ```
 backend/app/
@@ -129,7 +129,7 @@ backend/app/
 │                    Application Layer                     │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
 │  │  Chat Bridge  │ │  Future App  │ │  Another App     │ │
-│  │  (VMS ChatOps)│ │  (Project B) │ │  (Project C)     │ │
+│  │  (VMS Channel Bridge)│ │  (Project B) │ │  (Project C)     │ │
 │  └──────┬───────┘ └──────┬───────┘ └────────┬─────────┘ │
 ├─────────┼────────────────┼──────────────────┼───────────┤
 │         │       Platform Layer              │           │
@@ -155,7 +155,7 @@ backend/app/
 ### 3.2 디렉토리 구조 (제안)
 
 ```
-vms-chat-ops/                          # 현재 프로젝트 (앱)
+vms-channel-bridge/                          # 현재 프로젝트 (앱)
 ├── platform/                          # ★ 플랫폼 패키지 (추출 대상)
 │   ├── backend/
 │   │   ├── platform/                  # Python 패키지: vms_platform
@@ -377,7 +377,7 @@ class PlatformApp:
 from platform import PlatformApp, PlatformConfig
 
 config = PlatformConfig(
-    app_name="VMS Chat Ops",
+    app_name="VMS Channel Bridge",
     database_url=os.getenv("DATABASE_URL"),
     redis_url=os.getenv("REDIS_URL"),
     secret_key=os.getenv("SECRET_KEY"),
@@ -513,7 +513,7 @@ function App() {
   return (
     <PlatformProvider config={{
       apiBaseUrl: import.meta.env.VITE_API_URL,
-      appName: 'VMS Chat Ops',
+      appName: 'VMS Channel Bridge',
       // 앱별 네비게이션 아이템
       navItems: [...platformNavItems, ...appNavItems],
     }}>
@@ -911,7 +911,7 @@ app = platform.fastapi
 
 ## 12. 결론
 
-현재 VMS Chat Ops의 코드베이스는 이미 관심사가 명확히 구분되어 있어, 물리적 분리의 기반이 잘 갖춰져 있다.
+현재 VMS Channel Bridge의 코드베이스는 이미 관심사가 명확히 구분되어 있어, 물리적 분리의 기반이 잘 갖춰져 있다.
 
 **핵심 제안:**
 1. 모노레포 내 `platform/` 디렉토리로 시작 (대안 C)

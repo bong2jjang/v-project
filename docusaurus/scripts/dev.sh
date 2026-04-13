@@ -1,5 +1,5 @@
 #!/bin/bash
-# VMS Chat Ops Docs - Development Server Start Script
+# VMS Channel Bridge Docs - Development Server Start Script
 
 set -e
 
@@ -9,7 +9,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 echo "================================================"
-echo "  VMS Chat Ops Docs - Development Mode"
+echo "  VMS Channel Bridge Docs - Development Mode"
 echo "================================================"
 echo ""
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VMS Chat Ops 문서를 Docusaurus 포맷으로 마이그레이션하는 스크립트
+VMS Channel Bridge 문서를 Docusaurus 포맷으로 마이그레이션하는 스크립트
 
 Usage:
     python migrate-to-docusaurus.py
@@ -202,7 +202,7 @@ def migrate():
         dest_root / "docs/user-guide",
         "사용자 가이드",
         2,
-        "일반 사용자를 위한 VMS Chat Ops 사용 가이드"
+        "일반 사용자를 위한 VMS Channel Bridge 사용 가이드"
     )
     create_category_json(
         dest_root / "docs/admin-guide",
@@ -232,7 +232,7 @@ def migrate():
         # Front Matter 추가
         frontmatter = """---
 id: intro
-title: VMS Chat Ops 문서
+title: VMS Channel Bridge 문서
 sidebar_position: 1
 slug: /
 ---
@@ -243,7 +243,7 @@ slug: /
 
     print("\n[OK] Migration completed!")
     print(f"\nNext steps:")
-    print(f"1. cd vms-chat-ops-docs")
+    print(f"1. cd vms-channel-bridge-docs")
     print(f"2. npm install  or  docker-compose up")
     print(f"3. npm start")
 

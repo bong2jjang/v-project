@@ -13,7 +13,7 @@ description: Settings 페이지에 Provider 관리 기능 추가
 **작성일**: 2026-04-02
 **우선순위**: 🔴 최우선
 **예상 작업 시간**: 4-6시간
-**담당**: VMS Chat Ops Team
+**담당**: VMS Channel Bridge Team
 
 ---
 
@@ -616,5 +616,5 @@ Phase 1 완료 후:
 
 **문서 버전**: 1.0
 **최종 업데이트**: 2026-04-02
-**작성자**: VMS Chat Ops Team
+**작성자**: VMS Channel Bridge Team
 **상태**: 🚧 구현 진행 중

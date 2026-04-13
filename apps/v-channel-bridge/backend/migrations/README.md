@@ -8,10 +8,10 @@
 
 ```bash
 # 마이그레이션 실행
-docker exec vms-chatops-backend python migrations/001_add_message_delivery_status.py
+docker exec vms-channel-bridge-backend python migrations/001_add_message_delivery_status.py
 
 # 롤백 (필요시)
-docker exec vms-chatops-backend python migrations/001_add_message_delivery_status.py --rollback
+docker exec vms-channel-bridge-backend python migrations/001_add_message_delivery_status.py --rollback
 ```
 
 ## 마이그레이션 목록

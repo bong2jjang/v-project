@@ -187,7 +187,7 @@ packages:
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "dev:bridge": "pnpm --filter vms-chat-ops-frontend dev",
+    "dev:bridge": "pnpm --filter vms-channel-bridge-frontend dev",
     "dev:template": "pnpm --filter v-platform-template-frontend dev",
     "dev:portal": "pnpm --filter v-platform-portal-frontend dev",
     "lint:all": "pnpm -r run lint",
@@ -368,7 +368,7 @@ COPY pnpm-lock.yaml ./
 
 # Workspace 설치 (해당 앱 + 의존 패키지만)
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --filter vms-chat-ops-frontend... --no-frozen-lockfile --prefer-offline
+    pnpm install --filter vms-channel-bridge-frontend... --no-frozen-lockfile --prefer-offline
 
 # 소스 복사
 COPY apps/v-channel-bridge/frontend ./apps/v-channel-bridge/frontend

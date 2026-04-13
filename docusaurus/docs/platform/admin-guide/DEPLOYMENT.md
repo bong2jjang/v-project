@@ -1,11 +1,11 @@
 ---
 id: deployment
-title: VMS Chat Ops 배포 가이드
+title: VMS Channel Bridge 배포 가이드
 sidebar_position: 2
 tags: [guide, admin]
 ---
 
-# VMS Chat Ops 배포 가이드
+# VMS Channel Bridge 배포 가이드
 
 **버전**: 3.1.0
 **최종 업데이트**: 2026-04-10
@@ -66,8 +66,8 @@ open /Applications/Docker.app
 ### 2. 저장소 클론
 
 ```bash
-git clone https://github.com/bong2jjang/vms-chat-ops.git
-cd vms-chat-ops
+git clone https://github.com/bong2jjang/vms-channel-bridge.git
+cd vms-channel-bridge
 ```
 
 ### 3. 환경 변수 설정
@@ -91,7 +91,7 @@ TEAMS_APP_PASSWORD=your-app-password
 # Database
 POSTGRES_PASSWORD=secure_password_here
 POSTGRES_USER=vmsuser
-DATABASE_URL=postgresql://vmsuser:secure_password_here@postgres:5432/vms_chat_ops
+DATABASE_URL=postgresql://vmsuser:secure_password_here@postgres:5432/vms_channel_bridge
 
 # Redis
 REDIS_PASSWORD=secure_redis_password
@@ -224,7 +224,7 @@ docker compose logs --tail=100 -f
 | promtail | Promtail | — | 로그 수집 에이전트 |
 | mailhog | MailHog | 8025 | 개발용 메일 서버 |
 
-모든 서비스는 `vms-chat-ops-network` Docker 네트워크에서 통신합니다.
+모든 서비스는 `vms-channel-bridge-network` Docker 네트워크에서 통신합니다.
 
 ---
 
@@ -233,8 +233,8 @@ docker compose logs --tail=100 -f
 ### 데이터베이스 백업
 
 ```bash
-docker exec vms-chatops-postgres pg_dump \
-  -U vmsuser -d vms_chat_ops \
+docker exec vms-channel-bridge-postgres pg_dump \
+  -U vmsuser -d vms_channel_bridge \
   -F c -f /backups/backup_$(date +%Y%m%d_%H%M%S).dump
 ```
 
@@ -246,11 +246,11 @@ docker exec vms-chatops-postgres pg_dump \
 BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-docker exec vms-chatops-postgres pg_dump \
-  -U vmsuser -d vms_chat_ops \
+docker exec vms-channel-bridge-postgres pg_dump \
+  -U vmsuser -d vms_channel_bridge \
   -F c -f /backups/postgres_$TIMESTAMP.dump
 
-docker exec vms-chatops-redis redis-cli --rdb /data/dump_$TIMESTAMP.rdb
+docker exec vms-channel-bridge-redis redis-cli --rdb /data/dump_$TIMESTAMP.rdb
 
 cp .env $BACKUP_DIR/env_$TIMESTAMP.env
 
@@ -267,13 +267,13 @@ echo "Backup completed: $TIMESTAMP"
 
 ```bash
 # PostgreSQL 복원
-docker exec -i vms-chatops-postgres pg_restore \
-  -U vmsuser -d vms_chat_ops -c \
+docker exec -i vms-channel-bridge-postgres pg_restore \
+  -U vmsuser -d vms_channel_bridge -c \
   /backups/postgres_20260401_020000.dump
 
 # Redis 복원
-docker cp backups/dump.rdb vms-chatops-redis:/data/dump.rdb
-docker restart vms-chatops-redis
+docker cp backups/dump.rdb vms-channel-bridge-redis:/data/dump.rdb
+docker restart vms-channel-bridge-redis
 ```
 
 ---

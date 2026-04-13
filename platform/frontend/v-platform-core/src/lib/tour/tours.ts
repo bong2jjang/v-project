@@ -15,7 +15,7 @@ import { DriveStep } from "driver.js";
 export const mainTourSteps: DriveStep[] = [
   {
     popover: {
-      title: "VMS Chat Ops에 오신 것을 환영합니다!",
+      title: "VMS Channel Bridge에 오신 것을 환영합니다!",
       description:
         "Slack과 Microsoft Teams 간 메시지를 실시간으로 연동하는 시스템입니다.<br><br>주요 기능을 함께 살펴보겠습니다.<span class='tour-hint'>언제든 ESC를 눌러 투어를 종료할 수 있습니다.</span>",
     },

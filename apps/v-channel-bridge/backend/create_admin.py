@@ -82,7 +82,7 @@ if __name__ == "__main__":
     password = sys.argv[3] if len(sys.argv) > 3 else "Admin123!"
 
     print("=" * 60)
-    print("VMS Chat Ops - Admin Account Creation")
+    print("VMS Channel Bridge - Admin Account Creation")
     print("=" * 60)
     print()
 

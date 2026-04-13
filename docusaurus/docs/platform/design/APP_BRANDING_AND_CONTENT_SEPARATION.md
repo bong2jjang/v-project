@@ -37,7 +37,7 @@ apps/v-platform-template/frontend/src/pages/  ← 18개 페이지 복사본
 
 ### 1.2 문제의 결과
 
-- 앱 이름("VMS Chat Ops")이 하드코딩 → template에 잘못된 이름 표시
+- 앱 이름("VMS Channel Bridge")이 하드코딩 → template에 잘못된 이름 표시
 - 앱 전용 내용(Slack/Teams)이 template에 노출
 - 페이지 업데이트 시 모든 앱에 수동 반영 필요
 - 새 앱 만들 때 18개 파일 복사 + 수정 필요

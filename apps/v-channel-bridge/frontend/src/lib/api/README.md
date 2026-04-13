@@ -1,6 +1,6 @@
 # API Client Documentation
 
-VMS Chat Ops API 클라이언트 라이브러리
+VMS Channel Bridge API 클라이언트 라이브러리
 
 ## 목차
 
@@ -81,7 +81,7 @@ const status = await api.getStatus();
 //   uptime: "2h 30m",
 //   version: "1.26.0",
 //   container_status: "running",
-//   container_name: "vms-chat-ops"
+//   container_name: "vms-channel-bridge"
 // }
 ```
 

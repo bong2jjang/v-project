@@ -5,7 +5,7 @@ Migration: users 테이블에 start_page 컬럼 추가
 기본값은 "/" (대시보드).
 
 Usage:
-    docker exec vms-chatops-backend python migrations/020_user_start_page.py
+    docker exec vms-channel-bridge-backend python migrations/020_user_start_page.py
 """
 
 import logging

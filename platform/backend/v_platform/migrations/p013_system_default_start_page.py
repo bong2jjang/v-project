@@ -8,7 +8,7 @@ Migration: system_settings에 default_start_page 컬럼 추가
 우선순위: 사용자 설정 > 시스템 기본값 > "/"
 
 Usage:
-    docker exec vms-chatops-backend python migrations/021_system_default_start_page.py
+    docker exec vms-channel-bridge-backend python migrations/021_system_default_start_page.py
 """
 
 import logging

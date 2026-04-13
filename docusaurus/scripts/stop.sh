@@ -1,5 +1,5 @@
 #!/bin/bash
-# VMS Chat Ops Docs - Stop Development Server Script
+# VMS Channel Bridge Docs - Stop Development Server Script
 
 set -e
 
@@ -9,7 +9,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 echo "================================================"
-echo "  VMS Chat Ops Docs - Stop Server"
+echo "  VMS Channel Bridge Docs - Stop Server"
 echo "================================================"
 echo ""
 

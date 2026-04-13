@@ -263,7 +263,7 @@ export const RestartConfirmDialog = ({
                               컨테이너 로그 확인:
                             </div>
                             <code className="block px-2 py-1 bg-surface-elevated rounded text-xs font-mono">
-                              docker logs vms-chat-ops
+                              docker logs vms-channel-bridge
                             </code>
                           </div>
                         </li>

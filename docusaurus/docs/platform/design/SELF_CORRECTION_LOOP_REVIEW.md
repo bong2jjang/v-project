@@ -2,7 +2,7 @@
 
 **작성일**: 2026-03-30
 **상태**: 검토 완료, 구현 보류
-**담당**: VMS Chat Ops 개발팀
+**담당**: VMS Channel Bridge 개발팀
 
 ## 개요
 
@@ -244,7 +244,7 @@ except KeyError:
 | **Automatic** | 자동 수정 (로그만 출력) | CI/CD 파이프라인 |
 | **Off** | Self-Correction 비활성화 | 프로덕션 |
 
-## VMS Chat Ops 프로젝트 적용 계획
+## VMS Channel Bridge 프로젝트 적용 계획
 
 ### Phase 1: 단일 Skill 시범 적용
 
@@ -488,4 +488,4 @@ if iteration < max_iterations and not success:
 
 | 날짜 | 버전 | 변경 내용 | 담당자 |
 |------|------|-----------|--------|
-| 2026-03-30 | 1.0 | 초기 작성 | VMS Chat Ops 팀 |
+| 2026-03-30 | 1.0 | 초기 작성 | VMS Channel Bridge 팀 |

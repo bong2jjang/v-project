@@ -11,7 +11,7 @@ description: 외부 브리지를 Zowe Chat 영감의 자체 v-channel-bridge로 
 **핵심 철학**: Zowe Chat의 **"메시지를 표준화된 규격(Common Schema)으로 변환하여 중간에서 중계한다"**는 개념을 Docker + FastAPI로 구현합니다.
 
 **작성일**: 2026-03-30
-**프로젝트**: VMS Chat Ops
+**프로젝트**: VMS Channel Bridge
 **목표**: 외부 브리지 의존성 제거 → 자체 v-channel-bridge 구현
 **일정**: 4주 완성
 
@@ -21,7 +21,7 @@ description: 외부 브리지를 Zowe Chat 영감의 자체 v-channel-bridge로 
 
 ### Zowe Chat에서 배울 점
 
-| Zowe Chat 개념 | VMS Chat Ops 적용 |
+| Zowe Chat 개념 | VMS Channel Bridge 적용 |
 |----------------|-------------------|
 | **Common Message Schema** | 플랫폼별 메시지를 `VMS-Message-Schema`로 통일 |
 | **Provider Pattern** | Slack/Teams 어댑터를 인터페이스로 분리 |
@@ -45,7 +45,7 @@ description: 외부 브리지를 Zowe Chat 영감의 자체 v-channel-bridge로 
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│              VMS Chat Ops Platform                  │
+│              VMS Channel Bridge Platform                  │
 │                                                      │
 │  ┌───────────────────────────────────────────────┐ │
 │  │          Core Engine (FastAPI)                │ │
@@ -275,7 +275,7 @@ class CommandProcessor:
         elif action == "info":
             return self._create_response(
                 message,
-                "VMS Chat Ops v1.1.0\n"
+                "VMS Channel Bridge v1.1.0\n"
                 "- Slack ↔ Teams 브리지 활성\n"
                 "- 처리된 메시지: 1,234개\n"
                 "- 가동 시간: 3일 5시간"
@@ -762,7 +762,7 @@ docker-compose -f docker-compose.backup.yml up -d
 
 ## 📚 Zowe Chat 벤치마킹 요약
 
-| Zowe Chat 개념 | VMS Chat Ops 구현 |
+| Zowe Chat 개념 | VMS Channel Bridge 구현 |
 |----------------|-------------------|
 | Common Message Schema | `CommonMessage` 스키마 (Pydantic) |
 | Provider Pattern | `BasePlatformProvider` 인터페이스 |
@@ -799,5 +799,5 @@ docker-compose -f docker-compose.backup.yml up -d
 
 **문서 버전**: 2.0 (Light-Zowe 아키텍처)
 **최종 업데이트**: 2026-03-30
-**작성자**: VMS Chat Ops Team
+**작성자**: VMS Channel Bridge Team
 **영감**: [Zowe Chat Architecture](https://docs.zowe.org/stable/getting-started/zowe-architecture/)

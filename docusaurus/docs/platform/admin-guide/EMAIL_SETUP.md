@@ -9,7 +9,7 @@ tags: [guide, admin]
 
 ## 개요
 
-VMS Chat Ops의 비밀번호 재설정 기능을 위한 이메일 설정 가이드입니다.
+VMS Channel Bridge의 비밀번호 재설정 기능을 위한 이메일 설정 가이드입니다.
 
 ## 환경별 설정
 
@@ -35,8 +35,8 @@ Backend 서비스의 기본 환경 변수:
 - SMTP_PORT=1025
 - SMTP_USERNAME=mailhog
 - SMTP_PASSWORD=mailhog
-- SMTP_FROM_EMAIL=noreply@vms-chat-ops.com
-- SMTP_FROM_NAME=VMS Chat Ops
+- SMTP_FROM_EMAIL=noreply@vms-channel-bridge.com
+- SMTP_FROM_NAME=VMS Channel Bridge
 - FRONTEND_URL=http://localhost:5173
 ```
 
@@ -71,7 +71,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-gmail-app-password
 SMTP_FROM_EMAIL=noreply@yourdomain.com
-SMTP_FROM_NAME=VMS Chat Ops
+SMTP_FROM_NAME=VMS Channel Bridge
 FRONTEND_URL=https://yourdomain.com
 ```
 
@@ -83,7 +83,7 @@ FRONTEND_URL=https://yourdomain.com
 4. **앱 비밀번호** 생성:
    - 앱 선택: 메일
    - 기기 선택: 기타 (사용자 지정 이름)
-   - 이름 입력: "VMS Chat Ops"
+   - 이름 입력: "VMS Channel Bridge"
 5. 생성된 16자리 비밀번호를 `SMTP_PASSWORD`에 입력
 
 #### 보안 주의사항
@@ -105,7 +105,7 @@ SMTP_PORT=587
 SMTP_USERNAME=apikey
 SMTP_PASSWORD=your-sendgrid-api-key
 SMTP_FROM_EMAIL=noreply@yourdomain.com
-SMTP_FROM_NAME=VMS Chat Ops
+SMTP_FROM_NAME=VMS Channel Bridge
 ```
 
 #### AWS SES
@@ -116,7 +116,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-ses-smtp-username
 SMTP_PASSWORD=your-ses-smtp-password
 SMTP_FROM_EMAIL=noreply@yourdomain.com
-SMTP_FROM_NAME=VMS Chat Ops
+SMTP_FROM_NAME=VMS Channel Bridge
 ```
 
 #### Outlook/Office 365
@@ -127,7 +127,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@outlook.com
 SMTP_PASSWORD=your-password
 SMTP_FROM_EMAIL=noreply@yourdomain.com
-SMTP_FROM_NAME=VMS Chat Ops
+SMTP_FROM_NAME=VMS Channel Bridge
 ```
 
 ## 환경 변수 설명
@@ -138,8 +138,8 @@ SMTP_FROM_NAME=VMS Chat Ops
 | `SMTP_PORT` | SMTP 포트 (587: TLS, 1025: MailHog) | `1025` | ✅ |
 | `SMTP_USERNAME` | SMTP 사용자명 | `mailhog` | ✅ |
 | `SMTP_PASSWORD` | SMTP 비밀번호 | `mailhog` | ✅ |
-| `SMTP_FROM_EMAIL` | 발신 이메일 주소 | `noreply@vms-chat-ops.com` | ✅ |
-| `SMTP_FROM_NAME` | 발신자 이름 | `VMS Chat Ops` | ❌ |
+| `SMTP_FROM_EMAIL` | 발신 이메일 주소 | `noreply@vms-channel-bridge.com` | ✅ |
+| `SMTP_FROM_NAME` | 발신자 이름 | `VMS Channel Bridge` | ❌ |
 | `FRONTEND_URL` | 프론트엔드 URL (재설정 링크용) | `http://localhost:5173` | ✅ |
 
 ## 트러블슈팅

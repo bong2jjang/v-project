@@ -5,7 +5,7 @@
 ### 문제
 
 Microsoft Graph API의 `/chats` 엔드포인트는 **application-only(client_credentials) 토큰을 지원하지 않습니다.**
-현재 VMS Chat Ops의 Teams Provider는 client_credentials 방식만 사용하므로,
+현재 VMS Channel Bridge의 Teams Provider는 client_credentials 방식만 사용하므로,
 DM/그룹 채팅 목록 조회가 불가능합니다 (HTTP 400: `Requested API is not supported in application-only context`).
 
 ### 해결 방향

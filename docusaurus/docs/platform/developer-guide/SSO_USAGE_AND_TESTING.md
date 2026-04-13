@@ -8,7 +8,7 @@
 
 ## 1. 개요
 
-VMS Chat Ops는 기존 ID/PW 로그인과 **SSO 로그인을 병행**하는 하이브리드 인증을 지원합니다.
+VMS Channel Bridge는 기존 ID/PW 로그인과 **SSO 로그인을 병행**하는 하이브리드 인증을 지원합니다.
 
 | 인증 방식 | 설명 |
 |-----------|------|
@@ -50,7 +50,7 @@ Azure Portal에서 앱을 등록해야 합니다.
 
 | 항목 | 값 |
 |------|------|
-| Name | `VMS Chat Ops SSO` |
+| Name | `VMS Channel Bridge SSO` |
 | Supported account types | **Single tenant** (이 조직만) 또는 **Multitenant** (선택) |
 | Redirect URI (Web) | `http://localhost:8000/api/auth/sso/microsoft/callback` |
 
@@ -59,7 +59,7 @@ Azure Portal에서 앱을 등록해야 합니다.
 #### Step 2: Client Secret 생성
 
 1. 등록된 앱 → **Certificates & secrets** → **New client secret**
-2. Description: `VMS Chat Ops SSO Secret`
+2. Description: `VMS Channel Bridge SSO Secret`
 3. Expires: 적절한 만료 기간 선택 (권장: 24 months)
 4. **Add** → 생성된 **Value**를 즉시 복사 (나중에 다시 볼 수 없음)
 
@@ -119,7 +119,7 @@ docker compose up -d --build
 백엔드 로그에서 SSO 초기화 확인:
 
 ```bash
-docker logs vms-chatops-backend 2>&1 | grep sso
+docker logs vms-channel-bridge-backend 2>&1 | grep sso
 ```
 
 정상이면 다음과 같은 로그가 출력됩니다:
@@ -135,7 +135,7 @@ sso_providers_initialized  count=1 providers=['microsoft']
 |------|-------------|
 | 로컬 개발 | `http://localhost:8000/api/auth/sso/microsoft/callback` |
 | 스테이징 | `https://staging.example.com/api/auth/sso/microsoft/callback` |
-| 프로덕션 | `https://chatops.example.com/api/auth/sso/microsoft/callback` |
+| 프로덕션 | `https://channel-bridge.example.com/api/auth/sso/microsoft/callback` |
 
 Azure App Registration의 Redirect URI에 **사용하는 환경의 URI를 모두 등록**해야 합니다.
 
@@ -160,7 +160,7 @@ IdP 관리 콘솔에서:
 ```bash
 # ─── SSO: Generic OIDC (예: Keycloak) ────────────
 SSO_OIDC_ISSUER_URL=https://keycloak.example.com/realms/main
-SSO_OIDC_CLIENT_ID=vms-chatops
+SSO_OIDC_CLIENT_ID=vms-channel-bridge
 SSO_OIDC_CLIENT_SECRET=xxxxxxxxxxxxxxxx
 
 # 선택 사항 (기본값 있음)
@@ -204,7 +204,7 @@ curl http://localhost:8000/api/auth/sso/providers
 
 ### 5.2 시나리오 1: SSO 로그인 (신규 사용자)
 
-> 기존에 VMS Chat Ops 계정이 없는 사용자가 SSO로 최초 로그인
+> 기존에 VMS Channel Bridge 계정이 없는 사용자가 SSO로 최초 로그인
 
 | 단계 | 행위 | 기대 결과 |
 |------|------|----------|
@@ -365,7 +365,7 @@ WHERE email = 'user@company.com';
 
 1. `.env`에 `SSO_MICROSOFT_*` 3개 변수가 모두 설정되었는지 확인
 2. Docker 재빌드: `docker compose up -d --build`
-3. Backend 로그 확인: `docker logs vms-chatops-backend 2>&1 | grep sso`
+3. Backend 로그 확인: `docker logs vms-channel-bridge-backend 2>&1 | grep sso`
 4. API 직접 호출: `curl http://localhost:8000/api/auth/sso/providers`
 
 ### Q: "Invalid or expired state" 에러
@@ -440,7 +440,7 @@ SSO_MICROSOFT_TENANT_ID=prod-tenant-id
 SSO_MICROSOFT_CLIENT_ID=prod-client-id
 SSO_MICROSOFT_CLIENT_SECRET=prod-client-secret
 ENVIRONMENT=production    # 쿠키 Secure 플래그 활성화
-FRONTEND_URL=https://chatops.company.com
+FRONTEND_URL=https://channel-bridge.company.com
 ```
 
-Azure Redirect URI: `https://chatops.company.com/api/auth/sso/microsoft/callback`
+Azure Redirect URI: `https://channel-bridge.company.com/api/auth/sso/microsoft/callback`

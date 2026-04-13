@@ -1,7 +1,7 @@
 """
 VMS-Message-Schema: Common Message Schema for Light-Zowe Architecture
 
-Zowe Chat의 Common Message Schema 개념을 VMS Chat Ops에 적용한 통합 메시지 스키마.
+Zowe Chat의 Common Message Schema 개념을 VMS Channel Bridge에 적용한 통합 메시지 스키마.
 모든 플랫폼(Slack, Teams, VMS 등)의 메시지를 이 스키마로 변환하여 처리합니다.
 
 작성일: 2026-03-31

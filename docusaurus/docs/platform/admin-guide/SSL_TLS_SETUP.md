@@ -9,7 +9,7 @@ tags: [guide, admin]
 
 ## 개요
 
-프로덕션 환경에서 VMS Chat Ops를 안전하게 운영하기 위한 SSL/TLS 인증서 설정 가이드입니다.
+프로덕션 환경에서 VMS Channel Bridge를 안전하게 운영하기 위한 SSL/TLS 인증서 설정 가이드입니다.
 
 이 문서는 다음 내용을 다룹니다:
 - Let's Encrypt를 사용한 무료 SSL 인증서 발급
@@ -161,7 +161,7 @@ docker compose -f docker-compose.prod.yml start nginx
 ```bash
 # 인증서 발급 (Nginx 실행 중)
 sudo certbot certonly --webroot \
-  -w /var/lib/docker/volumes/vms-chat-ops_certbot_webroot/_data \
+  -w /var/lib/docker/volumes/vms-channel-bridge_certbot_webroot/_data \
   -d your-domain.com \
   -d www.your-domain.com \
   --email your-email@example.com \
@@ -345,10 +345,10 @@ sudo certbot renew --dry-run
 sudo crontab -e
 
 # 다음 라인 추가 (매일 오전 3시 갱신 체크)
-0 3 * * * certbot renew --quiet --post-hook "docker compose -f /path/to/vms-chat-ops/docker-compose.prod.yml exec nginx nginx -s reload"
+0 3 * * * certbot renew --quiet --post-hook "docker compose -f /path/to/vms-channel-bridge/docker-compose.prod.yml exec nginx nginx -s reload"
 ```
 
-**경로 변경**: `/path/to/vms-chat-ops`를 실제 프로젝트 경로로 변경하세요.
+**경로 변경**: `/path/to/vms-channel-bridge`를 실제 프로젝트 경로로 변경하세요.
 
 ### 5.3 Systemd Timer (Ubuntu 18.04+)
 
@@ -407,7 +407,7 @@ Cron 설정:
 
 ```bash
 # Crontab에 추가
-0 3 * * * /path/to/vms-chat-ops/scripts/renew-certs.sh >> /var/log/certbot-renew.log 2>&1
+0 3 * * * /path/to/vms-channel-bridge/scripts/renew-certs.sh >> /var/log/certbot-renew.log 2>&1
 ```
 
 ## 6. 보안 강화 설정
@@ -604,7 +604,7 @@ docker compose -f docker-compose.prod.yml restart nginx
 ```bash
 # 여러 도메인을 하나의 인증서에 포함
 sudo certbot certonly --webroot \
-  -w /var/lib/docker/volumes/vms-chat-ops_certbot_webroot/_data \
+  -w /var/lib/docker/volumes/vms-channel-bridge_certbot_webroot/_data \
   -d domain1.com \
   -d www.domain1.com \
   -d domain2.com \

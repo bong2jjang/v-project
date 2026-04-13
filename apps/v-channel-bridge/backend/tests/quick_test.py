@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VMS Chat Ops Quick Test Script
+VMS Channel Bridge Quick Test Script
 Phase 2 주요 기능 빠른 테스트
 """
 
@@ -75,7 +75,7 @@ def test_api(name, method, endpoint, data=None, expected_status=200):
 
 
 def main():
-    print_header("VMS Chat Ops Quick Test")
+    print_header("VMS Channel Bridge Quick Test")
     print(f"Base URL: {BASE_URL}")
     print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

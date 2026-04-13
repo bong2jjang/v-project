@@ -1,5 +1,5 @@
 #!/bin/bash
-# VMS Chat Ops Docs - Cleanup Script
+# VMS Channel Bridge Docs - Cleanup Script
 
 set -e
 
@@ -9,7 +9,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 echo "================================================"
-echo "  VMS Chat Ops Docs - Cleanup"
+echo "  VMS Channel Bridge Docs - Cleanup"
 echo "================================================"
 echo ""
 echo "This will remove:"

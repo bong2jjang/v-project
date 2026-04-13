@@ -8,11 +8,11 @@ const config: Config = {
   tagline: 'Slack ↔ Microsoft Teams 양방향 메시지 동기화',
   favicon: 'img/favicon.png',
 
-  url: 'https://docs.vms-chat-ops.com',
+  url: 'https://docs.vms-channel-bridge.com',
   baseUrl: '/',
 
-  organizationName: 'vms-chat-ops',
-  projectName: 'vms-chat-ops-docs',
+  organizationName: 'vms-channel-bridge',
+  projectName: 'vms-channel-bridge-docs',
 
   onBrokenLinks: 'warn',
 
@@ -76,7 +76,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/bong2jjang/vms-chat-ops/tree/main/docs/',
+          editUrl: 'https://github.com/bong2jjang/vms-channel-bridge/tree/main/docs/',
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
           remarkPlugins: [],
@@ -85,7 +85,7 @@ const config: Config = {
         blog: {
           showReadingTime: true,
           blogTitle: '개발 일지 & 설계 문서',
-          blogDescription: 'VMS Chat Ops 개발 과정 및 설계 문서',
+          blogDescription: 'VMS Channel Bridge 개발 과정 및 설계 문서',
           blogSidebarTitle: '최근 문서',
           blogSidebarCount: 10,
           showLastUpdateTime: false,
@@ -102,7 +102,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/vms-chat-ops-social-card.png',
+    image: 'img/vms-channel-bridge-social-card.png',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,
@@ -129,7 +129,7 @@ const config: Config = {
         //   position: 'right',
         // },
         // {
-        //   href: 'https://github.com/bong2jjang/vms-chat-ops',
+        //   href: 'https://github.com/bong2jjang/vms-channel-bridge',
         //   label: 'GitHub',
         //   position: 'right',
         // },
@@ -160,11 +160,11 @@ const config: Config = {
           items: [
             {
               label: 'GitHub Issues',
-              href: 'https://github.com/bong2jjang/vms-chat-ops/issues',
+              href: 'https://github.com/bong2jjang/vms-channel-bridge/issues',
             },
             {
               label: 'GitHub Discussions',
-              href: 'https://github.com/bong2jjang/vms-chat-ops/discussions',
+              href: 'https://github.com/bong2jjang/vms-channel-bridge/discussions',
             },
           ],
         },
@@ -177,12 +177,12 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/bong2jjang/vms-chat-ops',
+              href: 'https://github.com/bong2jjang/vms-channel-bridge',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} VMS Chat Ops Team. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} VMS Channel Bridge Team. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

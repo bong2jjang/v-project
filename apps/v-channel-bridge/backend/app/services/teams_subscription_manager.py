@@ -239,10 +239,10 @@ class TeamsSubscriptionManager:
 
         if is_chat:
             resource = f"/chats/{channel_id}/messages"
-            client_state = f"vms-chatops-chat-{channel_id[:8]}"
+            client_state = f"vms-channel-bridge-chat-{channel_id[:8]}"
         else:
             resource = f"/teams/{team_id}/channels/{channel_id}/messages"
-            client_state = f"vms-chatops-{team_id[:8]}"
+            client_state = f"vms-channel-bridge-{team_id[:8]}"
 
         payload = {
             "changeType": "created,updated,deleted",

@@ -1,11 +1,11 @@
 ---
 id: migration-plan
-title: VMS Chat Ops 마이그레이션 계획 (완료)
+title: VMS Channel Bridge 마이그레이션 계획 (완료)
 sidebar_position: 7
 tags: [guide, developer]
 ---
 
-# VMS Chat Ops 마이그레이션 계획
+# VMS Channel Bridge 마이그레이션 계획
 
 **작성일**: 2026-03-20
 **완료일**: 2026-04-05
@@ -15,7 +15,7 @@ tags: [guide, developer]
 
 ## 개요
 
-이 문서는 VMS Chat Ops 프로젝트의 외부 브리지 기반 아키텍처에서 **v-channel-bridge (Light-Zowe 아키텍처)** 로의 마이그레이션 계획 및 완료 기록입니다.
+이 문서는 VMS Channel Bridge 프로젝트의 외부 브리지 기반 아키텍처에서 **v-channel-bridge (Light-Zowe 아키텍처)** 로의 마이그레이션 계획 및 완료 기록입니다.
 
 ---
 
@@ -33,8 +33,8 @@ tags: [guide, developer]
 
 ### Phase 1: 명칭 변경 및 기반 정리 ✅
 
-- [x] Docker 이미지/컨테이너명 `vms-chatops-*` 접두사로 통일
-- [x] Docker 네트워크명 `vms-chat-ops-network` 변경
+- [x] Docker 이미지/컨테이너명 `vms-channel-bridge-*` 접두사로 통일
+- [x] Docker 네트워크명 `vms-channel-bridge-network` 변경
 - [x] `docker-compose.yml` 서비스 구조 정리
 - [x] `.env.example` 생성 및 환경 변수 정리
 - [x] CLAUDE.md 프로젝트 설정 업데이트

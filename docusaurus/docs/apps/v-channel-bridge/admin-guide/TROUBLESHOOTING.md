@@ -1,13 +1,13 @@
 ---
 id: troubleshooting
-title: VMS Chat Ops 트러블슈팅 가이드
+title: VMS Channel Bridge 트러블슈팅 가이드
 sidebar_position: 9
 tags: [guide, admin]
 ---
 
-# VMS Chat Ops 트러블슈팅 가이드
+# VMS Channel Bridge 트러블슈팅 가이드
 
-이 문서는 VMS Chat Ops Light-Zowe 아키텍처에서 발생할 수 있는 일반적인 문제와 해결 방법을 안내합니다.
+이 문서는 VMS Channel Bridge Light-Zowe 아키텍처에서 발생할 수 있는 일반적인 문제와 해결 방법을 안내합니다.
 
 ---
 
@@ -51,7 +51,7 @@ Windows의 경우 Docker Desktop이 실행 중인지 확인합니다.
 
 ```bash
 # 로그 확인
-docker logs vms-chatops-backend --tail=100
+docker logs vms-channel-bridge-backend --tail=100
 
 # 일반적인 원인:
 # 1. PostgreSQL 연결 실패 → postgres 컨테이너 상태 확인
@@ -119,10 +119,10 @@ curl -H "Authorization: Bearer xoxb-YOUR-TOKEN" \
 
 ```bash
 # Backend 로그에서 메시지 라우팅 확인
-docker logs vms-chatops-backend --tail=200 | grep -i "route\|message\|error"
+docker logs vms-channel-bridge-backend --tail=200 | grep -i "route\|message\|error"
 
 # Redis에서 Route 확인
-docker exec vms-chatops-redis redis-cli KEYS "route:*"
+docker exec vms-channel-bridge-redis redis-cli KEYS "route:*"
 
 # Messages 페이지에서 실패 메시지의 에러 메시지 확인
 ```
@@ -157,10 +157,10 @@ docker exec vms-chatops-redis redis-cli KEYS "route:*"
 docker stats --no-stream
 
 # Redis 상태 확인
-docker exec vms-chatops-redis redis-cli INFO server
+docker exec vms-channel-bridge-redis redis-cli INFO server
 
 # PostgreSQL 연결 수 확인
-docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
+docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
   -c "SELECT count(*) FROM pg_stat_activity;"
 ```
 
@@ -178,10 +178,10 @@ docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
 
 ```bash
 # 컨테이너 상태 확인
-docker logs vms-chatops-postgres --tail=50
+docker logs vms-channel-bridge-postgres --tail=50
 
 # 연결 테스트
-docker exec vms-chatops-backend python -c "
+docker exec vms-channel-bridge-backend python -c "
 from app.db.database import engine
 from sqlalchemy import text
 with engine.connect() as conn:
@@ -200,7 +200,7 @@ df -h
 docker system prune -a --volumes
 
 # 오래된 메시지 삭제
-docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
+docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
   -c "DELETE FROM messages WHERE created_at < NOW() - INTERVAL '90 days';"
 ```
 
@@ -208,15 +208,15 @@ docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
 
 ```bash
 # PostgreSQL 성능 확인
-docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
+docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
   -c "SELECT * FROM pg_stat_activity WHERE state = 'active';"
 
 # Redis 메모리 확인
-docker exec vms-chatops-redis redis-cli INFO memory
+docker exec vms-channel-bridge-redis redis-cli INFO memory
 
 # 인덱스 재구성
-docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
-  -c "REINDEX DATABASE vms_chat_ops;"
+docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
+  -c "REINDEX DATABASE vms_channel_bridge;"
 ```
 
 ---
@@ -255,7 +255,7 @@ docker exec vms-chatops-postgres psql -U vmsuser -d vms_chat_ops \
 ```bash
 # Docker 네트워크 확인
 docker network ls
-docker network inspect vms-chat-ops_vms-chat-ops-network
+docker network inspect vms-channel-bridge_vms-channel-bridge-network
 
 # 네트워크 재생성
 docker compose down
@@ -327,7 +327,7 @@ docker compose version
 docker compose ps > docker-status.txt
 
 # 3. Backend 로그
-docker logs vms-chatops-backend --tail=500 > backend-logs.txt
+docker logs vms-channel-bridge-backend --tail=500 > backend-logs.txt
 
 # 4. 전체 서비스 로그
 docker compose logs --tail=200 > all-logs.txt

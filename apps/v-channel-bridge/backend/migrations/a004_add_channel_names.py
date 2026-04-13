@@ -9,7 +9,7 @@ Fields added:
 - destination_channel_name: Display name of destination channel
 
 Usage:
-    docker exec vms-chatops-backend python migrations/004_add_channel_names.py
+    docker exec vms-channel-bridge-backend python migrations/004_add_channel_names.py
 """
 
 import sys

@@ -1,13 +1,13 @@
 ---
 id: development
-title: VMS Chat Ops 개발 가이드
+title: VMS Channel Bridge 개발 가이드
 sidebar_position: 1
 tags: [guide, developer]
 ---
 
-# VMS Chat Ops 개발 가이드
+# VMS Channel Bridge 개발 가이드
 
-이 문서는 VMS Chat Ops 프로젝트 개발을 위한 환경 설정, 프로젝트 구조, 코딩 컨벤션, 워크플로우를 안내합니다.
+이 문서는 VMS Channel Bridge 프로젝트 개발을 위한 환경 설정, 프로젝트 구조, 코딩 컨벤션, 워크플로우를 안내합니다.
 
 ---
 
@@ -29,8 +29,8 @@ tags: [guide, developer]
 
 ```bash
 # 저장소 클론
-git clone https://github.com/bong2jjang/vms-chat-ops.git
-cd vms-chat-ops
+git clone https://github.com/bong2jjang/vms-channel-bridge.git
+cd vms-channel-bridge
 
 # 환경 변수 설정
 cp .env.example .env
@@ -72,7 +72,7 @@ docker compose up -d --no-deps --build frontend
 ## 프로젝트 구조
 
 ```
-vms-chat-ops/
+vms-channel-bridge/
 ├── backend/                        # Python 3.11 / FastAPI
 │   ├── app/
 │   │   ├── adapters/               # Provider Pattern
@@ -349,17 +349,17 @@ cd frontend && npm run lint:fix && npm run format
 
 ```bash
 # Docker 컨테이너에서 실행
-docker exec vms-chatops-backend python -m pytest tests/ -v
+docker exec vms-channel-bridge-backend python -m pytest tests/ -v
 
 # 커버리지 포함
-docker exec vms-chatops-backend python -m pytest tests/ -v --cov=app --cov-report=term
+docker exec vms-channel-bridge-backend python -m pytest tests/ -v --cov=app --cov-report=term
 ```
 
 ### Frontend 테스트
 
 ```bash
 # Docker 컨테이너에서 실행
-docker exec vms-chatops-frontend npx vitest --run
+docker exec vms-channel-bridge-frontend npx vitest --run
 ```
 
 자세한 테스트 가이드는 [테스트 가이드](testing-guide)를 참조하세요.
@@ -408,7 +408,7 @@ TEAMS_APP_ID=...
 TEAMS_APP_PASSWORD=...
 
 # Database
-DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_chat_ops
+DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_channel_bridge
 
 # Redis
 REDIS_URL=redis://:redispassword@redis:6379/0
@@ -458,18 +458,18 @@ docker compose up -d --build backend
 ### Backend 로그 확인
 
 ```bash
-docker logs vms-chatops-backend -f --tail=100
-docker logs vms-chatops-backend --tail=200 | grep -i "error\|route\|message"
+docker logs vms-channel-bridge-backend -f --tail=100
+docker logs vms-channel-bridge-backend --tail=200 | grep -i "error\|route\|message"
 ```
 
 ### Redis 직접 확인
 
 ```bash
 # Route 키 조회
-docker exec vms-chatops-redis redis-cli KEYS "route:*"
+docker exec vms-channel-bridge-redis redis-cli KEYS "route:*"
 
 # 특정 Route의 대상 목록
-docker exec vms-chatops-redis redis-cli SMEMBERS "route:slack:C1234567890"
+docker exec vms-channel-bridge-redis redis-cli SMEMBERS "route:slack:C1234567890"
 ```
 
 ---

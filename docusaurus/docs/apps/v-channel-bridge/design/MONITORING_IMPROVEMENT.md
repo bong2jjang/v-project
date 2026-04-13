@@ -1,14 +1,14 @@
-# VMS Chat Ops 모니터링 개선 설계 문서
+# VMS Channel Bridge 모니터링 개선 설계 문서
 
 ## 1. 개선 목표 및 배경
 
 ### 배경
 
-초기 모니터링 설정은 외부 브리지 기반 아키텍처를 전제로 구성되어 있었습니다. VMS Chat Ops가 **v-channel-bridge 아키텍처** (FastAPI + Provider Pattern)로 전환되면서 다음과 같은 불일치 문제가 발생했습니다.
+초기 모니터링 설정은 외부 브리지 기반 아키텍처를 전제로 구성되어 있었습니다. VMS Channel Bridge가 **v-channel-bridge 아키텍처** (FastAPI + Provider Pattern)로 전환되면서 다음과 같은 불일치 문제가 발생했습니다.
 
 | 문제 | 내용 |
 |------|------|
-| 네트워크 이름 오류 | 이전 네트워크명 → `vms-chat-ops_vms-chat-ops-network` |
+| 네트워크 이름 오류 | 이전 네트워크명 → `vms-channel-bridge_vms-channel-bridge-network` |
 | 잡 이름 불일치 | `alerts.yml`에서 존재하지 않는 레거시 잡 참조 |
 | 대시보드 구식 | Grafana 타이틀 및 서비스 로그 필터가 이전 아키텍처 기준 |
 | Loki 설정 오류 | 미사용 alertmanager URL 참조 (`ruler.alertmanager_url`) |
@@ -18,7 +18,7 @@
 ### 개선 목표
 
 1. **정확성**: 실제 컨테이너 이름 및 네트워크 이름과 일치하는 설정
-2. **관찰 가능성**: VMS Chat Ops 핵심 비즈니스 메트릭(메시지 브리지, API 상태) 시각화
+2. **관찰 가능성**: VMS Channel Bridge 핵심 비즈니스 메트릭(메시지 브리지, API 상태) 시각화
 3. **재현성**: 이미지 버전 고정으로 환경 일관성 보장
 4. **안정성**: healthcheck 추가 및 서비스 간 의존성 명확화
 5. **운영 편의성**: 한글 주석, 알림 규칙, 구조화 로그 파싱
@@ -29,7 +29,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    vms-chat-ops_vms-chat-ops-network                  │
+│                    vms-channel-bridge_vms-channel-bridge-network                  │
 │                                                                       │
 │  ┌──────────────┐   /metrics    ┌─────────────────┐                  │
 │  │   backend    │◄──────────────│   prometheus    │                  │
@@ -53,8 +53,8 @@
 │         │ /var/run/docker.sock            │                          │
 │         └────────────────────────────────┘                          │
 │                                                                       │
-│  컨테이너: vms-chatops-backend, vms-chatops-frontend,                │
-│           vms-chatops-postgres, vms-chatops-redis                    │
+│  컨테이너: vms-channel-bridge-backend, vms-channel-bridge-frontend,                │
+│           vms-channel-bridge-postgres, vms-channel-bridge-redis                    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -88,9 +88,9 @@
 
 | 메트릭 | 출처 | 설명 |
 |--------|------|------|
-| `container_cpu_usage_seconds_total{name=~"vms-chatops.*"}` | cAdvisor | 컨테이너 CPU 사용량 |
-| `container_memory_usage_bytes{name=~"vms-chatops.*"}` | cAdvisor | 컨테이너 메모리 사용량 |
-| `container_start_time_seconds{name=~"vms-chatops.*"}` | cAdvisor | 컨테이너 재시작 감지용 |
+| `container_cpu_usage_seconds_total{name=~"vms-channel-bridge.*"}` | cAdvisor | 컨테이너 CPU 사용량 |
+| `container_memory_usage_bytes{name=~"vms-channel-bridge.*"}` | cAdvisor | 컨테이너 메모리 사용량 |
+| `container_start_time_seconds{name=~"vms-channel-bridge.*"}` | cAdvisor | 컨테이너 재시작 감지용 |
 | `node_filesystem_avail_bytes{mountpoint="/"}` | Node Exporter | 디스크 여유 공간 |
 | `node_cpu_seconds_total{mode="idle"}` | Node Exporter | 호스트 CPU 유휴 비율 |
 
@@ -111,8 +111,8 @@
 
 | 알림명 | 조건 | 지속 | 심각도 | 설명 |
 |--------|------|------|--------|------|
-| `ContainerHighCPU` | CPU > 80% | 5m | warning | vms-chatops.* 컨테이너 |
-| `ContainerHighMemory` | 메모리 > 512MB | 5m | warning | vms-chatops.* 컨테이너 |
+| `ContainerHighCPU` | CPU > 80% | 5m | warning | vms-channel-bridge.* 컨테이너 |
+| `ContainerHighMemory` | 메모리 > 512MB | 5m | warning | vms-channel-bridge.* 컨테이너 |
 | `ContainerRestarting` | 1시간 내 재시작 > 3회 | 즉시 | warning | 불안정 컨테이너 |
 
 ### 그룹 3: `host_alerts` (평가 주기: 1m)
@@ -126,7 +126,7 @@
 
 ## 6. 대시보드 패널 설계
 
-대시보드 UID: `vms-chat-ops-overview`, 갱신 주기: 30s
+대시보드 UID: `vms-channel-bridge-overview`, 갱신 주기: 30s
 
 ### 상단 행 (Row 1) - 서비스 상태 지표 (y:0)
 
@@ -161,7 +161,7 @@
 
 ## 7. Loki 로그 파이프라인
 
-Promtail은 Docker Socket을 통해 `vms-chat-ops` 컴포즈 프로젝트 컨테이너 로그를 수집합니다.
+Promtail은 Docker Socket을 통해 `vms-channel-bridge` 컴포즈 프로젝트 컨테이너 로그를 수집합니다.
 
 ```
 Docker 컨테이너 로그

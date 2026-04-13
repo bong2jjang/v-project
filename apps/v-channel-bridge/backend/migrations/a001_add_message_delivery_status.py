@@ -5,7 +5,7 @@ This migration adds status, error_message, retry_count, and delivered_at
 columns to the messages table for tracking message delivery status.
 
 Usage:
-    docker exec vms-chatops-backend python migrations/001_add_message_delivery_status.py
+    docker exec vms-channel-bridge-backend python migrations/001_add_message_delivery_status.py
 """
 
 import logging

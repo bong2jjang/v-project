@@ -117,7 +117,7 @@ function LayoutContent({ children }: LayoutContentProps) {
                       </svg>
                     </div>
                     <span className="text-body-sm font-bold text-content-primary">
-                      VMS Chat Ops
+                      VMS Channel Bridge
                     </span>
                   </div>
                 </div>
@@ -277,7 +277,7 @@ function LayoutContent({ children }: LayoutContentProps) {
         <div className="px-4 py-0.5">
           <div className="flex items-center justify-end text-caption text-content-tertiary">
             <div className="flex items-center gap-3">
-              <span>VMS Chat Ops v1.1.0</span>
+              <span>VMS Channel Bridge v1.1.0</span>
               {/* 알림 벨 */}
               <NotificationBell />
             </div>

@@ -631,7 +631,7 @@ async def login(request: LoginRequest, ...):
 
 ```
 ┌─────────────────────────────────────────┐
-│              VMS Chat Ops               │
+│              VMS Channel Bridge               │
 │                                         │
 │  ┌───────────────────────────────────┐  │
 │  │  Email      [________________]   │  │
@@ -768,7 +768,7 @@ SSO_MICROSOFT_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```bash
 # .env — 고객사 SSO로 교체 (MS SSO 변수 제거 또는 비움)
 SSO_OIDC_ISSUER_URL=https://keycloak.customer.com/realms/main
-SSO_OIDC_CLIENT_ID=vms-chatops
+SSO_OIDC_CLIENT_ID=vms-channel-bridge
 SSO_OIDC_CLIENT_SECRET=customer-secret
 SSO_OIDC_PROVIDER_NAME=customer_sso
 SSO_OIDC_DISPLAY_NAME=회사 통합인증
@@ -785,7 +785,7 @@ SSO_OIDC_SUB_CLAIM=sub
 |------|------|
 | 1 | `.env`에서 `SSO_MICROSOFT_*` 변수 제거 |
 | 2 | `.env`에 `SSO_OIDC_*` 변수 설정 (고객사 IdP 정보) |
-| 3 | 고객사 IdP에 VMS Chat Ops를 Client로 등록 (redirect_uri 설정) |
+| 3 | 고객사 IdP에 VMS Channel Bridge를 Client로 등록 (redirect_uri 설정) |
 | 4 | `docker compose up -d --build` 재배포 |
 | 5 | 로그인 페이지에서 고객사 SSO 버튼 확인 |
 
@@ -879,7 +879,7 @@ SaaS 배포                          온프레미스 배포
 .env:                              .env:
   SSO_MICROSOFT_TENANT_ID=xxx        (삭제)
   SSO_MICROSOFT_CLIENT_ID=xxx        SSO_OIDC_ISSUER_URL=https://customer-idp/...
-  SSO_MICROSOFT_CLIENT_SECRET=xxx    SSO_OIDC_CLIENT_ID=vms-chatops
+  SSO_MICROSOFT_CLIENT_SECRET=xxx    SSO_OIDC_CLIENT_ID=vms-channel-bridge
                                      SSO_OIDC_CLIENT_SECRET=xxx
                                      SSO_OIDC_DISPLAY_NAME=통합인증
 

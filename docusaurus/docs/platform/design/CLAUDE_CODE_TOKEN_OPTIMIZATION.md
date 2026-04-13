@@ -378,7 +378,7 @@ Task(
   subagent_type="general-purpose",
   model="haiku",
   description="Extract errors from logs",
-  prompt="docker logs vms-chatops-backend에서 ERROR, Exception, Failed 키워드 포함 라인만 추출하고 시간순 정렬"
+  prompt="docker logs vms-channel-bridge-backend에서 ERROR, Exception, Failed 키워드 포함 라인만 추출하고 시간순 정렬"
 )
 ```
 
@@ -551,5 +551,5 @@ Agent 호출: 5회 (약 10,000 토큰)
 
 **문서 버전**: 1.0
 **최종 업데이트**: 2026-04-02
-**작성자**: VMS Chat Ops Team
+**작성자**: VMS Channel Bridge Team
 **상태**: ✅ 검증 완료 (실전 테스트됨)

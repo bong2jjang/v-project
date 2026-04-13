@@ -20,7 +20,7 @@ logger = structlog.get_logger()
 
 # 설정
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
-TEMP_DIR = Path(tempfile.gettempdir()) / "vms_chat_ops_attachments"
+TEMP_DIR = Path(tempfile.gettempdir()) / "vms_channel_bridge_attachments"
 SUPPORTED_IMAGE_TYPES = [
     "image/png",
     "image/jpeg",

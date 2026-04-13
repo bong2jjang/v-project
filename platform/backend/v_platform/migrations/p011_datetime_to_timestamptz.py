@@ -5,7 +5,7 @@ Migration: TIMESTAMP → TIMESTAMP WITH TIME ZONE
 기존 naive UTC 값은 그대로 유지되며, PostgreSQL이 UTC 기준 TIMESTAMPTZ로 해석합니다.
 
 Usage:
-    docker exec vms-chatops-backend python migrations/018_datetime_to_timestamptz.py
+    docker exec vms-channel-bridge-backend python migrations/018_datetime_to_timestamptz.py
 """
 
 import logging

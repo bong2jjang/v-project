@@ -129,7 +129,7 @@ class CommandProcessor:
         elif action == "info":
             # VMS 시스템 정보
             info_text = (
-                "📊 **VMS Chat Ops 정보**\n\n"
+                "📊 **VMS Channel Bridge 정보**\n\n"
                 "• 버전: v1.1.0 (Light-Zowe)\n"
                 "• 아키텍처: Provider Pattern\n"
                 "• 메시지 스키마: VMS-Message-Schema\n"
@@ -301,7 +301,7 @@ class CommandProcessor:
     ) -> CommonMessage:
         """도움말 커맨드 처리"""
         help_text = (
-            "❓ **VMS Chat Ops 커맨드 도움말**\n\n"
+            "❓ **VMS Channel Bridge 커맨드 도움말**\n\n"
             "**시스템 관리**\n"
             "• `/vms status` - VMS 서버 상태 조회\n"
             "• `/vms info` - 시스템 정보\n"
@@ -327,7 +327,7 @@ class CommandProcessor:
 
             return self._create_response(
                 message,
-                f"✅ VMS Chat Ops 작동 중\n" f"🌉 {providers_count}개 Provider 연결됨",
+                f"✅ VMS Channel Bridge 작동 중\n" f"🌉 {providers_count}개 Provider 연결됨",
             )
         else:
             return self._create_response(message, "⚠️ 브리지가 초기화되지 않았습니다.")
@@ -351,7 +351,7 @@ class CommandProcessor:
             user=User(
                 id="vms-bot",
                 username="vms-bot",
-                display_name="VMS Chat Ops",
+                display_name="VMS Channel Bridge",
                 platform=Platform.VMS,
             ),
             channel=original.channel,

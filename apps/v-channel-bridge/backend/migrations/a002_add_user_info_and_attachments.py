@@ -11,7 +11,7 @@ Fields added:
 - message_format: Message format type (text, markdown, code, etc.)
 
 Usage:
-    docker exec vms-chatops-backend python migrations/002_add_user_info_and_attachments.py
+    docker exec vms-channel-bridge-backend python migrations/002_add_user_info_and_attachments.py
 """
 
 import logging

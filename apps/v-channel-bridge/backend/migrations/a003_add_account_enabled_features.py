@@ -5,7 +5,7 @@ This migration adds the enabled_features column for per-account feature selectio
 NULL = all features active (backward compatible).
 
 Usage:
-    docker exec vms-chatops-backend python migrations/003_add_account_enabled_features.py
+    docker exec vms-channel-bridge-backend python migrations/003_add_account_enabled_features.py
 """
 
 import sys

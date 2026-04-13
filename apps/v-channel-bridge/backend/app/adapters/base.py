@@ -1,7 +1,7 @@
 """
 BasePlatformProvider: Provider Pattern Interface for Light-Zowe Architecture
 
-Zowe Chat의 Provider Pattern을 VMS Chat Ops에 적용한 추상 인터페이스.
+Zowe Chat의 Provider Pattern을 VMS Channel Bridge에 적용한 추상 인터페이스.
 새로운 플랫폼(Slack, Teams, Mattermost, 카카오워크 등)을 추가할 때
 이 인터페이스를 구현하면 됩니다.
 

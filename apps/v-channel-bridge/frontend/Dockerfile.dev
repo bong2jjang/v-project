@@ -14,7 +14,7 @@ COPY pnpm-lock.yaml* ./
 
 # Install dependencies (workspace-aware)
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --filter vms-chat-ops-frontend... --no-frozen-lockfile --prefer-offline
+    pnpm install --filter vms-channel-bridge-frontend... --no-frozen-lockfile --prefer-offline
 
 WORKDIR /workspace/apps/v-channel-bridge/frontend
 
