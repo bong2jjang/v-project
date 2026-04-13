@@ -181,7 +181,7 @@ export function RouteModal({
           {/* Edit mode: current route info */}
           {isEditMode && editRoute && (
             <div className="mb-5 px-4 py-3 bg-status-info-light border border-status-info-border rounded-md">
-              <div className="flex items-center gap-2 text-sm text-content-primary">
+              <div className="flex items-center gap-2 flex-wrap text-sm text-content-primary">
                 <svg
                   className="w-4 h-4 text-status-info flex-shrink-0"
                   fill="currentColor"
@@ -194,7 +194,7 @@ export function RouteModal({
                   />
                 </svg>
                 <span className="font-semibold">수정 중인 Route:</span>
-                <span className="text-content-secondary">
+                <span className="text-content-secondary truncate max-w-[40%]">
                   {editRoute.source.channel_name || editRoute.source.channel_id}
                 </span>
                 <svg
@@ -210,7 +210,7 @@ export function RouteModal({
                     d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                   />
                 </svg>
-                <span className="text-content-secondary">
+                <span className="text-content-secondary truncate max-w-[40%]">
                   {editRoute.targets[0]?.channel_name ||
                     editRoute.targets[0]?.channel_id}
                 </span>
@@ -618,16 +618,16 @@ export function RouteModal({
             </div>
 
             {/* Buttons */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
               {availableProviders.length === 0 ? (
-                <p className="text-xs text-status-warning">
+                <p className="text-xs text-status-warning flex-1 min-w-0">
                   활성화된 플랫폼이 없습니다. 연동 관리에서 플랫폼 연동을
                   설정하세요.
                 </p>
               ) : (
-                <div />
+                <div className="hidden sm:block" />
               )}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-end gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={onClose}

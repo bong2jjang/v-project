@@ -148,12 +148,12 @@ export function ChannelInputField({
   return (
     <div className="w-full space-y-3">
       {/* 라벨 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <label className="block text-sm font-medium text-content-secondary">
           {label}
         </label>
         {/* 모드 전환 토글 */}
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs flex-wrap">
           <button
             type="button"
             onClick={() => setInputMode("select")}
@@ -186,18 +186,18 @@ export function ChannelInputField({
         <div className="space-y-2">
           {/* 검색 및 정렬 컨트롤 */}
           {!loadingChannels && platform && channels.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="채널 검색..."
-                className="flex-1 px-3 py-1.5 text-sm border border-border-subtle rounded-button bg-surface-card text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-border-subtle rounded-button bg-surface-card text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "name" | "id")}
-                className="px-3 py-1.5 text-sm border border-border-subtle rounded-button bg-surface-card text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="flex-shrink-0 px-3 py-1.5 text-sm border border-border-subtle rounded-button bg-surface-card text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="name">이름순</option>
                 <option value="id">ID순</option>
@@ -252,7 +252,7 @@ export function ChannelInputField({
       {/* 직접 입력 모드 */}
       {inputMode === "manual" && (
         <div className="space-y-2">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
             <input
               type="text"
               value={manualInput}
@@ -268,13 +268,13 @@ export function ChannelInputField({
               }}
               placeholder="채널 ID 입력 (예: C01234567)"
               disabled={disabled || !platform}
-              className="flex-1 px-3 py-2 border border-border-subtle rounded-button bg-surface-card text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 min-w-0 px-3 py-2 border border-border-subtle rounded-button bg-surface-card text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               type="button"
               onClick={validateChannelId}
               disabled={disabled || !platform || !manualInput || validating}
-              className="px-3 py-2 bg-brand-600 text-white rounded-button hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+              className="flex-shrink-0 px-3 py-2 bg-brand-600 text-white rounded-button hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
               title="채널 유효성 검사"
             >
               {validating ? (
