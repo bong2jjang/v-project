@@ -33,6 +33,9 @@ class RefreshToken(Base):
     device_name = Column(String(256), nullable=True)
     ip_address = Column(String(45), nullable=True)  # IPv6 지원
 
+    # 로그인 출처 앱 (표시 용도 — 필터링에는 사용하지 않음)
+    app_id = Column(String(64), nullable=True, index=True)
+
     # 만료 및 상태
     expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     is_revoked = Column(Boolean, default=False, nullable=False, index=True)
@@ -60,6 +63,7 @@ class RefreshToken(Base):
             "device_fingerprint": self.device_fingerprint,
             "device_name": self.device_name,
             "ip_address": self.ip_address,
+            "app_id": self.app_id,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "is_revoked": self.is_revoked,
             "created_at": self.created_at.isoformat() if self.created_at else None,

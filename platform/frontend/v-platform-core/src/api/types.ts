@@ -396,6 +396,7 @@ export interface DeviceInfo {
   device_name: string;
   device_fingerprint: string | null;
   ip_address: string | null;
+  app_id: string | null;
   last_used_at: string | null;
   created_at: string | null;
   expires_at: string | null;

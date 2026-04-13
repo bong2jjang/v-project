@@ -205,6 +205,7 @@ class DeviceInfo(BaseModel):
     device_name: str = Field(..., description="디바이스 이름")
     device_fingerprint: Optional[str] = Field(None, description="디바이스 핑거프린트")
     ip_address: Optional[str] = Field(None, description="IP 주소")
+    app_id: Optional[str] = Field(None, description="로그인 출처 앱")
     last_used_at: Optional[datetime] = Field(None, description="마지막 사용 시간")
     created_at: Optional[datetime] = Field(None, description="생성 시간")
     expires_at: Optional[datetime] = Field(None, description="만료 시간")

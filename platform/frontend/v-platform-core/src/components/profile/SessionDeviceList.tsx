@@ -213,10 +213,15 @@ export function SessionDeviceList() {
 
                   {/* 상세 정보 */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="text-body-base font-medium text-content-primary truncate">
                         {device.device_name || "알 수 없는 디바이스"}
                       </p>
+                      {device.app_id && (
+                        <Badge variant="default" size="sm">
+                          {device.app_id}
+                        </Badge>
+                      )}
                       {isCurrent && (
                         <Badge variant="info" size="sm">
                           현재 디바이스

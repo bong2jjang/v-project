@@ -112,8 +112,8 @@ services:
       - TEAMS_TEAM_ID=${TEAMS_TEAM_ID}
       # Microsoft OAuth (Delegated Auth)
       - MS_OAUTH_REDIRECT_URI=${MS_OAUTH_REDIRECT_URI:-}
-      # Graph API Change Notifications
-      - BACKEND_URL=${BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8000}
+      # Graph API Change Notifications / SSO 콜백 루트
+      - BACKEND_URL=${BRIDGE_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8000}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180}
       - TEAMS_NOTIFICATION_URL=${TEAMS_NOTIFICATION_URL:-}
       # SSO: TEAMS_* 환경변수를 재사용 (별도 SSO 변수 불필요)
@@ -236,6 +236,9 @@ services:
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5180
+      # SSO 콜백 루트 (MS OAuth redirect_uri 생성에 사용)
+      - BACKEND_URL=${PORTAL_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8080}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180}
       # SSO (Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
@@ -308,6 +311,9 @@ services:
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5174
+      # SSO 콜백 루트 (MS OAuth redirect_uri 생성에 사용)
+      - BACKEND_URL=${TEMPLATE_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8002}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180}
       # SSO (Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}

@@ -87,6 +87,7 @@ class TokenService:
         device_name: Optional[str],
         ip_address: Optional[str],
         remember_me: bool = False,
+        app_id: Optional[str] = None,
     ) -> str:
         """
         Refresh Token 생성 및 DB 저장
@@ -98,6 +99,7 @@ class TokenService:
             device_name: 디바이스 이름
             ip_address: IP 주소
             remember_me: 로그인 유지 여부
+            app_id: 로그인 출처 앱 (표시용)
 
         Returns:
             Refresh Token
@@ -120,6 +122,7 @@ class TokenService:
             device_name=device_name,
             ip_address=ip_address,
             expires_at=expires_at,
+            app_id=app_id,
         )
 
         db.add(refresh_token)
@@ -218,6 +221,7 @@ class TokenService:
             device_name=db_token.device_name,
             ip_address=ip_address or db_token.ip_address,
             remember_me=remember_me,
+            app_id=db_token.app_id,
         )
 
         return new_access_token, new_refresh_token
@@ -300,6 +304,7 @@ class TokenService:
                     "device_name": token.device_name or "Unknown Device",
                     "device_fingerprint": token.device_fingerprint,
                     "ip_address": token.ip_address,
+                    "app_id": token.app_id,
                     "last_used_at": token.last_used_at.isoformat()
                     if token.last_used_at
                     else None,

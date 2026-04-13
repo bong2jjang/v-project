@@ -172,6 +172,7 @@ async def login(
         device_name=user_data.device_name,
         ip_address=request.client.host if request.client else None,
         remember_me=user_data.remember_me,
+        app_id=app_id,
     )
 
     # CSRF 토큰 생성
@@ -279,6 +280,7 @@ async def login_form(
         device_name="Swagger UI",
         ip_address=request.client.host if request.client else None,
         remember_me=False,
+        app_id=app_id,
     )
 
     # Refresh Token을 HttpOnly 쿠키로 설정
