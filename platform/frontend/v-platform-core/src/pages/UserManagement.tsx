@@ -739,10 +739,10 @@ export default function UserManagement() {
 
       <div className="page-container space-y-section-gap">
         {/* 탭 바 */}
-        <div className="flex gap-1 border-b border-line">
+        <div className="flex gap-1 border-b border-line overflow-x-auto min-w-0">
           <button
             onClick={() => setActiveTab("users")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
               activeTab === "users"
                 ? "border-brand-600 text-brand-600"
                 : "border-transparent text-content-secondary hover:text-content-primary hover:border-line"
@@ -753,7 +753,7 @@ export default function UserManagement() {
           </button>
           <button
             onClick={() => setActiveTab("orgchart")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
               activeTab === "orgchart"
                 ? "border-brand-600 text-brand-600"
                 : "border-transparent text-content-secondary hover:text-content-primary hover:border-line"
