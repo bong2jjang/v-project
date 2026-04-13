@@ -61,8 +61,13 @@ interface TabsListProps {
 
 export function TabsList({ children, className = "" }: TabsListProps) {
   return (
-    <div className={`border-b border-line ${className}`}>
-      <nav className="flex space-x-4" aria-label="Tabs">
+    <div
+      className={`border-b border-line overflow-x-auto scrollbar-thin ${className}`}
+    >
+      <nav
+        className="flex space-x-4 min-w-max whitespace-nowrap"
+        aria-label="Tabs"
+      >
         {children}
       </nav>
     </div>
@@ -89,7 +94,7 @@ export function TabsTrigger({ value, children, icon }: TabsTriggerProps) {
       type="button"
       onClick={() => setActiveTab(value)}
       className={`
-        flex items-center gap-2 px-4 py-2 border-b-2 text-body-base font-medium transition-colors duration-normal
+        flex flex-shrink-0 items-center gap-2 px-4 py-2 border-b-2 text-body-base font-medium whitespace-nowrap transition-colors duration-normal
         ${
           isActive
             ? "border-brand-500 text-brand-600"
