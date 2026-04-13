@@ -500,44 +500,24 @@ table thead {
  * ===========================
  * Mobile Navbar Sidebar (Hamburger Drawer)
  * ===========================
- * Docusaurus의 .navbar-sidebar는 .navbar의 자식이지만 position:fixed로 뷰포트를
- * 차지해야 합니다. navbar에 transform/will-change가 걸리면 containing block이
- * navbar로 바뀌어 상단 메뉴가 탑바 안쪽에 갇히는 현상이 발생하므로,
- * 아래에서 드로어가 항상 풀스크린으로 뜨도록 명시적으로 잡아둡니다.
+ * 원래 버그: .navbar에 `will-change: transform`이 걸리면 브라우저가 navbar를
+ * stacking/containing block으로 승격시켜, position:fixed인 .navbar-sidebar가
+ * navbar 기준으로 위치하게 되어 상단 메뉴가 탑바 아래에 갇혔습니다.
+ * → 해결: .navbar의 will-change 제거 (상단 navbar 규칙 참조).
+ *
+ * 아래는 드로어/백드롭이 확실히 풀스크린을 덮도록 최소한만 강제합니다.
+ * Docusaurus 내부는 .navbar-sidebar__items를 가로 flex + transform으로 슬라이드
+ * 시키므로 items/brand의 레이아웃 속성(display, height, flex)은 건드리지 않습니다.
  */
 @media (max-width: 996px) {
   .navbar-sidebar {
-    position: fixed !important;
     top: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
     height: 100vh !important;
     height: 100dvh !important;
     max-height: none !important;
     z-index: 400 !important;
-    width: min(83%, 24rem);
-    display: flex;
-    flex-direction: column;
   }
 
-  .navbar-sidebar__brand {
-    flex: 0 0 auto;
-    height: auto;
-    min-height: 3.5rem;
-    padding: 0.5rem 1rem;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
-  }
-
-  .navbar-sidebar__items {
-    flex: 1 1 auto;
-    height: auto !important;
-    max-height: none !important;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-
-  /* 백드롭도 풀스크린으로 */
   .navbar-sidebar__backdrop,
   [class*="navbarSidebarBackdrop"] {
     top: 0 !important;
