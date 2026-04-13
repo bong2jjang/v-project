@@ -326,25 +326,26 @@ async def set_group_grants(
         .all()
     }
 
-    # 현재 앱 범위의 기존 grants만 삭제 (다른 앱의 grants는 유지)
-    existing_grants = (
-        db.query(PermissionGroupGrant)
-        .filter(PermissionGroupGrant.permission_group_id == group_id)
-        .all()
-    )
-    for g in existing_grants:
-        if g.menu_item_id in app_menu_ids:
-            db.delete(g)
-
+    # 입력 검증을 INSERT 전에 먼저 수행
     for item in req.grants:
         if item.access_level not in ("none", "read", "write"):
             raise HTTPException(400, f"잘못된 권한 수준입니다: {item.access_level}")
-        # 메뉴가 현재 앱 범위에 속하는지 검증
         if item.menu_item_id not in app_menu_ids:
             raise HTTPException(
                 400,
                 f"메뉴 ID {item.menu_item_id}은(는) 현재 앱에서 접근할 수 없습니다",
             )
+
+    # 현재 앱 범위의 기존 grants만 일괄 삭제 (다른 앱의 grants는 유지)
+    # bulk delete + flush로 INSERT 전에 DELETE가 DB에 반영되도록 보장
+    # (UNIQUE(permission_group_id, menu_item_id) 충돌 방지)
+    db.query(PermissionGroupGrant).filter(
+        PermissionGroupGrant.permission_group_id == group_id,
+        PermissionGroupGrant.menu_item_id.in_(app_menu_ids),
+    ).delete(synchronize_session=False)
+    db.flush()
+
+    for item in req.grants:
         grant = PermissionGroupGrant(
             permission_group_id=group_id,
             menu_item_id=item.menu_item_id,
