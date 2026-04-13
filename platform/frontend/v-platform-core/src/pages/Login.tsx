@@ -9,7 +9,6 @@ import { Input } from "../components/ui/Input";
 import { Alert } from "../components/ui/Alert";
 import { SSOButton } from "../components/auth/SSOButton";
 import { getSSOProviders, getSSOAuthorizeUrl } from "../api/auth";
-import { systemSettingsApi, type PublicBranding } from "../api/systemSettings";
 import type { SSOProviderInfo } from "../api/types";
 
 export default function Login() {
@@ -29,15 +28,6 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [ssoProviders, setSsoProviders] = useState<SSOProviderInfo[]>([]);
   const [ssoLoading, setSsoLoading] = useState(false);
-  const [branding, setBranding] = useState<PublicBranding | null>(null);
-
-  // 공개 브랜딩 조회 (인증 불필요)
-  useEffect(() => {
-    systemSettingsApi
-      .getPublicBranding()
-      .then(setBranding)
-      .catch(() => setBranding(null));
-  }, []);
 
   // SSO Provider 목록 조회 (404 시 조용히 무시 — 백엔드에 SSO 미설정)
   useEffect(() => {
@@ -156,29 +146,11 @@ export default function Login() {
       <div className="max-w-md w-full space-y-8">
         {/* 헤더 */}
         <div>
-          {branding?.app_logo_url && (
-            <div className="flex justify-center mb-4">
-              <img
-                src={branding.app_logo_url}
-                alt="Logo"
-                className="h-16 w-auto"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </div>
-          )}
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            {branding?.app_title ||
-              systemSettings?.app_title ||
-              appTitle ||
-              "v-platform"}
+            {appTitle || "v-platform"}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            {branding?.app_description ||
-              systemSettings?.app_description ||
-              appDescription ||
-              "로그인하여 계속하세요"}
+            {appDescription || "로그인하여 계속하세요"}
           </p>
         </div>
 

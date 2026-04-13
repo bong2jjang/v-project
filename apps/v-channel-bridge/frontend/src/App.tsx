@@ -63,7 +63,7 @@ function App() {
   return (
     <PlatformProvider config={{
       appName: "v-channel-bridge",
-      appTitle: "v-channel-bridge",
+      appTitle: "channel-bridge",
       appDescription: "Slack ↔ Teams 메시지 브리지",
     }}>
     <ThemeProvider>

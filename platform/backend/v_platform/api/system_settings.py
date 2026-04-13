@@ -4,7 +4,6 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from v_platform.core.database import get_db_session
@@ -17,44 +16,6 @@ from v_platform.schemas.system_settings import (
 from v_platform.utils.auth import get_current_user, require_permission
 
 router = APIRouter(prefix="/api/system-settings", tags=["system-settings"])
-
-
-class PublicBrandingResponse(BaseModel):
-    """인증 불필요한 브랜딩 정보 (로그인 페이지용)"""
-
-    app_title: str | None = None
-    app_description: str | None = None
-    app_logo_url: str | None = None
-
-
-@router.get("/branding", response_model=PublicBrandingResponse)
-async def get_public_branding(
-    request: Request,
-    db: Session = Depends(get_db_session),
-) -> PublicBrandingResponse:
-    """공개 브랜딩 정보 조회 (인증 불필요)
-
-    로그인/회원가입 페이지에서 앱 타이틀·설명·로고를 표시하기 위해 사용합니다.
-    """
-    app_id = request.app.state.app_id if hasattr(request.app.state, "app_id") else None
-
-    settings = None
-    if app_id:
-        settings = (
-            db.query(SystemSettings).filter(SystemSettings.app_id == app_id).first()
-        )
-    if not settings:
-        settings = (
-            db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
-        )
-    if not settings:
-        return PublicBrandingResponse()
-
-    return PublicBrandingResponse(
-        app_title=settings.app_title,
-        app_description=settings.app_description,
-        app_logo_url=settings.app_logo_url,
-    )
 
 
 @router.get("/", response_model=SystemSettingsResponse)

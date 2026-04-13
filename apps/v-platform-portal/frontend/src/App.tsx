@@ -67,8 +67,8 @@ function App() {
   return (
     <PlatformProvider config={{
       appName: "v-platform-portal",
-      appTitle: "v-platform Portal",
-      appDescription: "통합 앱 포탈",
+      appTitle: "v-platform-portal",
+      appDescription: "통합 관리 플랫폼",
     }}>
     <ThemeProvider>
       <BrowserRouter
