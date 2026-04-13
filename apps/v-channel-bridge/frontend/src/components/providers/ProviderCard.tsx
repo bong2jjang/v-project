@@ -46,9 +46,9 @@ export function ProviderCard({
 
   return (
     <div className="p-6 bg-surface-card border border-line rounded-lg hover:border-brand-500/30 transition-colors">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         {/* Provider 정보 */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <h3 className="text-lg font-semibold text-content-primary">
               {provider.name}
@@ -201,7 +201,7 @@ export function ProviderCard({
         </div>
 
         {/* 액션 버튼 */}
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-2 sm:ml-4">
           <button
             onClick={() => onTest(provider)}
             disabled={isTesting || !provider.enabled}

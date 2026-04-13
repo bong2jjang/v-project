@@ -111,7 +111,7 @@ export function Toast({
   return (
     <div
       className={`
-        relative w-[400px] max-w-full overflow-hidden
+        relative w-full sm:w-[400px] max-w-full overflow-hidden
         rounded-lg border shadow-elevation-high
         ${variant.bgColor} ${variant.borderColor}
         transition-all duration-300 ease-out

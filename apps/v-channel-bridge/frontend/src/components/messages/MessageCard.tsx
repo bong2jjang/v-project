@@ -436,7 +436,7 @@ export function MessageCard({ message }: MessageCardProps) {
         )}
 
       {/* ── Footer: 발신→수신 흐름 ── */}
-      <div className="flex items-center justify-between gap-4 text-body-xs pt-3 border-t border-line">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 text-body-xs pt-3 border-t border-line">
         {/* Route 흐름 */}
         <div className="flex items-center gap-1.5 text-content-secondary min-w-0">
           <PlatformBadge platform={sourcePlatform} />

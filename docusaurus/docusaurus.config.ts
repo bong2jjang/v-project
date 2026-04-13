@@ -110,7 +110,7 @@ const config: Config = {
     },
     navbar: {
       title: 'VMS Docs',
-      hideOnScroll: true,
+      hideOnScroll: false,
       logo: {
         alt: 'VMS Docs Logo',
         src: 'img/logo.png',

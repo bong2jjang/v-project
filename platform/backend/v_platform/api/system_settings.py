@@ -97,9 +97,9 @@ async def update_system_settings(
         settings = SystemSettings()
         db.add(settings)
 
-    # URL 검증
+    # URL 검증 (빈 문자열은 "미설정"으로 허용)
     if update.manual_url is not None:
-        if not (
+        if update.manual_url and not (
             update.manual_url.startswith("http://")
             or update.manual_url.startswith("https://")
         ):
@@ -114,6 +114,14 @@ async def update_system_settings(
 
     if update.default_start_page is not None:
         settings.default_start_page = update.default_start_page
+
+    # 앱 브랜딩
+    if update.app_title is not None:
+        settings.app_title = update.app_title or None
+    if update.app_description is not None:
+        settings.app_description = update.app_description or None
+    if update.app_logo_url is not None:
+        settings.app_logo_url = update.app_logo_url or None
 
     db.commit()
     db.refresh(settings)

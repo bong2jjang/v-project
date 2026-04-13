@@ -81,7 +81,7 @@ export function NotificationBell() {
           />
 
           {/* Popover */}
-          <div className="absolute right-0 bottom-full mb-2 z-50">
+          <div className="fixed sm:absolute right-4 sm:right-0 bottom-12 sm:bottom-full sm:mb-2 z-50">
             <NotificationPopover onClose={() => setIsOpen(false)} />
           </div>
         </>

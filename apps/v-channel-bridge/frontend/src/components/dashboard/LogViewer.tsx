@@ -127,7 +127,7 @@ export function LogViewer({ isServerReachable = true }: LogViewerProps) {
       <CardHeader>
         <div className="space-y-3">
           {/* Row 1: Title and Controls */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-1.5">
                 <CardTitle>
@@ -149,7 +149,7 @@ export function LogViewer({ isServerReachable = true }: LogViewerProps) {
                 브리지 서비스 실시간 로그 (오류, 경고, 메시지 전송 등)
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Filter Toggle */}
               <button
                 type="button"
@@ -175,7 +175,7 @@ export function LogViewer({ isServerReachable = true }: LogViewerProps) {
                       d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                     />
                   </svg>
-                  Filter
+                  <span className="hidden sm:inline">Filter</span>
                 </div>
               </button>
 
@@ -188,7 +188,7 @@ export function LogViewer({ isServerReachable = true }: LogViewerProps) {
               >
                 {LINE_OPTIONS.map((option) => (
                   <option key={option} value={option}>
-                    {option} lines
+                    {option}
                   </option>
                 ))}
               </select>
@@ -216,7 +216,7 @@ export function LogViewer({ isServerReachable = true }: LogViewerProps) {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Auto
+                  <span className="hidden sm:inline">Auto</span>
                 </div>
               </button>
 
@@ -332,13 +332,13 @@ export function LogViewer({ isServerReachable = true }: LogViewerProps) {
 
           {/* Row 2: Filters (collapsible) */}
           {showFilters && (
-            <div className="flex items-center gap-3 pt-2 border-t border-line-light">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t border-line-light">
               {/* Log Level Filter */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <label className="text-body-sm text-content-secondary font-medium">
                   Level:
                 </label>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap">
                   {LOG_LEVELS.map((level) => (
                     <button
                       key={level}

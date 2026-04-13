@@ -177,21 +177,28 @@ class TeamsSubscriptionManager:
             source = route.get("source", {})
             source_platform = source.get("platform")
             source_channel = source.get("channel_id", "")
+            targets = route.get("targets", [])
 
-            # Teams 소스 채널
+            # Teams 소스 채널: 활성(is_enabled=True) 타겟이 하나라도 있을 때만 구독
             if source_platform == "teams":
-                team_id, channel_id = self.teams_provider._parse_channel_ref(
-                    source_channel
-                )
-                if channel_id:
-                    key = self._make_channel_key(team_id, channel_id)
-                    if key not in seen:
-                        seen.add(key)
-                        channels.append((team_id, channel_id))
+                has_enabled_target = any(t.get("is_enabled", True) for t in targets)
+                if has_enabled_target:
+                    team_id, channel_id = self.teams_provider._parse_channel_ref(
+                        source_channel
+                    )
+                    if channel_id:
+                        key = self._make_channel_key(team_id, channel_id)
+                        if key not in seen:
+                            seen.add(key)
+                            channels.append((team_id, channel_id))
 
-            # 양방향 라우트의 Teams 타겟도 소스가 됨
-            for target in route.get("targets", []):
-                if target.get("platform") == "teams" and target.get("is_bidirectional"):
+            # 양방향 라우트의 Teams 타겟도 소스가 됨 (해당 타겟이 활성일 때만)
+            for target in targets:
+                if (
+                    target.get("platform") == "teams"
+                    and target.get("is_bidirectional")
+                    and target.get("is_enabled", True)
+                ):
                     target_channel = target.get("channel_id", "")
                     team_id, channel_id = self.teams_provider._parse_channel_ref(
                         target_channel

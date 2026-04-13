@@ -1369,7 +1369,7 @@ class TeamsProvider(BasePlatformProvider):
         try:
             from app.db import SessionLocal
             from app.models import Account
-            from app.api.auth_microsoft import get_delegated_token
+            from v_platform.api.auth_microsoft import get_delegated_token
 
             db = SessionLocal()
             try:

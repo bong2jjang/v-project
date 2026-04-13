@@ -81,7 +81,7 @@ export function Pagination({
   if (total <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between flex-wrap gap-2">
       {totalItems && perPage && (
         <div className="text-body-sm text-content-secondary">
           전체 {totalItems}건 중 {(current - 1) * perPage + 1}~
@@ -89,7 +89,7 @@ export function Pagination({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <NavButton
           direction="prev"
           onClick={() => onChange(current - 1)}

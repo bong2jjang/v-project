@@ -9,7 +9,8 @@
  */
 
 import { ReactNode, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Settings, User, KeyRound, Sparkles, LogOut } from "lucide-react";
 import { SidebarProvider, useSidebar } from "../hooks/useSidebar";
 import { Sidebar } from "./layout/Sidebar";
 import { TopBar } from "./layout/TopBar";
@@ -26,6 +27,8 @@ import { Divider } from "./ui/Divider";
 import { useAuthStore } from "../stores/auth";
 import { usePermissionStore } from "../stores/permission";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useTour } from "../hooks/useTour";
+import { getRoleDisplayName } from "../api/types";
 import { NotificationBell } from "./notifications/NotificationBell";
 import { ToastContainer } from "./notifications/ToastContainer";
 import { AnnouncementPopup } from "./notifications/AnnouncementPopup";
@@ -36,12 +39,23 @@ interface LayoutContentProps {
 
 function LayoutContent({ children }: LayoutContentProps) {
   const { actualState, isMobileOpen, closeMobile } = useSidebar();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { menus, isLoaded } = usePermissionStore();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { startMainTour } = useTour();
 
   // 전역 키보드 단축키
   useKeyboardShortcuts();
+
+  const handleMobileLogout = async () => {
+    closeMobile();
+    try {
+      await logout();
+    } finally {
+      navigate("/login");
+    }
+  };
 
   // 라우트 변경 시 모바일/오버플로 오버레이 자동 닫기
   useEffect(() => {
@@ -55,14 +69,19 @@ function LayoutContent({ children }: LayoutContentProps) {
   let mobileMainItems;
   let mobileAdminItems;
 
+  let mobileBottomItems: ReturnType<typeof categorizeMenus>["bottom"] = [];
+
   if (useServerMenus) {
     const categorized = categorizeMenus(menus);
     mobileMainItems = categorized.main;
     mobileAdminItems = categorized.admin;
+    mobileBottomItems = categorized.bottom;
   } else {
     mobileMainItems = mainNavItems.filter((item) => item.path !== "/settings");
     mobileAdminItems = filterNavItemsByRole(adminNavItems, user?.role);
   }
+
+  const mobileShowSettings = mobileBottomItems.length > 0 || !isLoaded;
 
   return (
     <div className="h-screen bg-surface-page flex flex-col overflow-hidden">
@@ -165,6 +184,85 @@ function LayoutContent({ children }: LayoutContentProps) {
                     </>
                   )}
                 </div>
+
+                {/* Bottom: Settings + User Actions */}
+                {user && (
+                  <div className="flex-shrink-0 border-t border-line">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-line">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-content-inverse font-medium text-body-base flex-shrink-0">
+                          {user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-body-sm font-medium text-content-primary truncate">
+                            {user.username}
+                          </p>
+                          <p className="text-caption text-content-secondary truncate">
+                            {user.email}
+                          </p>
+                          <p className="text-caption text-content-tertiary">
+                            {getRoleDisplayName(user.role)} 권한
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Settings Link */}
+                    {mobileShowSettings && (
+                      <Link
+                        to="/settings"
+                        onClick={closeMobile}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
+                      >
+                        <Settings className="w-5 h-5" />
+                        설정
+                      </Link>
+                    )}
+
+                    {/* User Action Buttons */}
+                    <button
+                      onClick={() => {
+                        closeMobile();
+                        navigate("/profile");
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
+                    >
+                      <User className="w-5 h-5" />
+                      프로필
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        closeMobile();
+                        navigate("/password-change");
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
+                    >
+                      <KeyRound className="w-5 h-5" />
+                      비밀번호 변경
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        closeMobile();
+                        startMainTour();
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors border-t border-line"
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      투어 다시 보기
+                    </button>
+
+                    <button
+                      onClick={handleMobileLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-status-danger hover:bg-status-danger-light transition-colors border-t border-line"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      로그아웃
+                    </button>
+                  </div>
+                )}
               </div>
             </aside>
           </>

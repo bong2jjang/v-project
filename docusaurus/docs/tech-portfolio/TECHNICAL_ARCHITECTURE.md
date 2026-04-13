@@ -529,14 +529,14 @@ sum by (app) (count_over_time({app=~"v-.*"} |= "ERROR" [5m]))
 
 | 알림 | 심각도 | 조건 | 평가 주기 |
 |------|--------|------|----------|
-| VMSBackendDown | CRITICAL | up{job="v-channel-bridge"} == 0 | 1분 |
-| VMSHighErrorRate | CRITICAL | 5xx 에러율 > 5% (5분 윈도) | 30초 |
-| VMSSlowResponse | WARNING | P95 응답시간 > 2초 | 30초 |
-| VMSBridgeHighMessageFailure | WARNING | 메시지 에러 > 0.1/s | 30초 |
-| ContainerHighCPU | WARNING | CPU > 80% (5분 지속) | 1분 |
-| ContainerHighMemory | WARNING | Memory > 512MB | 1분 |
-| ContainerRestarting | WARNING | 재시작 > 3회 / 1시간 | 즉시 |
-| HostDiskSpaceLow | CRITICAL | 디스크 여유 < 10% | 1분 |
+| VMSBackendDown | CRITICAL | `up{job="v-channel-bridge"} == 0` | 1분 |
+| VMSHighErrorRate | CRITICAL | 5xx 에러율 `> 5%` (5분 윈도) | 30초 |
+| VMSSlowResponse | WARNING | P95 응답시간 `> 2초` | 30초 |
+| VMSBridgeHighMessageFailure | WARNING | 메시지 에러 `> 0.1/s` | 30초 |
+| ContainerHighCPU | WARNING | CPU `> 80%` (5분 지속) | 1분 |
+| ContainerHighMemory | WARNING | Memory `> 512MB` | 1분 |
+| ContainerRestarting | WARNING | 재시작 `> 3회 / 1시간` | 즉시 |
+| HostDiskSpaceLow | CRITICAL | 디스크 여유 `< 10%` | 1분 |
 | HostHighCPU | WARNING | CPU > 85% (10분 지속) | 1분 |
 
 ### 4.8 통합 이벤트 브로드캐스터 (실시간)

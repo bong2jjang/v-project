@@ -35,14 +35,14 @@ export const RealtimeMetricsChart = () => {
     <Card>
       <CardBody>
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-brand-primary/10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex-shrink-0 p-2 rounded-lg bg-brand-primary/10">
               <TrendingUp className="w-5 h-5 text-brand-primary" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-heading-md font-semibold text-content-primary">
+                <h3 className="text-heading-md font-semibold text-content-primary truncate">
                   실시간 메시지 처리량
                 </h3>
                 <InfoTooltip
@@ -52,7 +52,7 @@ export const RealtimeMetricsChart = () => {
                   side="bottom"
                 />
               </div>
-              <p className="text-body-sm text-content-tertiary">
+              <p className="text-body-sm text-content-tertiary truncate">
                 최근{" "}
                 {timeRange === "1h"
                   ? "1시간"
@@ -64,7 +64,7 @@ export const RealtimeMetricsChart = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* 메시지 히스토리 바로가기 */}
             <button
               onClick={() => navigate("/messages")}
@@ -75,7 +75,7 @@ export const RealtimeMetricsChart = () => {
               title="메시지 히스토리 페이지로 이동"
             >
               <ExternalLink className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-              <span>히스토리</span>
+              <span className="hidden sm:inline">히스토리</span>
             </button>
 
             {/* 시간 범위 선택 */}

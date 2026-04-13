@@ -125,7 +125,8 @@ main>div {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   background-color: #ffffff !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  will-change: transform;
+  /* NOTE: 모바일에서 navbar-sidebar(fixed 자식)가 navbar에 종속되어 위치가
+     잘못 잡히는 문제를 피하려면 navbar에 transform/will-change를 걸지 않아야 함. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -493,6 +494,57 @@ table thead {
   color: var(--ifm-color-primary);
   font-weight: 600;
   border-left-color: var(--ifm-color-primary);
+}
+
+/*
+ * ===========================
+ * Mobile Navbar Sidebar (Hamburger Drawer)
+ * ===========================
+ * Docusaurus의 .navbar-sidebar는 .navbar의 자식이지만 position:fixed로 뷰포트를
+ * 차지해야 합니다. navbar에 transform/will-change가 걸리면 containing block이
+ * navbar로 바뀌어 상단 메뉴가 탑바 안쪽에 갇히는 현상이 발생하므로,
+ * 아래에서 드로어가 항상 풀스크린으로 뜨도록 명시적으로 잡아둡니다.
+ */
+@media (max-width: 996px) {
+  .navbar-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: none !important;
+    z-index: 400 !important;
+    width: min(83%, 24rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .navbar-sidebar__brand {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 3.5rem;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .navbar-sidebar__items {
+    flex: 1 1 auto;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* 백드롭도 풀스크린으로 */
+  .navbar-sidebar__backdrop,
+  [class*="navbarSidebarBackdrop"] {
+    top: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 399 !important;
+  }
 }
 
 /*

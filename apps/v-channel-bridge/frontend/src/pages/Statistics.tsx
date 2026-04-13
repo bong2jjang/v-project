@@ -232,7 +232,7 @@ const Statistics = () => {
           <>
             <div className="flex items-center gap-2 px-3 py-2 bg-white text-brand-700 rounded-button dark:bg-brand-600 dark:text-content-inverse">
               <Zap className="w-4 h-4" />
-              <span className="text-body-base font-medium">실시간</span>
+              <span className="hidden sm:inline text-body-base font-medium">실시간</span>
               <Toggle
                 checked={realtimeEnabled}
                 onChange={setRealtimeEnabled}
@@ -252,7 +252,7 @@ const Statistics = () => {
               <RefreshCw
                 className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
               />
-              새로고침
+              <span className="hidden sm:inline">새로고침</span>
             </button>
           </>
         }

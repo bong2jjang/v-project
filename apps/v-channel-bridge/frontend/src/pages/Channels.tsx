@@ -29,7 +29,7 @@ const Channels = () => {
         title="채널 관리"
         description="Slack ↔ Teams 양방향 메시지 라우팅 설정"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isAdmin && (
               <button
                 type="button"
@@ -55,7 +55,7 @@ const Channels = () => {
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                Provider 설정
+                <span className="hidden sm:inline">Provider 설정</span>
               </button>
             )}
             <button
@@ -78,7 +78,7 @@ const Channels = () => {
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
-              Route 추가
+              <span className="hidden sm:inline">Route 추가</span>
             </button>
           </div>
         }

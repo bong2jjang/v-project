@@ -24,6 +24,10 @@ from app.schemas.account_crud import (
 )
 from app.schemas.feature_catalog import FeatureCatalogResponse, build_catalog_response
 from app.services.notification_service import NotificationService
+from app.services.provider_sync import (
+    sync_account_provider,
+    sync_provider_for_platform,
+)
 from app.utils.auth import require_permission
 
 router = APIRouter(prefix="/api/accounts-db", tags=["accounts-db"])
@@ -332,6 +336,14 @@ async def create_account(
             f"(valid={is_valid})"
         )
 
+        # 브리지 Provider 자동 재동기화 (실패해도 계정 생성은 성공)
+        try:
+            await sync_account_provider(db, account)
+        except Exception as sync_err:
+            logger.warning(
+                f"Failed to sync provider after account create: {sync_err}"
+            )
+
         # 성공 알림
         await NotificationService.notify_success(
             category="accounts",
@@ -465,6 +477,14 @@ async def update_account(
             f"(valid={is_valid})"
         )
 
+        # 브리지 Provider 자동 재동기화 (실패해도 계정 수정은 성공)
+        try:
+            await sync_account_provider(db, account)
+        except Exception as sync_err:
+            logger.warning(
+                f"Failed to sync provider after account update: {sync_err}"
+            )
+
         # 성공 알림
         await NotificationService.notify_success(
             category="accounts",
@@ -552,6 +572,15 @@ async def delete_account(
 
         logger.info(f"Account '{account_name}' deleted by user {current_user.username}")
 
+        # 브리지 Provider 자동 재동기화 — 해당 플랫폼에 다른 유효 계정이 남아
+        # 있으면 교체, 없으면 Provider 제거
+        try:
+            await sync_provider_for_platform(db, account_platform)
+        except Exception as sync_err:
+            logger.warning(
+                f"Failed to sync provider after account delete: {sync_err}"
+            )
+
         # 성공 알림
         await NotificationService.notify_success(
             category="accounts",
@@ -613,6 +642,14 @@ async def validate_account_endpoint(
             f"Account '{account.name}' validated by user {current_user.username} "
             f"(valid={is_valid})"
         )
+
+        # 유효성 상태 변경에 따라 Provider 재동기화
+        try:
+            await sync_account_provider(db, account)
+        except Exception as sync_err:
+            logger.warning(
+                f"Failed to sync provider after account validate: {sync_err}"
+            )
 
         return AccountResponse.from_orm_with_masking(account)
 

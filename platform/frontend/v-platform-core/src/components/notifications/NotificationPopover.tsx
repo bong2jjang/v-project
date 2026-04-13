@@ -71,9 +71,9 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
   };
 
   return (
-    <div className="w-[400px] bg-surface-card border border-line rounded-lg shadow-elevation-high">
+    <div className="w-[calc(100vw-2rem)] sm:w-[400px] max-h-[calc(100dvh-6rem)] bg-surface-card border border-line rounded-lg shadow-elevation-high flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-line">
+      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-line">
         <h3 className="text-lg font-semibold text-content-primary">알림</h3>
         <button
           onClick={markAllAsRead}
@@ -86,7 +86,7 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-1 p-2 border-b border-line overflow-x-auto">
+      <div className="flex-shrink-0 flex gap-1 p-2 border-b border-line overflow-x-auto">
         {tabs.map((tab) => {
           const count = getCount(tab.value);
           const isActive = activeFilter === tab.value;
@@ -127,7 +127,7 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
       </div>
 
       {/* Notification List */}
-      <div className="max-h-[500px] overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {filteredNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-content-secondary mb-2">알림이 없습니다</p>
@@ -150,7 +150,7 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
 
       {/* Footer */}
       {visibleNotifications.length > 0 && (
-        <div className="flex items-center justify-between p-3 border-t border-line">
+        <div className="flex-shrink-0 flex items-center justify-between p-3 border-t border-line">
           <span className="text-sm text-content-tertiary">
             총 {visibleNotifications.length}개의 알림
           </span>

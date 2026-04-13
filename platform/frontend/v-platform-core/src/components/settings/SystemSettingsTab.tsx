@@ -31,7 +31,11 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
   const [appTitle, setAppTitle] = useState(settings?.app_title ?? "");
   const [appDescription, setAppDescription] = useState(settings?.app_description ?? "");
   const [appLogoUrl, setAppLogoUrl] = useState(settings?.app_logo_url ?? "");
-  const [isDirty, setIsDirty] = useState(false);
+
+  // 섹션별 dirty 상태 (카드마다 독립적으로 관리)
+  const [brandingDirty, setBrandingDirty] = useState(false);
+  const [startPageDirty, setStartPageDirty] = useState(false);
+  const [manualDirty, setManualDirty] = useState(false);
 
   // 시스템에서 사용 가능한 모든 페이지 목록 (menu_group 및 외부 링크 제외)
   const pageOptions = useMemo(() => {
@@ -61,42 +65,66 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
     }
   }, [settings]);
 
-  const handleSave = async () => {
+  const notifySaved = (label: string) => {
+    addToast({
+      id: `system-settings-saved-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      severity: "success",
+      category: "system",
+      title: "설정 저장 완료",
+      message: `${label} 설정이 저장되었습니다.`,
+      source: "system_settings",
+      dismissible: true,
+      persistent: false,
+      read: false,
+    });
+  };
+
+  const handleSaveBranding = async () => {
+    try {
+      await updateSettings({
+        app_title: appTitle,
+        app_description: appDescription,
+        app_logo_url: appLogoUrl,
+      });
+      notifySaved("앱 브랜딩");
+      setBrandingDirty(false);
+    } catch {
+      // Error handled by store
+    }
+  };
+
+  const handleSaveStartPage = async () => {
+    try {
+      await updateSettings({ default_start_page: defaultStartPage });
+      notifySaved("기본 시작 페이지");
+      setStartPageDirty(false);
+    } catch {
+      // Error handled by store
+    }
+  };
+
+  const handleSaveManual = async () => {
     try {
       await updateSettings({
         manual_enabled: manualEnabled,
         manual_url: manualUrl,
-        default_start_page: defaultStartPage,
-        app_title: appTitle || undefined,
-        app_description: appDescription || undefined,
-        app_logo_url: appLogoUrl || undefined,
       });
-      addToast({
-        id: `system-settings-saved-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        severity: "success",
-        category: "system",
-        title: "설정 저장 완료",
-        message: "시스템 설정이 저장되었습니다.",
-        source: "system_settings",
-        dismissible: true,
-        persistent: false,
-        read: false,
-      });
-      setIsDirty(false);
-    } catch (err) {
+      notifySaved("메뉴얼");
+      setManualDirty(false);
+    } catch {
       // Error handled by store
     }
   };
 
   const handleManualEnabledChange = (enabled: boolean) => {
     setManualEnabled(enabled);
-    setIsDirty(true);
+    setManualDirty(true);
   };
 
   const handleManualUrlChange = (url: string) => {
     setManualUrl(url);
-    setIsDirty(true);
+    setManualDirty(true);
   };
 
   return (
@@ -128,7 +156,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                 <input
                   type="text"
                   value={appTitle}
-                  onChange={(e) => { setAppTitle(e.target.value); setIsDirty(true); }}
+                  onChange={(e) => { setAppTitle(e.target.value); setBrandingDirty(true); }}
                   disabled={readOnly}
                   placeholder="예: v-channel-bridge"
                   className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -146,7 +174,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                 <input
                   type="text"
                   value={appDescription}
-                  onChange={(e) => { setAppDescription(e.target.value); setIsDirty(true); }}
+                  onChange={(e) => { setAppDescription(e.target.value); setBrandingDirty(true); }}
                   disabled={readOnly}
                   placeholder="예: Slack ↔ Teams 메시지 브리지"
                   className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -164,7 +192,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                 <input
                   type="text"
                   value={appLogoUrl}
-                  onChange={(e) => { setAppLogoUrl(e.target.value); setIsDirty(true); }}
+                  onChange={(e) => { setAppLogoUrl(e.target.value); setBrandingDirty(true); }}
                   disabled={readOnly}
                   placeholder="https://example.com/logo.svg"
                   className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -182,8 +210,8 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
               {/* 저장 버튼 */}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
-                  onClick={handleSave}
-                  disabled={readOnly || !isDirty || isLoading}
+                  onClick={handleSaveBranding}
+                  disabled={readOnly || !brandingDirty || isLoading}
                   variant="primary"
                   className="flex items-center gap-2"
                 >
@@ -220,7 +248,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                   value={defaultStartPage}
                   onChange={(e) => {
                     setDefaultStartPage(e.target.value);
-                    setIsDirty(true);
+                    setStartPageDirty(true);
                   }}
                   disabled={readOnly}
                   className="
@@ -255,8 +283,8 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
               {/* 저장 버튼 */}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
-                  onClick={handleSave}
-                  disabled={readOnly || !isDirty || isLoading}
+                  onClick={handleSaveStartPage}
+                  disabled={readOnly || !startPageDirty || isLoading}
                   variant="primary"
                   className="flex items-center gap-2"
                 >
@@ -337,8 +365,8 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
               {/* 저장 버튼 */}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
-                  onClick={handleSave}
-                  disabled={readOnly || !isDirty || isLoading}
+                  onClick={handleSaveManual}
+                  disabled={readOnly || !manualDirty || isLoading}
                   variant="primary"
                   className="flex items-center gap-2"
                 >

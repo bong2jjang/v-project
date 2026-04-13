@@ -218,7 +218,7 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
               }`}
             >
               {/* ── Badge row ── */}
-              <div className="flex items-center gap-2 px-4 pt-3 pb-0">
+              <div className="flex items-center flex-wrap gap-2 px-4 pt-3 pb-0">
                 {/* Direction badge */}
                 <span
                   className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${

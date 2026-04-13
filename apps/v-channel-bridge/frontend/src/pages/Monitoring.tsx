@@ -127,11 +127,11 @@ export default function Monitoring() {
             </div>
 
             {/* 새로고침 버튼 */}
-            <div className="flex items-end">
+            <div className="flex items-end w-full md:w-auto">
               <button
                 onClick={refreshHealth}
                 disabled={isLoading}
-                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                className="w-full md:w-auto px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
               >
                 <RefreshCw
                   className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}

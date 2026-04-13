@@ -122,7 +122,7 @@ export function ProviderList({
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-heading-md text-content-primary mb-1">
             플랫폼 연동
@@ -131,12 +131,12 @@ export function ProviderList({
             Slack 및 Teams 연동 설정 관리
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => fetchProviders()}>
             <RefreshCw
               className={`w-4 h-4 mr-1 ${isLoading ? "animate-spin" : ""}`}
             />
-            새로고침
+            <span className="hidden sm:inline">새로고침</span>
           </Button>
           <Button
             variant="primary"
