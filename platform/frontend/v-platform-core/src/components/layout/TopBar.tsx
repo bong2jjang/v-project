@@ -321,17 +321,28 @@ export function TopBar() {
               className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer"
               title="시작 페이지로 이동"
             >
-              <div className="flex items-center justify-center w-7 h-7 bg-brand-600 rounded-lg shadow-sm">
-                <svg
-                  className="w-4 h-4 text-content-inverse"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                </svg>
-              </div>
+              {settings?.app_logo_url ? (
+                <img
+                  src={settings.app_logo_url}
+                  alt="Logo"
+                  className="h-7 w-auto rounded-lg"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-center w-7 h-7 bg-brand-600 rounded-lg shadow-sm">
+                  <svg
+                    className="w-4 h-4 text-content-inverse"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                  </svg>
+                </div>
+              )}
               <span className="text-body-sm font-semibold text-content-primary">
-                {appTitle || "v-platform"}
+                {settings?.app_title || appTitle || "v-platform"}
               </span>
             </button>
           </div>

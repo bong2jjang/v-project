@@ -24,6 +24,12 @@ export interface SystemSettingsUpdate {
   app_logo_url?: string;
 }
 
+export interface PublicBranding {
+  app_title?: string | null;
+  app_description?: string | null;
+  app_logo_url?: string | null;
+}
+
 export const systemSettingsApi = {
   /**
    * 시스템 설정 조회
@@ -44,6 +50,16 @@ export const systemSettingsApi = {
     const response = await apiClient.put<SystemSettings>(
       "/api/system-settings/",
       update,
+    );
+    return response.data;
+  },
+
+  /**
+   * 공개 브랜딩 조회 (인증 불필요) - 로그인 페이지용
+   */
+  getPublicBranding: async (): Promise<PublicBranding> => {
+    const response = await apiClient.get<PublicBranding>(
+      "/api/system-settings/branding",
     );
     return response.data;
   },
