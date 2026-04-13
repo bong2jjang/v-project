@@ -197,12 +197,18 @@ async def sso_callback(
             role=user.role.value if isinstance(user.role, UserRole) else user.role,
         )
 
+        sso_app_id = (
+            getattr(request.app.state, "app_id", None)
+            if hasattr(request.app, "state")
+            else None
+        )
         refresh_token = TokenService.create_refresh_token(
             db=db,
             user_id=user.id,
             device_fingerprint=f"sso_{provider}",
             device_name=f"SSO ({sso.get_display_name()})",
             ip_address=request.client.host if request.client else None,
+            app_id=sso_app_id,
         )
 
         # CSRF 토큰 생성
