@@ -66,7 +66,7 @@ function App() {
   return (
     <PlatformProvider config={{
       appName: "v-platform-template",
-      appTitle: "v-platform",
+      appTitle: "v-platform-template",
       appDescription: "플랫폼 템플릿 앱",
     }}>
     <ThemeProvider>
