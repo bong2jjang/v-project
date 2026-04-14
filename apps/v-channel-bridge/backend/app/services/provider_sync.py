@@ -80,7 +80,9 @@ async def sync_provider_for_platform(db: Session, platform: str) -> Optional[str
     """
     bridge = get_bridge()
     if not bridge:
-        logger.debug("Bridge not initialized; skipping provider sync", platform=platform)
+        logger.debug(
+            "Bridge not initialized; skipping provider sync", platform=platform
+        )
         return None
 
     account = (

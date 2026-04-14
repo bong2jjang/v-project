@@ -340,9 +340,7 @@ async def create_account(
         try:
             await sync_account_provider(db, account)
         except Exception as sync_err:
-            logger.warning(
-                f"Failed to sync provider after account create: {sync_err}"
-            )
+            logger.warning(f"Failed to sync provider after account create: {sync_err}")
 
         # 성공 알림
         await NotificationService.notify_success(
@@ -481,9 +479,7 @@ async def update_account(
         try:
             await sync_account_provider(db, account)
         except Exception as sync_err:
-            logger.warning(
-                f"Failed to sync provider after account update: {sync_err}"
-            )
+            logger.warning(f"Failed to sync provider after account update: {sync_err}")
 
         # 성공 알림
         await NotificationService.notify_success(
@@ -577,9 +573,7 @@ async def delete_account(
         try:
             await sync_provider_for_platform(db, account_platform)
         except Exception as sync_err:
-            logger.warning(
-                f"Failed to sync provider after account delete: {sync_err}"
-            )
+            logger.warning(f"Failed to sync provider after account delete: {sync_err}")
 
         # 성공 알림
         await NotificationService.notify_success(

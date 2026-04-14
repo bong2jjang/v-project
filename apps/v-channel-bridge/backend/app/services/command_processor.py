@@ -327,7 +327,8 @@ class CommandProcessor:
 
             return self._create_response(
                 message,
-                f"✅ VMS Channel Bridge 작동 중\n" f"🌉 {providers_count}개 Provider 연결됨",
+                f"✅ VMS Channel Bridge 작동 중\n"
+                f"🌉 {providers_count}개 Provider 연결됨",
             )
         else:
             return self._create_response(message, "⚠️ 브리지가 초기화되지 않았습니다.")
