@@ -2,450 +2,320 @@
 id: monitoring-setup
 title: 모니터링 설정 가이드
 sidebar_position: 3
-tags: [guide, admin]
+tags: [guide, admin, monitoring, prometheus, grafana]
 ---
 
 # 모니터링 설정 가이드
 
 ## 개요
 
-VMS Channel Bridge 프로덕션 환경을 위한 종합 모니터링 시스템 구축 가이드입니다.
+v-project는 Prometheus, Grafana, Promtail, Loki를 사용하여 메트릭 수집, 시각화, 로그 관리를 수행합니다. 이 문서에서는 각 모니터링 컴포넌트의 설정 방법과 알림 규칙을 설명합니다.
 
-이 가이드는 다음 모니터링 스택을 다룹니다:
-- **Prometheus**: 메트릭 수집 및 저장
-- **Grafana**: 메트릭 시각화 및 대시보드
-- **Loki**: 로그 수집 및 분석
-- **Promtail**: 로그 수집 에이전트
-- **cAdvisor**: 컨테이너 메트릭 수집
-- **Node Exporter**: 호스트 메트릭 수집
-
-## 아키텍처
+### 모니터링 아키텍처
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Grafana UI                            │
-│                    (시각화 및 대시보드)                        │
-└────────────────┬────────────────────────────┬────────────────┘
-                 │                            │
-                 │ 쿼리                       │ 쿼리
-                 ↓                            ↓
-        ┌────────────────┐          ┌────────────────┐
-        │  Prometheus    │          │      Loki      │
-        │  (메트릭 DB)    │          │    (로그 DB)    │
-        └────────┬───────┘          └────────┬───────┘
-                 ↑                            ↑
-                 │ 스크레이핑                 │ 푸시
-                 │                            │
-    ┌────────────┴────────────┐      ┌───────┴────────┐
-    ↓            ↓            ↓      ↓                ↓
-┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐
-│Backend │  │Frontend│  │cAdvisor│  │Promtail│  │  Node  │
-│        │  │        │  │        │  │        │  │Exporter│
-└────────┘  └────────┘  └────────┘  └────────┘  └────────┘
+┌──────────────┐   scrape    ┌────────────┐   query    ┌──────────┐
+│ Backend Apps │ ──────────→ │ Prometheus │ ←───────── │ Grafana  │
+│ /api/metrics │   (15s)     │  :9090     │            │  :3001   │
+└──────────────┘             └────────────┘            └──────────┘
+                                                            ↑
+┌──────────────┐   push      ┌────────────┐   query         │
+│ Docker Logs  │ ──────────→ │   Loki     │ ────────────────┘
+│ (JSON)       │  Promtail   │  :3100     │
+└──────────────┘             └────────────┘
 ```
 
-## 1. Docker Compose 설정
+| 컴포넌트 | 역할 | 포트 |
+|----------|------|------|
+| Prometheus | 메트릭 수집 및 저장, 알림 규칙 평가 | 9090 |
+| Grafana | 대시보드 시각화 | 3001 |
+| Loki | 로그 저장소 | 3100 |
+| Promtail | Docker 컨테이너 로그 수집 → Loki 전송 | 9080 |
+| cAdvisor | 컨테이너 리소스 메트릭 수집 | 8080 |
+| Node Exporter | 호스트 시스템 메트릭 수집 | 9100 |
 
-### 1.1 모니터링 서비스 추가
+---
 
-`docker-compose.monitoring.yml` 생성:
+## Prometheus 메트릭
+
+### 애플리케이션 메트릭 엔드포인트
+
+각 백엔드 앱은 `GET /api/metrics` 엔드포인트를 통해 Prometheus 형식의 메트릭을 노출합니다.
+
+```bash
+# v-channel-bridge 메트릭 확인
+curl http://127.0.0.1:8000/api/metrics
+
+# v-platform-template 메트릭 확인
+curl http://127.0.0.1:8002/api/metrics
+```
+
+### 등록된 메트릭 목록
+
+v-platform이 기본 제공하는 메트릭은 다음과 같습니다.
+
+#### HTTP 메트릭
+
+| 메트릭 | 타입 | 레이블 | 설명 |
+|--------|------|--------|------|
+| `http_requests_total` | Counter | `method`, `endpoint`, `status` | 전체 HTTP 요청 수 |
+| `http_request_duration_seconds` | Histogram | `method`, `endpoint` | HTTP 요청 처리 시간 (초) |
+
+#### WebSocket 메트릭
+
+| 메트릭 | 타입 | 설명 |
+|--------|------|------|
+| `websocket_connections` | Gauge | 현재 활성 WebSocket 연결 수 |
+
+#### 메시지 메트릭
+
+| 메트릭 | 타입 | 레이블 | 설명 |
+|--------|------|--------|------|
+| `message_count_total` | Counter | `channel`, `direction` | 처리된 전체 메시지 수 |
+
+#### 채널 메트릭
+
+| 메트릭 | 타입 | 레이블 | 설명 |
+|--------|------|--------|------|
+| `channel_status` | Gauge | `slack_channel`, `teams_channel` | 채널 활성 상태 (1=활성, 0=비활성) |
+
+#### 사용자 메트릭
+
+| 메트릭 | 타입 | 레이블 | 설명 |
+|--------|------|--------|------|
+| `user_login_total` | Counter | `role` | 전체 로그인 횟수 (역할별) |
+| `user_active` | Gauge | - | 현재 활성 사용자 수 |
+
+### Prometheus 설정 (`prometheus.yml`)
+
+설정 파일 위치: `monitoring/prometheus/prometheus.yml`
 
 ```yaml
-version: '3.8'
-
-services:
-  # Prometheus - 메트릭 수집 및 저장
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus_data:/prometheus
-    restart: unless-stopped
-    networks:
-      - vms-channel-bridge-network
-
-  # Grafana - 시각화 및 대시보드
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-      - GF_SERVER_ROOT_URL=https://your-domain.com/grafana
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-    networks:
-      - vms-channel-bridge-network
-
-  # Loki - 로그 수집 및 저장
-  loki:
-    image: grafana/loki:latest
-    container_name: loki
-    command: -config.file=/etc/loki/loki-config.yml
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
-      - loki_data:/loki
-    restart: unless-stopped
-    networks:
-      - vms-channel-bridge-network
-
-  # Promtail - 로그 수집 에이전트
-  promtail:
-    image: grafana/promtail:latest
-    container_name: promtail
-    command: -config.file=/etc/promtail/promtail-config.yml
-    volumes:
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - loki
-    restart: unless-stopped
-    networks:
-      - vms-channel-bridge-network
-
-  # cAdvisor - 컨테이너 메트릭 수집
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
-    ports:
-      - "8081:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
-    privileged: true
-    devices:
-      - /dev/kmsg
-    restart: unless-stopped
-    networks:
-      - vms-channel-bridge-network
-
-  # Node Exporter - 호스트 메트릭 수집
-  node_exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--path.rootfs=/rootfs'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    restart: unless-stopped
-    networks:
-      - vms-channel-bridge-network
-
-volumes:
-  prometheus_data:
-  grafana_data:
-  loki_data:
-
-networks:
-  vms-channel-bridge-network:
-    name: vms-channel-bridge_vms-channel-bridge-network
-    external: true
-```
-
-## 2. Prometheus 설정
-
-### 2.1 Prometheus 설정 파일
-
-`monitoring/prometheus/prometheus.yml`:
-
-```yaml
-# Prometheus 글로벌 설정
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: 'vms-channel-bridge'
-    environment: 'production'
+    project: 'v-project'
+    environment: 'development'
 
-# 알림 규칙 파일
 rule_files:
   - '/etc/prometheus/alerts.yml'
 
-# Alertmanager 설정 (선택사항)
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets: ['alertmanager:9093']
-
-# 메트릭 수집 대상
 scrape_configs:
   # Prometheus 자체 모니터링
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # Backend API 메트릭
-  - job_name: 'backend'
+  # v-platform 앱 메트릭 (멀티앱 지원)
+  - job_name: 'v-platform-apps'
     static_configs:
-      - targets: ['backend:8000']
-    metrics_path: '/metrics'
+      - targets:
+          - 'backend:8000'            # v-channel-bridge
+          - 'template-backend:8000'   # v-platform-template
+          # 새 앱 추가 시 여기에 target 추가
+    metrics_path: '/api/metrics'
+    scrape_interval: 15s
 
-  # cAdvisor - 컨테이너 메트릭
+  # cAdvisor - 컨테이너 리소스 메트릭
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
 
-  # Node Exporter - 호스트 메트릭
+  # Node Exporter - 호스트 시스템 메트릭
   - job_name: 'node_exporter'
     static_configs:
       - targets: ['node_exporter:9100']
 ```
 
-### 2.2 알림 규칙
+:::tip 새 앱 추가 시
+새로운 v-platform 앱을 추가할 때는 `v-platform-apps` job의 `targets` 목록에 해당 앱의 백엔드 서비스명과 포트를 추가하세요. Docker Compose 네트워크 내부에서는 서비스 이름으로 접근합니다.
+:::
 
-`monitoring/prometheus/alerts.yml`:
+---
+
+## 알림 규칙
+
+설정 파일 위치: `monitoring/prometheus/alerts.yml`
+
+Prometheus는 30초 간격으로 알림 규칙을 평가합니다.
+
+### 서비스 알림 (`vms_service_alerts`)
+
+| 알림 | 조건 | 지속 시간 | 심각도 |
+|------|------|----------|--------|
+| `VMSBackendDown` | `up{job="vms-backend"} == 0` | 1분 | critical |
+| `VMSHighErrorRate` | 5xx 에러율 > 5% | 5분 | critical |
+| `VMSSlowResponse` | P95 응답시간 > 2초 | 5분 | warning |
+| `VMSBridgeHighMessageFailure` | 메시지 처리 에러 > 0.1/s | 2분 | warning |
+
+#### VMSBackendDown
+
+백엔드 서비스가 1분 이상 응답하지 않으면 발생합니다.
 
 ```yaml
-groups:
-  # 컨테이너 상태 알림
-  - name: container_alerts
-    interval: 30s
-    rules:
-      - alert: ContainerDown
-        expr: up{job=~"backend|frontend|backend"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "컨테이너 다운: {{ $labels.job }}"
-          description: "{{ $labels.job }} 컨테이너가 1분 이상 응답하지 않습니다."
-
-      - alert: HighCPUUsage
-        expr: rate(container_cpu_usage_seconds_total{name=~"vms-.*"}[5m]) > 0.8
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "높은 CPU 사용률: {{ $labels.name }}"
-          description: "{{ $labels.name }} 컨테이너의 CPU 사용률이 80%를 초과했습니다."
-
-      - alert: HighMemoryUsage
-        expr: (container_memory_usage_bytes{name=~"vms-.*"} / container_spec_memory_limit_bytes{name=~"vms-.*"}) > 0.9
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "높은 메모리 사용률: {{ $labels.name }}"
-          description: "{{ $labels.name }} 컨테이너의 메모리 사용률이 90%를 초과했습니다."
-
-  # 디스크 공간 알림
-  - name: disk_alerts
-    interval: 1m
-    rules:
-      - alert: DiskSpaceLow
-        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "디스크 공간 부족"
-          description: "루트 파일시스템의 여유 공간이 10% 미만입니다."
-
-  # API 응답 시간 알림
-  - name: api_alerts
-    interval: 30s
-    rules:
-      - alert: SlowAPIResponse
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "느린 API 응답"
-          description: "API 응답 시간의 95 percentile이 1초를 초과했습니다."
-
-      - alert: HighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "높은 에러율"
-          description: "API 에러율이 5%를 초과했습니다."
+- alert: VMSBackendDown
+  expr: up{job="vms-backend"} == 0
+  for: 1m
+  labels:
+    severity: critical
+    service: backend
+  annotations:
+    summary: "VMS 백엔드 다운"
+    description: "v-channel-bridge 백엔드가 다운되었습니다. (1분 이상 응답 없음)"
 ```
 
-## 3. Loki 설정
+#### VMSHighErrorRate
 
-### 3.1 Loki 설정 파일
-
-`monitoring/loki/loki-config.yml`:
+5분간 5xx 에러 비율이 전체 요청의 5%를 초과하면 발생합니다.
 
 ```yaml
-auth_enabled: false
-
-server:
-  http_listen_port: 3100
-  grpc_listen_port: 9096
-
-common:
-  path_prefix: /loki
-  storage:
-    filesystem:
-      chunks_directory: /loki/chunks
-      rules_directory: /loki/rules
-  replication_factor: 1
-  ring:
-    instance_addr: 127.0.0.1
-    kvstore:
-      store: inmemory
-
-schema_config:
-  configs:
-    - from: 2020-10-24
-      store: boltdb-shipper
-      object_store: filesystem
-      schema: v11
-      index:
-        prefix: index_
-        period: 24h
-
-storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/boltdb-shipper-active
-    cache_location: /loki/boltdb-shipper-cache
-    cache_ttl: 24h
-    shared_store: filesystem
-  filesystem:
-    directory: /loki/chunks
-
-compactor:
-  working_directory: /loki/boltdb-shipper-compactor
-  shared_store: filesystem
-
-limits_config:
-  reject_old_samples: true
-  reject_old_samples_max_age: 168h
-  retention_period: 720h  # 30일
-
-chunk_store_config:
-  max_look_back_period: 0s
-
-table_manager:
-  retention_deletes_enabled: true
-  retention_period: 720h
+- alert: VMSHighErrorRate
+  expr: >
+    sum(rate(http_requests_total{job="vms-backend",status=~"5.."}[5m]))
+    /
+    sum(rate(http_requests_total{job="vms-backend"}[5m]))
+    * 100 > 5
+  for: 5m
+  labels:
+    severity: critical
 ```
 
-### 3.2 Promtail 설정
+#### VMSSlowResponse
 
-`monitoring/promtail/promtail-config.yml`:
+P95 응답시간이 2초를 초과하면 발생합니다.
 
 ```yaml
-server:
-  http_listen_port: 9080
-  grpc_listen_port: 0
-
-positions:
-  filename: /tmp/positions.yaml
-
-clients:
-  - url: http://loki:3100/loki/api/v1/push
-
-scrape_configs:
-  # Docker 컨테이너 로그 수집
-  - job_name: docker
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-        filters:
-          - name: label
-            values: ["com.docker.compose.project=vms-channel-bridge"]
-    relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(.*)'
-        target_label: 'container'
-      - source_labels: ['__meta_docker_container_log_stream']
-        target_label: 'stream'
-      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
-        target_label: 'service'
-    pipeline_stages:
-      - docker: {}
-      - json:
-          expressions:
-            level: level
-            message: message
-            timestamp: timestamp
-      - labels:
-          level:
-          service:
-      - timestamp:
-          source: timestamp
-          format: RFC3339Nano
+- alert: VMSSlowResponse
+  expr: >
+    histogram_quantile(0.95,
+      sum(rate(http_request_duration_seconds_bucket{job="vms-backend"}[5m])) by (le)
+    ) > 2
+  for: 5m
+  labels:
+    severity: warning
 ```
 
-## 4. Grafana 설정
+### 컨테이너 리소스 알림 (`container_resource_alerts`)
 
-### 4.1 데이터소스 프로비저닝
+| 알림 | 조건 | 지속 시간 | 심각도 |
+|------|------|----------|--------|
+| `ContainerHighCPU` | CPU 사용률 > 80% | 5분 | warning |
+| `ContainerHighMemory` | 메모리 > 512MB | 5분 | warning |
+| `ContainerRestarting` | 1시간 내 3회 초과 재시작 | 즉시 | warning |
 
-`monitoring/grafana/provisioning/datasources/datasources.yml`:
+### 호스트 시스템 알림 (`host_alerts`)
+
+| 알림 | 조건 | 지속 시간 | 심각도 |
+|------|------|----------|--------|
+| `HostDiskSpaceLow` | 루트 디스크 여유 < 10% | 5분 | critical |
+| `HostHighCPU` | 호스트 CPU > 85% | 10분 | warning |
+
+---
+
+## 헬스 체크 엔드포인트
+
+### GET /api/health
+
+등록된 모든 서비스의 상태를 확인합니다.
+
+```bash
+curl -s http://127.0.0.1:8000/api/health | python -m json.tool
+```
+
+응답 구조:
+
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "services": {
+    "database": {
+      "status": "healthy",
+      "response_time_ms": 2.3,
+      "error": null
+    },
+    "redis": {
+      "status": "healthy",
+      "response_time_ms": 1.1,
+      "error": null
+    }
+  }
+}
+```
+
+| 필드 | 설명 |
+|------|------|
+| `status` | 전체 상태: `"healthy"` (모두 정상) 또는 `"degraded"` (하나 이상 비정상) |
+| `version` | 애플리케이션 버전 |
+| `services` | 개별 서비스 상태 딕셔너리 |
+| `services.*.status` | `"healthy"`, `"unhealthy"`, `"unknown"` |
+| `services.*.response_time_ms` | 응답 시간 (밀리초) |
+| `services.*.error` | 에러 메시지 (정상이면 `null`) |
+
+플랫폼은 기본으로 `database`와 `redis` 체크를 등록합니다. 앱은 `HealthRegistry`를 통해 추가 체크를 등록할 수 있습니다.
+
+### GET /api/metrics
+
+Prometheus 형식의 메트릭 데이터를 반환합니다. `prometheus_client` 라이브러리의 `generate_latest()`를 사용합니다.
+
+```bash
+curl http://127.0.0.1:8000/api/metrics
+```
+
+응답 예시 (일부):
+
+```
+# HELP http_requests_total Total HTTP requests
+# TYPE http_requests_total counter
+http_requests_total{method="GET",endpoint="/api/health",status="200"} 42.0
+http_requests_total{method="POST",endpoint="/api/auth/login",status="200"} 15.0
+
+# HELP user_active Active users count
+# TYPE user_active gauge
+user_active 3.0
+```
+
+---
+
+## Grafana 대시보드
+
+### 데이터소스 설정
+
+Grafana에는 Prometheus와 Loki 데이터소스가 자동 프로비저닝됩니다.
+
+설정 파일 위치: `monitoring/grafana/provisioning/datasources/datasources.yml`
 
 ```yaml
-apiVersion: 1
-
 datasources:
-  # Prometheus
   - name: Prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
     isDefault: true
-    editable: true
-    jsonData:
-      timeInterval: "15s"
 
-  # Loki
   - name: Loki
     type: loki
     access: proxy
     url: http://loki:3100
-    editable: true
-    jsonData:
-      maxLines: 1000
 ```
 
-### 4.2 대시보드 프로비저닝
+### 프로비저닝된 대시보드
 
-`monitoring/grafana/provisioning/dashboards/dashboards.yml`:
+대시보드는 JSON 파일로 관리되며, Grafana 시작 시 자동 로드됩니다.
+
+| 대시보드 | 파일 | 내용 |
+|----------|------|------|
+| Platform Overview | `monitoring/grafana/dashboards/platform-overview.json` | 플랫폼 전체 상태 |
+| v-channel-bridge Overview | `monitoring/grafana/dashboards/app-specific/v-channel-bridge-overview.json` | 채널 브리지 앱 상태 |
+| v-channel-bridge Logs | `monitoring/grafana/dashboards/app-specific/v-channel-bridge-logs.json` | 채널 브리지 로그 뷰 |
+
+대시보드 프로비저닝 설정: `monitoring/grafana/provisioning/dashboards/dashboards.yml`
 
 ```yaml
-apiVersion: 1
-
 providers:
   - name: 'VMS Channel Bridge'
     orgId: 1
-    folder: ''
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10
@@ -454,550 +324,256 @@ providers:
       path: /var/lib/grafana/dashboards
 ```
 
-### 4.3 VMS Channel Bridge 대시보드
+:::note 대시보드 수정
+`allowUiUpdates: true`로 설정되어 있으므로, Grafana UI에서 직접 대시보드를 수정할 수 있습니다. 다만, 컨테이너를 재시작하면 파일에 저장된 원본으로 되돌아갑니다. 변경사항을 영구 보존하려면 JSON 파일을 직접 수정하세요.
+:::
 
-`monitoring/grafana/dashboards/vms-overview.json`:
+### 유용한 Grafana 쿼리 예시
 
-```json
-{
-  "dashboard": {
-    "title": "VMS Channel Bridge Overview",
-    "tags": ["vms", "backend"],
-    "timezone": "browser",
-    "panels": [
-      {
-        "title": "Container Status",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "up{job=~\"backend|frontend|backend\"}"
-          }
-        ]
-      },
-      {
-        "title": "CPU Usage",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(container_cpu_usage_seconds_total{name=~\"vms-.*\"}[5m])"
-          }
-        ]
-      },
-      {
-        "title": "Memory Usage",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "container_memory_usage_bytes{name=~\"vms-.*\"}"
-          }
-        ]
-      },
-      {
-        "title": "API Request Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(http_requests_total[5m])"
-          }
-        ]
-      },
-      {
-        "title": "API Error Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])"
-          }
-        ]
-      },
-      {
-        "title": "Recent Logs",
-        "type": "logs",
-        "targets": [
-          {
-            "expr": "{service=~\"backend|frontend|backend\"}"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+#### HTTP 요청률 (초당)
 
-## 5. Backend 메트릭 구현
-
-### 5.1 Prometheus 클라이언트 추가
-
-`backend/requirements.txt`에 추가:
-
-```
-prometheus-client==0.19.0
-```
-
-### 5.2 메트릭 엔드포인트 구현
-
-`backend/app/api/metrics.py`:
-
-```python
-from fastapi import APIRouter
-from prometheus_client import (
-    Counter,
-    Histogram,
-    Gauge,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
-)
-from fastapi.responses import Response
-
-router = APIRouter()
-
-# 메트릭 정의
-http_requests_total = Counter(
-    'http_requests_total',
-    'Total HTTP requests',
-    ['method', 'endpoint', 'status']
-)
-
-http_request_duration_seconds = Histogram(
-    'http_request_duration_seconds',
-    'HTTP request duration in seconds',
-    ['method', 'endpoint']
-)
-
-websocket_connections = Gauge(
-    'websocket_connections',
-    'Active WebSocket connections'
-)
-
-message_count = Counter(
-    'message_count_total',
-    'Total messages processed',
-    ['channel']
-)
-
-@router.get("/metrics")
-async def metrics():
-    """Prometheus 메트릭 엔드포인트"""
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
-```
-
-### 5.3 메트릭 미들웨어
-
-`backend/app/middleware/metrics.py`:
-
-```python
-import time
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from app.api.metrics import (
-    http_requests_total,
-    http_request_duration_seconds
-)
-
-class MetricsMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        start_time = time.time()
-
-        response = await call_next(request)
-
-        duration = time.time() - start_time
-
-        # 메트릭 기록
-        http_requests_total.labels(
-            method=request.method,
-            endpoint=request.url.path,
-            status=response.status_code
-        ).inc()
-
-        http_request_duration_seconds.labels(
-            method=request.method,
-            endpoint=request.url.path
-        ).observe(duration)
-
-        return response
-```
-
-### 5.4 Main 애플리케이션에 등록
-
-`backend/app/main.py`:
-
-```python
-from app.middleware.metrics import MetricsMiddleware
-from app.api import metrics
-
-# 미들웨어 추가
-app.add_middleware(MetricsMiddleware)
-
-# 메트릭 엔드포인트 등록
-app.include_router(metrics.router)
-```
-
-## 6. 모니터링 스택 실행
-
-### 6.1 디렉토리 생성
-
-```bash
-# 모니터링 설정 디렉토리 생성
-mkdir -p monitoring/{prometheus,grafana/{provisioning/{datasources,dashboards},dashboards},loki,promtail}
-
-# 권한 설정
-sudo chown -R 472:472 monitoring/grafana
-```
-
-### 6.2 서비스 시작
-
-VMS Channel Bridge의 `docker-compose.yml`에는 모니터링 서비스(Prometheus, Grafana, Loki, Promtail)가 이미 포함되어 있습니다.
-
-```bash
-# 모든 서비스 시작 (모니터링 포함)
-docker compose up -d --build
-
-# 모니터링 서비스만 로그 확인
-docker compose logs -f prometheus grafana loki promtail
-```
-
-별도 모니터링 스택을 운영하려면 위의 `docker-compose.monitoring.yml`을 사용할 수 있습니다.
-
-### 6.3 접속 확인
-
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000 (admin/admin)
-- **Loki**: http://localhost:3100
-- **cAdvisor**: http://localhost:8081 (별도 설정 시)
-
-## 7. Grafana 대시보드 설정
-
-### 7.1 첫 로그인
-
-1. http://localhost:3000 접속
-2. 기본 계정: admin / admin
-3. 비밀번호 변경 프롬프트 (권장)
-
-### 7.2 데이터소스 확인
-
-1. Configuration → Data Sources
-2. Prometheus와 Loki가 자동 추가되었는지 확인
-3. "Test" 버튼으로 연결 확인
-
-### 7.3 대시보드 임포트
-
-**Community 대시보드 사용**:
-
-1. Dashboards → Import
-2. 다음 대시보드 ID 입력:
-   - **Docker Monitoring**: 893
-   - **Node Exporter Full**: 1860
-   - **Loki Dashboard**: 13639
-   - **cAdvisor**: 14282
-3. "Load" 클릭 후 데이터소스 선택
-
-### 7.4 커스텀 대시보드 생성
-
-**VMS Channel Bridge 전용 대시보드**:
-
-1. Dashboards → New Dashboard
-2. Add Panel 클릭
-3. 쿼리 예시:
-
-**CPU 사용률**:
 ```promql
-rate(container_cpu_usage_seconds_total{name=~"vms-.*"}[5m]) * 100
+sum(rate(http_requests_total[5m])) by (endpoint)
 ```
 
-**메모리 사용량**:
+#### 5xx 에러율
+
 ```promql
-container_memory_usage_bytes{name=~"vms-.*"} / 1024 / 1024
+sum(rate(http_requests_total{status=~"5.."}[5m]))
+/
+sum(rate(http_requests_total[5m]))
+* 100
 ```
 
-**API 요청 수**:
+#### P95 응답시간
+
 ```promql
-rate(http_requests_total[5m])
+histogram_quantile(0.95,
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+)
 ```
 
-**에러율**:
+#### 활성 WebSocket 연결
+
 ```promql
-rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
+websocket_connections
 ```
 
-**최근 로그** (Loki):
+#### 역할별 로그인 추이
+
+```promql
+sum(rate(user_login_total[1h])) by (role)
+```
+
+---
+
+## Promtail + Loki 로그 관리
+
+### Promtail 설정
+
+설정 파일 위치: `monitoring/promtail/promtail-config.yml`
+
+Promtail은 Docker 소켓을 통해 `v-project` 프로젝트의 모든 컨테이너 로그를 자동으로 수집합니다.
+
+```yaml
+scrape_configs:
+  - job_name: v-project
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=v-project"]
+```
+
+#### 라벨 매핑
+
+Promtail은 Docker 메타데이터와 structlog JSON 필드에서 라벨을 추출합니다.
+
+| Loki 라벨 | 소스 | 설명 |
+|-----------|------|------|
+| `container` | Docker 컨테이너 이름 | 예: `v-channel-bridge-backend` |
+| `service` | Docker Compose 서비스명 | 예: `backend` |
+| `stream` | 로그 스트림 | `stdout` 또는 `stderr` |
+| `level` | structlog JSON `level` 필드 | `info`, `warning`, `error` 등 |
+| `app` | structlog JSON `app` 필드 | 앱 식별자 |
+
+#### 헬스 체크 로그 필터링
+
+`/api/health` 요청 로그는 자동으로 필터링(드롭)됩니다. 60초 간격으로 반복되는 헬스 체크 로그가 Loki 저장소를 불필요하게 차지하지 않도록 합니다.
+
+```yaml
+pipeline_stages:
+  - drop:
+      expression: '.*/api/health.*'
+      drop_counter_reason: health_check_filtered
+```
+
+### Loki 설정
+
+설정 파일 위치: `monitoring/loki/loki-config.yml`
+
+| 설정 | 값 | 설명 |
+|------|-----|------|
+| 로그 보관 기간 | 720h (30일) | `limits_config.retention_period` |
+| 오래된 샘플 거부 | 7일 초과 | `reject_old_samples_max_age: 168h` |
+| 수집 속도 제한 | 4MB/s | `ingestion_rate_mb: 4` |
+| 버스트 허용량 | 6MB | `ingestion_burst_size_mb: 6` |
+| 스키마 | TSDB v13 | `schema_config.configs[0].schema: v13` |
+| 스토리지 | 로컬 파일시스템 | `storage_config.filesystem` |
+| 인증 | 비활성화 (개발용) | `auth_enabled: false` |
+
+:::warning 프로덕션 주의
+개발 환경에서는 `auth_enabled: false`로 설정되어 있습니다. 프로덕션에서는 인증을 활성화하거나, Loki를 외부 네트워크에 노출하지 않도록 하세요.
+:::
+
+### 유용한 Loki 쿼리 예시 (LogQL)
+
+Grafana의 Explore 탭에서 Loki 데이터소스를 선택한 후 LogQL을 사용합니다.
+
+#### 백엔드 에러 로그
+
 ```logql
 {service="backend"} |= "error"
 ```
 
-## 8. 알림 설정 (Alertmanager)
+#### 특정 앱의 로그
 
-### 8.1 Alertmanager 추가
+```logql
+{app="v-channel-bridge"} | json | level="error"
+```
 
-`docker-compose.monitoring.yml`에 추가:
+#### 로그인 관련 로그
+
+```logql
+{service="backend"} |= "login" | json
+```
+
+#### 최근 1시간 에러 카운트
+
+```logql
+count_over_time({service="backend"} |= "error" [1h])
+```
+
+---
+
+## Docker Compose로 모니터링 스택 실행
+
+모니터링 서비스는 별도의 Docker Compose 파일이나 기존 `docker-compose.yml`에 추가하여 실행합니다.
 
 ```yaml
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
+# docker-compose.monitoring.yml (예시)
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: v-project-prometheus
     ports:
-      - "9093:9093"
+      - "9090:9090"
     volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager_data:/alertmanager
-    restart: unless-stopped
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
     networks:
-      - vms-channel-bridge-network
+      - v-project-network
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: v-project-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - v-project-network
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: v-project-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki:/etc/loki
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - v-project-network
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: v-project-promtail
+    volumes:
+      - ./monitoring/promtail:/etc/promtail
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - v-project-network
 ```
 
-### 8.2 Alertmanager 설정
+실행:
 
-`monitoring/alertmanager/alertmanager.yml`:
-
-```yaml
-global:
-  resolve_timeout: 5m
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alerts@your-domain.com'
-  smtp_auth_username: 'your-email@gmail.com'
-  smtp_auth_password: 'your-app-password'
-
-route:
-  group_by: ['alertname', 'cluster', 'service']
-  group_wait: 10s
-  group_interval: 10s
-  repeat_interval: 12h
-  receiver: 'email'
-  routes:
-    - match:
-        severity: critical
-      receiver: 'critical-email'
-      continue: true
-
-receivers:
-  - name: 'email'
-    email_configs:
-      - to: 'team@your-domain.com'
-        send_resolved: true
-
-  - name: 'critical-email'
-    email_configs:
-      - to: 'oncall@your-domain.com'
-        send_resolved: true
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
-### 8.3 Prometheus에 Alertmanager 연동
+---
 
-`prometheus.yml`에 추가:
+## 모니터링 운영 팁
+
+### 디스크 공간 관리
+
+- **Prometheus**: `--storage.tsdb.retention.time=30d`로 30일간 메트릭 보관
+- **Loki**: `retention_period: 720h`로 30일간 로그 보관
+- 디스크 사용량을 주기적으로 확인하세요
+
+```bash
+# 모니터링 볼륨 사용량 확인
+docker system df -v | grep -E "prometheus|loki|grafana"
+```
+
+### Alertmanager 연동 (선택)
+
+Prometheus 알림 규칙은 정의되어 있지만, Alertmanager가 없으면 알림이 발송되지 않습니다. Slack이나 이메일 알림이 필요하면 Alertmanager를 추가하세요.
 
 ```yaml
+# prometheus.yml에 추가
 alerting:
   alertmanagers:
     - static_configs:
         - targets: ['alertmanager:9093']
 ```
 
-## 9. 로그 분석 예제
+### 커스텀 메트릭 추가
 
-### 9.1 Loki 쿼리 예제
+앱에서 커스텀 Prometheus 메트릭을 추가하려면 `prometheus_client` 라이브러리를 사용합니다.
 
-**에러 로그 찾기**:
-```logql
-{service="backend"} |= "error" or "ERROR"
+```python
+from prometheus_client import Counter
+
+# 커스텀 카운터 정의
+my_custom_counter = Counter(
+    "my_app_events_total",
+    "Total custom events",
+    ["event_type"],
+)
+
+# 이벤트 발생 시 카운트 증가
+my_custom_counter.labels(event_type="order_created").inc()
 ```
 
-**특정 시간대 로그**:
-```logql
-{service="backend"} | json | level="error"
-```
-
-**로그 집계 (카운트)**:
-```logql
-sum(count_over_time({service="backend"}[1h]))
-```
-
-**패턴 매칭**:
-```logql
-{service="backend"} |~ "message.*failed"
-```
-
-### 9.2 Grafana Explore 사용
-
-1. Grafana → Explore
-2. 데이터소스: Loki 선택
-3. 쿼리 입력 후 "Run query"
-4. 시간 범위 조정
-5. "Add to dashboard" 클릭
-
-## 10. 성능 튜닝
-
-### 10.1 Prometheus 데이터 보존 기간
-
-```yaml
-# prometheus.yml
-global:
-  scrape_interval: 15s  # 수집 간격 (기본: 15s)
-
-# docker-compose.monitoring.yml
-command:
-  - '--storage.tsdb.retention.time=30d'  # 30일 보존
-  - '--storage.tsdb.retention.size=10GB'  # 또는 크기 제한
-```
-
-### 10.2 Loki 로그 보존
-
-```yaml
-# loki-config.yml
-limits_config:
-  retention_period: 720h  # 30일
-```
-
-### 10.3 리소스 제한
-
-```yaml
-# docker-compose.monitoring.yml
-  prometheus:
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-
-  grafana:
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-```
-
-## 11. 백업 및 복구
-
-### 11.1 Prometheus 백업
-
-```bash
-# 스냅샷 생성
-curl -X POST http://localhost:9090/api/v1/admin/tsdb/snapshot
-
-# 데이터 디렉토리 백업
-docker run --rm \
-  -v prometheus_data:/data \
-  -v $(pwd)/backups:/backup \
-  alpine tar -czf /backup/prometheus-backup-$(date +%Y%m%d).tar.gz /data
-```
-
-### 11.2 Grafana 백업
-
-```bash
-# Grafana 설정 백업
-docker exec grafana grafana-cli admin export-dashboard > grafana-backup.json
-
-# 데이터 볼륨 백업
-docker run --rm \
-  -v grafana_data:/data \
-  -v $(pwd)/backups:/backup \
-  alpine tar -czf /backup/grafana-backup-$(date +%Y%m%d).tar.gz /data
-```
-
-## 12. 문제 해결
-
-### 12.1 Prometheus가 타겟을 스크레이핑하지 못함
-
-**확인 사항**:
-```bash
-# Prometheus 타겟 상태 확인
-curl http://localhost:9090/api/v1/targets
-
-# 네트워크 연결 확인
-docker exec prometheus ping backend
-```
-
-**해결**:
-- Docker 네트워크가 동일한지 확인
-- 서비스 이름이 정확한지 확인
-
-### 12.2 Grafana에서 데이터소스 연결 실패
-
-**해결**:
-```bash
-# Grafana 로그 확인
-docker logs grafana
-
-# 데이터소스 URL 확인 (컨테이너 이름 사용)
-http://prometheus:9090
-http://loki:3100
-```
-
-### 12.3 Loki 로그가 수집되지 않음
-
-**확인**:
-```bash
-# Promtail 로그 확인
-docker logs promtail
-
-# Docker 소켓 권한 확인
-ls -la /var/run/docker.sock
-```
-
-## 13. 보안 고려사항
-
-### 13.1 Grafana 보안
-
-- 기본 비밀번호 즉시 변경
-- HTTPS 사용 (Nginx 리버스 프록시)
-- 불필요한 플러그인 비활성화
-- 정기적인 업데이트
-
-### 13.2 Prometheus 보안
-
-- 외부 노출 제한 (Nginx로 프록시)
-- 인증 추가 (basic auth)
-- 민감한 레이블 마스킹
-
-### 13.3 네트워크 격리
-
-```yaml
-# 모니터링 전용 네트워크 사용
-networks:
-  vms-channel-bridge-network:
-    internal: false  # 외부 접근 필요 시
-  monitoring-network:
-    internal: true   # 모니터링 내부 통신만
-```
-
-## 14. 체크리스트
-
-모니터링 시스템 배포 전 확인:
-
-- [ ] Prometheus 설정 파일 작성
-- [ ] 알림 규칙 정의
-- [ ] Loki 및 Promtail 설정
-- [ ] Grafana 데이터소스 프로비저닝
-- [ ] 기본 대시보드 생성
-- [ ] Backend 메트릭 엔드포인트 구현
-- [ ] 모니터링 스택 시작 확인
-- [ ] 각 서비스 접속 테스트
-- [ ] 알림 테스트 (선택사항)
-- [ ] 백업 스크립트 설정
-- [ ] 로그 보존 정책 설정
-- [ ] 리소스 제한 설정
-- [ ] Grafana 비밀번호 변경
-- [ ] HTTPS 리버스 프록시 설정
-
-## 15. 참고 자료
-
-- [Prometheus 문서](https://prometheus.io/docs/)
-- [Grafana 문서](https://grafana.com/docs/)
-- [Loki 문서](https://grafana.com/docs/loki/latest/)
-- [Promtail 문서](https://grafana.com/docs/loki/latest/clients/promtail/)
-- [cAdvisor GitHub](https://github.com/google/cadvisor)
-- [Node Exporter GitHub](https://github.com/prometheus/node_exporter)
-- [Alertmanager 문서](https://prometheus.io/docs/alerting/latest/alertmanager/)
+등록된 메트릭은 자동으로 `/api/metrics` 엔드포인트에 노출됩니다.
 
 ---
 
-**최종 업데이트**: 2026-04-07
-**문서 버전**: 3.0
+## 참고 문서
+
+- [배포 가이드](./DEPLOYMENT.md) -- Docker Compose 실행 및 환경 변수 설정
+- [Prometheus 공식 문서](https://prometheus.io/docs/)
+- [Grafana 공식 문서](https://grafana.com/docs/)
+- [Loki 공식 문서](https://grafana.com/docs/loki/)
+- [LogQL 쿼리 가이드](https://grafana.com/docs/loki/latest/logql/)

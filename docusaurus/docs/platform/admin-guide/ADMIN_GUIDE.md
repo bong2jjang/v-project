@@ -1,711 +1,591 @@
 ---
-id: admin-guide
-title: v-project 관리자 가이드
 sidebar_position: 1
-tags: [guide, admin]
+title: 플랫폼 관리자 가이드
+description: v-platform 관리자를 위한 종합 운영 가이드
 ---
 
-# v-project 관리자 가이드
+# 플랫폼 관리자 가이드
 
-**버전**: 4.0.0
-**최종 업데이트**: 2026-04-13
-
----
-
-## 소개
-
-이 가이드는 VMS Channel Bridge 시스템의 관리자를 위한 문서입니다. Provider 계정 관리, 사용자 관리, 백업, 보안, 모니터링 등 시스템 운영에 필요한 전반적인 내용을 다룹니다.
+v-platform은 인증, RBAC(역할 기반 접근 제어), 감사로그, 조직 관리, 알림 시스템 등 범용 플랫폼 기능을 제공합니다. 이 문서는 **플랫폼 관리자**가 일상적으로 수행하는 작업을 시나리오 중심으로 설명합니다.
 
 ---
 
-## 초기 설정
+## 관리자 역할 개요
 
-### 1. 관리자 계정 생성
+v-platform은 3단계 역할(Role) 체계를 사용합니다.
 
-시스템 최초 설치 후 관리자 계정을 생성합니다.
+| 역할 | 코드 | 설명 |
+|------|------|------|
+| **시스템 관리자** | `system_admin` | 개발사(VMS) 관리자. 모든 기능에 대한 전체 권한을 자동으로 보유합니다. |
+| **운영 관리자** | `org_admin` | 고객사 관리자. 위임된 범위 내에서 사용자 관리, 그룹 할당 등을 수행합니다. |
+| **일반 사용자** | `user` | 부여받은 메뉴와 권한 범위 내에서만 시스템을 사용합니다. |
 
-**방법 1: Web UI 사용**
-
-1. 브라우저에서 `http://<서버IP>:5173/register` 접속
-2. 다음 정보 입력:
-   - Username: admin
-   - Email: admin@yourdomain.com
-   - Password: (강력한 패스워드)
-3. "회원가입" 클릭
-
-**방법 2: API 직접 호출**
-
-```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "email": "admin@yourdomain.com",
-    "password": "SecurePassword123!",
-    "role": "SYSTEM_ADMIN"
-  }'
-```
-
-### 2. Provider 계정 등록
-
-Slack과 Teams Provider 계정을 등록합니다.
-
-#### Web UI를 통한 등록
-
-1. 관리자로 로그인
-2. Settings 페이지로 이동
-3. Provider 섹션에서 "+" 버튼 클릭
-4. Provider 정보 입력:
-   - **Slack**: Bot Token, App Token (Socket Mode용)
-   - **Teams**: Tenant ID, App ID, App Password
-5. "저장" 클릭
-6. "연결 테스트" 버튼으로 연결 확인
-
-#### API를 통한 등록
-
-```bash
-# Slack 계정 등록
-curl -X POST http://localhost:8000/api/accounts-db \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "platform": "slack",
-    "account_name": "my-workspace",
-    "bot_token": "xoxb-...",
-    "app_token": "xapp-..."
-  }'
-
-# Teams 계정 등록
-curl -X POST http://localhost:8000/api/accounts-db \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "platform": "msteams",
-    "account_name": "my-org",
-    "tenant_id": "your-tenant-id",
-    "app_id": "your-app-id",
-    "app_password": "your-client-secret"
-  }'
-```
-
-### 3. 환경 변수 설정
-
-`.env` 파일에 다음 값을 설정합니다:
-
-```bash
-# Slack
-SLACK_BOT_TOKEN=xoxb-your-token
-SLACK_APP_TOKEN=xapp-your-app-token    # Socket Mode 필수
-
-# Microsoft Teams
-TEAMS_TENANT_ID=your-tenant-id
-TEAMS_APP_ID=your-app-id
-TEAMS_APP_PASSWORD=your-client-secret
-
-# Database
-DATABASE_URL=postgresql://vmsuser:vmspassword@postgres:5432/vms_channel_bridge
-
-# Redis
-REDIS_URL=redis://:redispassword@redis:6379/0
-
-# JWT
-SECRET_KEY=your-secret-key-32chars-min
-
-# Bridge
-BRIDGE_TYPE=native
-
-# SMTP (비밀번호 재설정용)
-SMTP_HOST=mailhog
-SMTP_PORT=1025
-SMTP_FROM_EMAIL=noreply@vms.local
-
-# SSO - Microsoft Entra ID (선택)
-SSO_MICROSOFT_ENABLED=false
-SSO_MICROSOFT_TENANT_ID=your-tenant-id
-SSO_MICROSOFT_CLIENT_ID=your-client-id
-SSO_MICROSOFT_CLIENT_SECRET=your-client-secret
-
-# SSO - Generic OIDC (선택)
-SSO_OIDC_ENABLED=false
-SSO_OIDC_ISSUER_URL=https://your-idp.example.com
-SSO_OIDC_CLIENT_ID=your-client-id
-SSO_OIDC_CLIENT_SECRET=your-client-secret
-```
-
-### 4. 서비스 시작
-
-```bash
-docker compose up -d --build
-```
+:::tip 역할별 핵심 차이
+- `system_admin`은 역할 변경, 커스텀 메뉴 생성/삭제, 디폴트 권한 그룹의 grants 수정, 회사/부서 CRUD가 가능합니다.
+- `org_admin`은 일반 사용자에 대한 그룹 할당, 사용자 목록 조회, 조직도 열람이 가능합니다.
+- `user`는 본인 프로필 수정과 부여된 메뉴 접근만 가능합니다.
+:::
 
 ---
 
-## 사용자 관리
+## 1. 사용자 관리
 
-### 사용자 역할
+### 1.1 사용자 목록 조회
 
-| 역할 | 설명 | 주요 권한 |
+관리자 메뉴에서 **사용자 관리** 페이지에 접근하면 전체 사용자 목록을 확인할 수 있습니다.
+
+**지원하는 필터:**
+
+| 필터 | 설명 | 예시 |
+|------|------|------|
+| 역할 | `system_admin`, `org_admin`, `user` 중 선택 | 일반 사용자만 보기 |
+| 활성 상태 | 활성/비활성 사용자 필터 | 비활성 계정 확인 |
+| 검색 | 이메일 또는 사용자명 부분 일치 검색 | `hong` 검색 시 `홍길동` 표시 |
+| 회사 | 특정 회사 소속 사용자만 표시 | A사 소속만 보기 |
+| 부서 | 특정 부서 소속 사용자만 표시 | 개발팀만 보기 |
+| 권한 그룹 | 특정 권한 그룹에 속한 사용자만 표시 | "편집자" 그룹만 보기 |
+
+페이지당 표시 건수는 1~1,000건까지 조절할 수 있으며, 기본값은 20건입니다.
+
+### 1.2 사용자 생성 (관리자 직접 등록)
+
+관리자가 직접 사용자를 생성할 수 있습니다. **사용자 관리** 페이지 상단의 **사용자 추가** 버튼을 클릭합니다.
+
+**필수 입력 항목:**
+
+| 항목 | 설명 | 제약 |
+|------|------|------|
+| 이메일 | 로그인에 사용할 이메일 주소 | 고유값, 중복 불가 |
+| 사용자명 | 화면에 표시할 이름 | 필수 |
+| 비밀번호 | 초기 비밀번호 | 필수 |
+| 역할 | `system_admin`, `org_admin`, `user` | 기본값: `user` |
+| 활성 상태 | 계정 즉시 활성화 여부 | 기본값: 활성 |
+
+**선택 입력 항목:**
+
+| 항목 | 설명 |
+|------|------|
+| 회사 | 소속 회사 지정 |
+| 부서 | 소속 부서 지정 |
+
+:::note 자동 권한 그룹 할당
+사용자를 생성하면 역할에 맞는 **기본(default) 권한 그룹**이 자동으로 할당됩니다. 예를 들어, `user` 역할로 생성하면 "일반사용자" 기본 그룹이 자동 배정됩니다.
+:::
+
+### 1.3 사용자 정보 수정
+
+관리자는 사용자 목록에서 특정 사용자를 선택하여 다음 항목을 수정할 수 있습니다.
+
+- **사용자명** 변경
+- **이메일** 변경 (중복 확인 자동 수행)
+- **활성/비활성** 상태 전환
+- **소속 회사/부서** 변경
+
+모든 변경 사항은 변경 전/후 값과 함께 감사로그에 자동 기록됩니다.
+
+:::warning 비활성화 주의
+사용자를 비활성화(`is_active: false`)하면 해당 사용자는 즉시 로그인할 수 없게 됩니다. 기존 세션은 토큰 만료 시 자연스럽게 종료됩니다.
+:::
+
+### 1.4 역할 변경
+
+역할 변경은 **system_admin만** 수행할 수 있습니다.
+
+1. 사용자 관리 페이지에서 대상 사용자를 선택합니다.
+2. **역할 변경** 기능을 사용하여 새 역할을 지정합니다.
+3. 역할 변경 시 해당 역할의 기본 권한 그룹이 자동으로 동기화됩니다.
+
+:::danger 자기 자신의 역할 변경 불가
+실수로 자신의 관리자 권한을 박탈하는 것을 방지하기 위해, 본인 계정의 역할은 변경할 수 없습니다.
+:::
+
+### 1.5 사용자 삭제
+
+사용자 삭제는 `users` 메뉴에 대한 `write` 권한이 필요합니다. 삭제 시 다음이 자동으로 처리됩니다.
+
+- 삭제 전 감사로그 자동 기록 (삭제된 사용자의 이메일, 삭제 수행자 정보)
+- 시스템 알림 자동 발송
+- 자기 자신은 삭제할 수 없습니다
+
+### 1.6 권한 그룹 할당
+
+사용자의 권한은 **권한 그룹(Permission Group)** 을 통해 관리합니다.
+
+1. 사용자 관리 페이지에서 대상 사용자를 선택합니다.
+2. **그룹 할당** 섹션에서 원하는 그룹을 선택합니다.
+3. 여러 그룹에 동시 소속이 가능하며, 각 그룹의 권한은 **MAX** 방식으로 병합됩니다.
+
+예를 들어 A 그룹에서 "대시보드" 메뉴가 `read`이고, B 그룹에서 `write`라면, 해당 사용자의 유효 권한은 `write`가 됩니다.
+
+:::tip 유효 권한 확인
+사용자 상세 페이지에서 **유효 권한** 탭을 통해, 그룹 + 개인 권한이 병합된 최종 권한 목록을 확인할 수 있습니다. 각 권한의 출처(어떤 그룹에서 온 것인지)도 함께 표시됩니다.
+:::
+
+:::note 앱별 그룹 격리
+그룹 할당은 현재 접속 중인 앱 범위 내에서만 변경됩니다. 다른 앱에서의 그룹 소속은 유지됩니다. 예를 들어, v-channel-bridge에서 그룹을 변경해도 v-platform-portal에서의 그룹 소속에는 영향이 없습니다.
+:::
+
+---
+
+## 2. 권한 그룹 관리
+
+### 2.1 권한 그룹이란
+
+권한 그룹은 여러 메뉴에 대한 접근 수준(`none`, `read`, `write`)을 묶어놓은 템플릿입니다. 사용자를 그룹에 추가하면 해당 그룹의 권한을 일괄적으로 부여할 수 있습니다.
+
+| 구분 | 기본(Default) 그룹 | 커스텀 그룹 |
+|------|-------------------|------------|
+| 생성 | 시스템 자동 생성 | system_admin이 직접 생성 |
+| 이름/상태 수정 | 불가 | system_admin이 수정 가능 |
+| Grants 수정 | system_admin이 수정 가능 | system_admin이 수정 가능 |
+| 삭제 | 삭제 불가 | system_admin이 삭제 가능 |
+| 예시 | "시스템관리자", "운영관리자", "일반사용자" | "편집자", "뷰어", "마케팅팀" |
+
+### 2.2 그룹 생성
+
+1. **관리 > 역할/권한 그룹** 페이지로 이동합니다.
+2. **그룹 추가** 버튼을 클릭합니다.
+3. 그룹 이름(1~100자)과 설명(최대 500자)을 입력합니다.
+4. 생성 후 해당 그룹의 메뉴별 권한(grants)을 설정합니다.
+
+:::note 앱별 격리
+같은 이름의 권한 그룹이라도 다른 앱에서는 별도로 생성할 수 있습니다. 그룹의 grants는 현재 접속 중인 앱의 메뉴만 대상으로 합니다.
+:::
+
+### 2.3 그룹 권한(Grants) 설정
+
+그룹 상세 페이지에서 각 메뉴에 대한 접근 수준을 설정합니다.
+
+| 접근 수준 | 설명 |
+|-----------|------|
+| `none` | 해당 메뉴에 접근할 수 없습니다 |
+| `read` | 해당 메뉴를 조회만 할 수 있습니다 |
+| `write` | 해당 메뉴에서 조회 + 생성/수정/삭제가 가능합니다 |
+
+grants를 설정하면 해당 그룹에 소속된 **모든 사용자**에게 즉시 반영됩니다.
+
+### 2.4 그룹 멤버 관리
+
+- **멤버 추가**: 그룹 상세 페이지 > 멤버 탭에서 사용자를 검색하여 추가합니다. 이미 소속된 사용자는 검색 결과에서 자동 제외됩니다.
+- **멤버 제거**: 멤버 목록에서 해당 사용자를 제거합니다.
+- **멤버 검색**: 사용자명 또는 이메일로 검색할 수 있습니다 (부분 일치).
+
+---
+
+## 3. 조직/부서 관리
+
+### 3.1 조직 구조
+
+v-platform의 조직 구조는 **회사(Company) > 부서(Department) > 사용자(User)** 3계층입니다.
+
+```
+회사 A (code: COMPANY_A)
+├── 개발팀 (sort_order: 0)
+│   ├── 프론트엔드파트 (sort_order: 0)
+│   └── 백엔드파트 (sort_order: 1)
+├── 영업팀 (sort_order: 1)
+└── 미배정 사용자
+```
+
+부서는 트리 구조를 지원하여, 부서 아래에 하위 부서를 만들 수 있습니다. 같은 레벨의 부서는 `sort_order`에 따라 정렬됩니다.
+
+### 3.2 회사 관리
+
+회사 CRUD는 **system_admin 전용**이며, `org_admin`은 회사 목록 조회만 가능합니다.
+
+**회사 생성 시 입력 항목:**
+
+| 항목 | 설명 | 제약 |
+|------|------|------|
+| 회사명 | 조직도에 표시할 이름 | 1~200자, 고유값 |
+| 회사 코드 | 내부 식별 코드 | 1~50자, 고유값 |
+| 활성 상태 | 활성/비활성 | 기본값: 활성 |
+
+:::warning 회사 삭제 시 주의
+회사를 삭제하면 해당 회사에 소속된 부서도 함께 삭제됩니다. 소속 사용자들의 회사/부서 정보가 사라지므로, 삭제 전에 소속 사용자를 다른 회사로 이동하는 것을 권장합니다.
+:::
+
+### 3.3 부서 관리
+
+부서는 회사 하위에 생성하며, **트리 구조**를 지원합니다.
+
+**부서 생성 시 입력 항목:**
+
+| 항목 | 설명 | 제약 |
+|------|------|------|
+| 부서명 | 조직도에 표시할 이름 | 1~200자, 같은 회사 내 고유 |
+| 부서 코드 | 내부 식별 코드 (선택) | 최대 50자 |
+| 상위 부서 | 트리에서의 부모 부서 (선택) | 없으면 최상위 부서 |
+| 정렬 순서 | 같은 레벨에서의 표시 순서 | 기본값: 0 |
+
+부서 목록은 **트리 형태** 또는 **플랫 목록** 두 가지 방식으로 조회할 수 있습니다.
+
+### 3.4 조직도 트리 조회
+
+**관리 > 조직도** 페이지에서 전체 조직 구조를 한눈에 확인할 수 있습니다.
+
+조직도는 다음 정보를 포함합니다:
+- 회사별 부서 트리 구조
+- 각 부서에 소속된 활성 사용자 목록 (사용자명, 이메일, 역할)
+- 회사에는 소속되었지만 부서가 미배정인 사용자
+- 어떤 회사에도 소속되지 않은 사용자
+- 전체 활성 사용자 수
+
+---
+
+## 4. 감사로그 관리
+
+감사로그는 시스템 내에서 발생하는 모든 중요한 활동을 자동으로 기록합니다.
+
+### 4.1 감사로그 자동 기록 대상
+
+| 이벤트 | 기록 내용 |
+|--------|----------|
+| 사용자 생성 | 생성된 사용자 정보, 생성자 |
+| 사용자 수정 | 변경된 필드와 이전/이후 값, 수정 수행자 |
+| 사용자 삭제 | 삭제된 사용자 이메일, 삭제 수행자 |
+| 역할 변경 | 이전 역할, 새 역할, 변경 수행자 |
+| 비밀번호 변경 | 변경 수행자 (비밀번호 자체는 기록하지 않음) |
+| 로그인/로그아웃 | 접속 IP, User-Agent |
+| 메뉴 생성 | 메뉴 유형, permission_key, 경로, 수행자 |
+| 메뉴 수정 | 변경된 필드 정보, 수행자 |
+| 메뉴 삭제 | permission_key, 수행자 |
+| 메뉴 순서 변경 | 변경된 순서 목록, 수행자 |
+
+### 4.2 감사로그 조회 및 필터
+
+**관리 > 감사로그** 페이지에서 다양한 조건으로 로그를 검색할 수 있습니다.
+
+**지원하는 필터:**
+
+| 필터 | 설명 | 사용 예시 |
 |------|------|----------|
-| **SYSTEM_ADMIN** | 시스템 관리자 | 모든 권한 (시스템 설정, 사용자 관리, Provider 관리, RBAC 권한 관리, 조직 관리, 메뉴 관리) |
-| **ORG_ADMIN** | 조직 관리자 | 소속 조직 사용자 관리, Provider 조회, Route 관리, 메시지 조회 |
-| **USER** | 일반 사용자 | 대시보드 조회, 메시지 검색, 통계 조회, 본인 프로필 관리 |
+| 액션 | 이벤트 유형 (예: `user.login`) | 로그인 이력만 보기 |
+| 사용자 ID | 특정 사용자의 활동 추적 | 사용자 #42의 활동 |
+| 사용자 이메일 | 이메일로 사용자 검색 (부분 일치) | `hong` 포함 이메일 |
+| 리소스 타입 | 대상 리소스 종류 (예: `user`, `config`) | 설정 변경 이력 |
+| 리소스 ID | 특정 리소스에 대한 활동 | 메뉴 #5의 변경 이력 |
+| 상태 | `success`, `failure`, `error` | 실패한 로그인 시도 |
+| 시작 일시 | 조회 시작 일시 (ISO 8601) | `2026-04-01T00:00:00Z` |
+| 종료 일시 | 조회 종료 일시 (ISO 8601) | `2026-04-13T23:59:59Z` |
+| IP 주소 | 특정 IP에서의 접속 기록 | 외부 접속 추적 |
 
-> **참고**: 역할 외에도 **권한 그룹**과 **개인별 권한 오버라이드**를 통해 세밀한 접근 제어가 가능합니다. 유효 권한 = MAX(그룹 권한, 개인 오버라이드).
+페이지당 1~500건까지 조회할 수 있으며, 기본값은 50건입니다.
 
-### 사용자 생성
+### 4.3 감사로그 통계
 
-**Web UI:**
+감사로그 통계 기능을 통해 지정 기간(1~365일) 동안의 요약 정보를 확인할 수 있습니다.
 
-1. 관리자로 로그인
-2. 사이드바에서 "Users" 클릭
-3. "새 사용자 추가" 버튼 클릭
-4. 사용자 정보 입력 후 저장
+- **전체 로그 수**: 해당 기간의 총 이벤트 건수
+- **상태별 통계**: 성공/실패/에러별 건수
+- **액션별 Top 10**: 가장 많이 발생한 이벤트 유형
+- **사용자별 Top 10**: 가장 활발한 사용자
 
-**API:**
+### 4.4 감사로그 CSV 내보내기
 
-```bash
-curl -X POST http://localhost:8000/api/users \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "newuser",
-    "email": "user@example.com",
-    "password": "password123",
-    "role": "USER"
-  }'
-```
+현재 필터 조건에 맞는 로그를 CSV 파일로 내보낼 수 있습니다.
 
-### 사용자 수정 / 비활성화 / 삭제
+- 최대 **10,000건**까지 내보내기 가능합니다.
+- 파일에 포함되는 컬럼: ID, Timestamp, User Email, Action, Resource Type, Resource ID, Description, Status, Error Message, IP Address, User Agent
+- 파일명 형식: `audit_logs_YYYYMMDD_HHMMSS.csv`
 
-```bash
-# 사용자 수정
-curl -X PUT http://localhost:8000/api/users/2 \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"email": "newemail@example.com", "role": "SYSTEM_ADMIN"}'
-
-# 비활성화
-curl -X PUT http://localhost:8000/api/users/2 \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"is_active": false}'
-
-# 삭제
-curl -X DELETE http://localhost:8000/api/users/2 \
-  -H "Authorization: Bearer <admin-token>"
-```
-
-### 비밀번호 재설정
-
-사용자가 비밀번호를 분실한 경우:
-
-1. 로그인 페이지에서 "비밀번호 찾기" 클릭
-2. 이메일 입력 → 재설정 링크 발송 (SMTP 설정 필요)
-3. 이메일의 링크로 새 비밀번호 설정
-
-관리자가 직접 재설정:
-
-```bash
-curl -X PUT http://localhost:8000/api/users/2/reset-password \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"new_password": "NewSecurePassword123!"}'
-```
+:::tip 앱별 로그 격리
+감사로그는 앱별로 자동 격리됩니다. v-channel-bridge에서 조회하면 해당 앱의 로그만, v-platform-portal에서 조회하면 포털 앱의 로그만 표시됩니다. `app_id`가 `NULL`인(전역) 로그는 모든 앱에서 함께 표시됩니다.
+:::
 
 ---
 
-## SSO 관리
+## 5. 시스템 설정
 
-VMS Channel Bridge는 **Microsoft Entra ID**와 **Generic OIDC** SSO 인증을 지원합니다.
+### 5.1 브랜딩 설정
 
-### SSO 활성화
+시스템 설정에서 앱의 외관과 기본 동작을 커스터마이즈할 수 있습니다.
 
-Settings 페이지의 SSO 탭에서 설정하거나, `.env`에서 직접 구성합니다.
+| 설정 항목 | 설명 | 기본값 |
+|-----------|------|--------|
+| `app_title` | 상단 바와 로그인 페이지에 표시하는 앱 이름 | (미설정 시 기본 앱 이름) |
+| `app_description` | 로그인 페이지에 표시하는 앱 설명 | (미설정) |
+| `app_logo_url` | 로고 이미지 URL | (미설정) |
+| `default_start_page` | 로그인 후 이동하는 기본 시작 페이지 경로 | `/` |
+| `manual_enabled` | 사이드바에 매뉴얼 링크 표시 여부 | `true` |
+| `manual_url` | 매뉴얼 링크 URL | `http://127.0.0.1:3000` |
 
-**Microsoft Entra ID:**
+### 5.2 시스템 설정 수정
 
-1. Azure Portal → App Registrations → 새 앱 등록
-2. Redirect URI: `http://<서버>/api/auth/sso/microsoft/callback`
-3. Client Secret 생성
-4. `.env`에 Tenant ID, Client ID, Client Secret 입력
-5. `SSO_MICROSOFT_ENABLED=true` 설정
+시스템 설정 수정에는 `settings` 메뉴의 `write` 권한이 필요합니다.
 
-**Generic OIDC:**
+1. **관리 > 시스템 설정** 페이지로 이동합니다.
+2. 변경하려는 항목을 수정합니다.
+3. **저장** 버튼을 클릭합니다.
 
-1. IdP에서 OIDC 클라이언트 등록
-2. Redirect URI: `http://<서버>/api/auth/sso/oidc/callback`
-3. `.env`에 Issuer URL, Client ID, Client Secret 입력
-4. `SSO_OIDC_ENABLED=true` 설정
+:::note 앱별 설정 상속
+앱 컨텍스트에서 처음 설정을 수정하면, 전역 설정을 템플릿으로 삼아 **앱별 설정 레코드**가 자동 생성됩니다. 이후에는 해당 앱만의 독립적인 설정이 적용됩니다. 전역 레코드(app_id가 NULL)는 앱 컨텍스트에서 직접 수정할 수 없으며, 각 앱은 자신의 레코드만 관리합니다.
+:::
 
-### SSO 사용자 동작
+### 5.3 URL 검증
 
-- SSO로 최초 로그인 시 자동으로 사용자 계정이 생성됩니다 (기본 역할: `USER`)
-- 기존 로컬 계정과 이메일이 동일하면 **하이브리드 인증** (로컬 + SSO 모두 사용 가능)으로 전환됩니다
-- 관리자는 Users 페이지에서 SSO 사용자의 인증 방식 (`local`, `sso`, `hybrid`)을 확인할 수 있습니다
-
-### SSO Provider 상태 확인
-
-```bash
-curl http://localhost:8000/api/auth/sso/providers \
-  -H "Authorization: Bearer <admin-token>"
-```
+매뉴얼 URL은 반드시 `http://` 또는 `https://`로 시작해야 합니다. 빈 문자열은 "미설정"으로 허용됩니다.
 
 ---
 
-## 권한 관리 (RBAC)
+## 6. 커스텀 메뉴 관리
 
-### 권한 그룹
+### 6.1 메뉴 유형
 
-권한 그룹은 여러 권한을 묶어서 사용자에게 일괄 할당합니다.
+v-platform의 메뉴는 4가지 유형이 있습니다.
 
-**Web UI:**
+| 메뉴 유형 | 코드 | 설명 |
+|-----------|------|------|
+| **기본 메뉴** | `built_in` | 플랫폼이 제공하는 메뉴. 삭제 불가, 비활성화만 가능 |
+| **커스텀 iframe** | `custom_iframe` | 외부 URL을 iframe으로 임베드하는 메뉴 |
+| **커스텀 링크** | `custom_link` | 외부 URL로 이동하는 링크 메뉴 |
+| **메뉴 그룹** | `menu_group` | 하위 메뉴를 묶는 폴더 역할 |
 
-1. Settings → Permissions 탭으로 이동
-2. "새 권한 그룹" 클릭
-3. 그룹 이름과 설명 입력
-4. 부여할 권한 선택
-5. 기본 할당 역할 설정 (선택: 해당 역할의 새 사용자에게 자동 부여)
+### 6.2 커스텀 메뉴 생성
 
-**API:**
+커스텀 메뉴 생성은 **system_admin 전용**입니다.
 
-```bash
-# 권한 그룹 생성
-curl -X POST http://localhost:8000/api/permission-groups \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Route Manager",
-    "description": "Route 관리 권한",
-    "permissions": ["routes.create", "routes.update", "routes.delete"],
-    "default_role": "ORG_ADMIN"
-  }'
+**입력 항목:**
 
-# 권한 그룹 목록 조회
-curl http://localhost:8000/api/permission-groups \
-  -H "Authorization: Bearer <admin-token>"
+| 항목 | 설명 | 제약 |
+|------|------|------|
+| 권한 키 (`permission_key`) | 메뉴 식별용 고유 키 | 앱 범위 내 고유 |
+| 라벨 (`label`) | 사이드바에 표시할 이름 | 필수 |
+| 아이콘 (`icon`) | Lucide React 아이콘 이름 | 선택, 예: `BarChart` |
+| 경로 (`path`) | 메뉴 클릭 시 이동할 URL 경로 | 필수 |
+| 메뉴 유형 (`menu_type`) | `custom_iframe`, `custom_link`, `menu_group` | 필수 |
+| iframe URL (`iframe_url`) | iframe으로 로드할 외부 URL | `custom_iframe`일 때 사용 |
+| 전체화면 (`iframe_fullscreen`) | iframe 전체화면 표시 여부 | 기본값: `false` |
+| 새 탭에서 열기 (`open_in_new_tab`) | 새 탭으로 열기 여부 | 기본값: `false` |
+| 상위 메뉴 키 (`parent_key`) | 부모 메뉴 그룹의 permission_key | 선택 |
+| 정렬 순서 (`sort_order`) | 메뉴 표시 순서 | 기본값: 0 |
+| 섹션 (`section`) | `basic`, `admin`, `custom` | 기본값: `custom` |
+
+:::danger javascript: URL 차단
+보안을 위해 `javascript:`로 시작하는 iframe URL은 자동 차단됩니다.
+:::
+
+### 6.3 메뉴 순서 변경
+
+사이드바에서의 메뉴 표시 순서를 일괄 변경할 수 있습니다. 각 메뉴의 ID와 새 `sort_order` 값을 지정하면 됩니다.
+
+```json
+{
+  "orders": [
+    { "id": 1, "sort_order": 100 },
+    { "id": 2, "sort_order": 200 },
+    { "id": 3, "sort_order": 300 }
+  ]
+}
 ```
 
-### 개인별 권한 오버라이드
+### 6.4 메뉴 수정
 
-특정 사용자에게 역할/그룹과 무관하게 개별 권한을 부여하거나 제한할 수 있습니다.
+메뉴의 라벨, 아이콘, 경로, iframe URL, 전체화면 여부, 새 탭 열기, 상위 메뉴 키, 정렬 순서, 섹션, 활성 상태를 수정할 수 있습니다. 모든 변경은 감사로그에 기록됩니다.
 
-```bash
-# 사용자 권한 조회
-curl http://localhost:8000/api/permissions/users/3 \
-  -H "Authorization: Bearer <admin-token>"
+### 6.5 메뉴 삭제 시 주의사항
 
-# 사용자 권한 업데이트
-curl -X PUT http://localhost:8000/api/permissions/users/3 \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "permissions": ["messages.export", "routes.view"]
-  }'
-```
-
-### 유효 권한 계산
-
-사용자의 유효 권한은 다음 순서로 결정됩니다:
-
-1. **기본 역할 권한** (SYSTEM_ADMIN / ORG_ADMIN / USER)
-2. **+ 권한 그룹** (소속 그룹의 권한 합산)
-3. **+ 개인 오버라이드** (개인 설정이 최우선)
-
-최종 권한 = MAX(역할 기본, 그룹 부여, 개인 오버라이드)
+- **기본 메뉴(`built_in`)**는 삭제할 수 없습니다. "기본 메뉴는 삭제할 수 없습니다. 비활성화를 사용하세요."라는 안내가 표시됩니다.
+- **메뉴 그룹** 삭제 시, 하위 메뉴의 `parent_key`가 자동으로 `null`로 초기화됩니다 (하위 메뉴가 최상위로 이동).
+- 삭제 시 감사로그가 자동으로 기록됩니다.
 
 ---
 
-## 조직 관리
+## 7. 알림 관리
 
-조직(회사/부서) 구조를 정의하고 사용자를 소속시킬 수 있습니다.
+### 7.1 알림 시스템 개요
 
-**Web UI:**
+v-platform의 알림 시스템은 두 가지 계층으로 구성됩니다.
 
-1. Settings → Organizations 탭으로 이동
-2. 회사 생성 → 부서 추가
-3. Users 페이지에서 사용자에게 조직 할당
+| 계층 | 설명 | 저장 방식 |
+|------|------|----------|
+| **실시간 알림** | WebSocket을 통해 즉시 전달되는 토스트 알림 | 메모리 (휘발성) |
+| **영구 알림** | DB에 저장되는 알림. 읽음/미읽음 처리, 공지사항 팝업 지원 | PostgreSQL |
 
-**API:**
+### 7.2 알림 범위(Scope)
 
-```bash
-# 회사 생성
-curl -X POST http://localhost:8000/api/organizations/companies \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "VMS Corp", "description": "본사"}'
+| 범위 | 코드 | 설명 |
+|------|------|------|
+| 전역 | `global` | 모든 앱의 모든 사용자에게 표시 (시스템 알림 전용) |
+| 앱 | `app` | 현재 앱의 모든 사용자에게 표시 |
+| 역할 | `role` | 특정 역할(`system_admin`, `org_admin`, `user`)의 사용자에게만 표시 |
+| 사용자 | `user` | 특정 사용자 한 명에게만 표시 |
 
-# 부서 생성
-curl -X POST http://localhost:8000/api/organizations/departments \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "개발팀", "company_id": 1}'
-```
+:::note 커스텀 알림의 범위 제한
+관리자가 직접 생성하는 커스텀 알림은 `global` 범위를 사용할 수 없습니다. `global` 범위는 시스템 기본 알림 전용입니다.
+:::
 
----
+### 7.3 알림 심각도(Severity)
 
-## 커스텀 메뉴 관리
+| 심각도 | 코드 | 사용 시기 |
+|--------|------|----------|
+| 성공 | `success` | 작업 완료 알림 |
+| 정보 | `info` | 일반 안내 사항 |
+| 경고 | `warning` | 주의가 필요한 사항 |
+| 에러 | `error` | 오류 발생 |
+| 치명적 | `critical` | 즉시 조치가 필요한 상황 |
 
-사이드바 메뉴에 외부 링크, iframe 페이지, 메뉴 그룹을 추가할 수 있습니다.
+### 7.4 알림 전달 유형(Delivery Type)
 
-**Web UI:**
+| 유형 | 코드 | 설명 |
+|------|------|------|
+| 토스트 | `toast` | 화면 우측 상단에 잠시 표시되는 실시간 알림 |
+| 공지사항 | `announcement` | 팝업 형태로 표시, 사용자가 읽음 처리할 때까지 반복 표시 |
+| 모두 | `both` | 토스트와 공지사항을 동시에 발송 |
 
-1. Settings → Menus 탭으로 이동
-2. "새 메뉴 추가" 클릭
-3. 메뉴 유형 선택:
-   - **외부 링크** (`custom_link`): 새 탭에서 URL 열기
-   - **iframe 페이지** (`custom_iframe`): 앱 내에서 외부 페이지 표시
-   - **메뉴 그룹** (`menu_group`): 하위 메뉴를 묶는 그룹
-4. 접근 권한 설정 (역할별)
-5. 표시 순서 조정 (드래그 & 드롭 또는 API)
+### 7.5 알림 생성
 
-**API:**
+관리자 메뉴에서 **알림 관리** 페이지를 통해 알림을 생성합니다.
 
-```bash
-# 메뉴 아이템 생성
-curl -X POST http://localhost:8000/api/menus \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Grafana Dashboard",
-    "type": "custom_iframe",
-    "url": "http://localhost:3000",
-    "icon": "BarChart3",
-    "section": "custom",
-    "required_role": "ORG_ADMIN"
-  }'
+**입력 항목:**
 
-# 메뉴 순서 변경
-curl -X PUT http://localhost:8000/api/menus/reorder \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"item_ids": [1, 3, 2, 4]}'
-```
+| 항목 | 설명 | 필수/선택 |
+|------|------|----------|
+| 제목 | 알림 제목 (최대 200자) | 필수 |
+| 메시지 | 알림 본문 | 필수 |
+| 심각도 | `critical`, `error`, `warning`, `info`, `success` | 필수 (기본: `info`) |
+| 카테고리 | `service`, `message`, `config`, `user`, `system` | 필수 (기본: `system`) |
+| 범위 | `app`, `role`, `user` | 필수 (기본: `app`) |
+| 대상 역할 | 범위가 `role`일 때 필수 | 조건부 |
+| 대상 사용자 ID | 범위가 `user`일 때 필수 | 조건부 |
+| 전달 유형 | `toast`, `announcement`, `both` | 선택 (기본: `toast`) |
+| 관련 링크 | 클릭 시 이동할 페이지 경로 | 선택 |
+| 만료 일시 | 자동 비활성화 시점 | 선택 |
 
-> **참고**: 사이드바 메뉴는 서버에서 사용자 역할에 따라 필터링되어 전달됩니다. 권한이 없는 메뉴는 자동으로 숨겨집니다.
+`toast` 또는 `both` 유형으로 생성하면, DB 저장과 동시에 WebSocket을 통해 실시간으로도 브로드캐스트됩니다.
 
----
+### 7.6 시스템 알림과 앱별 오버라이드
 
-## Route 관리
+시스템 알림(`is_system: true`)은 v-platform이 기본 제공하는 알림으로, **삭제할 수 없습니다**. 대신 각 앱에서 활성/비활성 상태를 토글할 수 있습니다.
 
-Route는 Slack과 Teams 채널 간 메시지 라우팅 규칙입니다. Web UI 또는 API로 관리합니다.
+- 시스템 알림의 활성/비활성 토글은 **앱별 오버라이드**로 처리됩니다.
+- 원본 시스템 알림의 `is_active` 값은 변경되지 않습니다.
+- 다른 앱에서의 시스템 알림 표시 여부에는 영향을 주지 않습니다.
+- 시스템 알림 상태 확인: 프론트엔드에서 `/api/notifications-v2/system-status` 엔드포인트를 통해 각 시스템 알림의 앱별 활성 상태를 조회합니다.
 
-### Route 추가
+### 7.7 알림 조회 (관리자 뷰)
 
-**Web UI:**
+관리자는 `admin_view=true` 파라미터로 전체 알림 목록을 조회할 수 있습니다. 시스템 알림과 해당 앱의 커스텀 알림을 모두 볼 수 있으며, 앱별 오버라이드 상태도 함께 표시됩니다.
 
-1. Routes 페이지로 이동
-2. "+ Add Route" 클릭
-3. 소스/대상 플랫폼 및 채널 선택
-4. 옵션 설정 (양방향, 모드)
-5. "Create" 클릭
+### 7.8 테스트 알림 발송
 
-Route는 **즉시 적용**됩니다 (서비스 재시작 불필요).
+개발 및 운영 확인 목적으로 테스트 알림을 발송할 수 있습니다.
 
-**API:**
-
-```bash
-curl -X POST http://localhost:8000/api/bridge/routes \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source_platform": "slack",
-    "source_channel": "C1234567890",
-    "target_platform": "msteams",
-    "target_channel": "teamId:channelId",
-    "is_bidirectional": true,
-    "mode": "sender_info"
-  }'
-```
-
-### Route 삭제
-
-```bash
-curl -X DELETE http://localhost:8000/api/bridge/routes \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source_platform": "slack",
-    "source_channel": "C1234567890",
-    "target_platform": "msteams",
-    "target_channel": "teamId:channelId"
-  }'
-```
-
-### Redis 라우팅 구조
-
-Route는 Redis에 저장됩니다:
-
-```
-route:{platform}:{channel_id}               → SET (대상 채널 집합)
-route:{platform}:{channel_id}:names         → HASH (채널 이름)
-route:{platform}:{channel_id}:modes         → HASH (전송 모드)
-route:{platform}:{channel_id}:bidirectional → HASH (양방향 여부)
-```
-
-양방향 Route는 역방향 키도 자동 생성됩니다.
+- **단건 테스트**: 심각도, 카테고리, 제목, 메시지를 지정하여 1건 발송
+- **전체 타입 테스트**: 5가지 심각도(success, info, warning, error, critical) 알림을 한번에 모두 발송하여 UI 표시 확인
 
 ---
 
-## 모니터링 및 로그
+## 8. 실전 시나리오: 신규 팀원 5명 온보딩
 
-### 시스템 상태 확인
+새로운 팀원 5명이 합류하여 계정을 생성하고 권한을 설정하는 전체 과정입니다.
 
-**Web UI:**
+### 8.1 사전 준비
 
-- Dashboard에서 브리지 상태, Provider 연결 상태 확인
-- 상단 바의 시스템 상태 아이콘 클릭 → 서비스별 헬스 상세 정보
+**1단계: 조직 구조 확인**
 
-**API:**
+관리 > 조직도 페이지에서 해당 팀원들이 소속될 회사와 부서가 이미 등록되어 있는지 확인합니다.
 
-```bash
-# 헬스체크
-curl http://localhost:8000/api/health
+- 회사가 없다면: 관리 > 조직도 > 회사 추가
+- 부서가 없다면: 해당 회사 아래에 부서 추가
 
-# 상세 헬스체크 (DB, Redis, Provider 상태)
-curl http://localhost:8000/api/health/detailed \
-  -H "Authorization: Bearer <token>"
-```
+**2단계: 권한 그룹 확인**
 
-### Docker 로그 확인
+관리 > 역할/권한 그룹 페이지에서 팀원들에게 부여할 권한 그룹이 있는지 확인합니다.
 
-```bash
-# 모든 서비스 로그
-docker compose logs -f
+- 기본 그룹("일반사용자" 등)은 이미 존재합니다.
+- 추가 권한이 필요하다면 커스텀 그룹을 생성하고 grants를 설정합니다.
 
-# Backend 로그
-docker logs vms-channel-bridge-backend -f --tail=100
+### 8.2 사용자 생성 (5명)
 
-# 에러 로그만 필터링
-docker compose logs | grep ERROR
-```
+관리 > 사용자 관리 페이지에서 **사용자 추가**를 5번 반복합니다.
 
-### Prometheus + Grafana
+| 순번 | 이메일 | 사용자명 | 역할 | 회사 | 부서 |
+|------|--------|---------|------|------|------|
+| 1 | kim@example.com | 김철수 | user | A사 | 개발팀 |
+| 2 | lee@example.com | 이영희 | user | A사 | 개발팀 |
+| 3 | park@example.com | 박지민 | user | A사 | 영업팀 |
+| 4 | choi@example.com | 최수현 | org_admin | A사 | 영업팀 |
+| 5 | jung@example.com | 정다운 | user | A사 | 기획팀 |
 
-Prometheus 메트릭 엔드포인트:
+각 사용자 생성 시 자동으로:
+- 역할에 맞는 기본 권한 그룹이 할당됩니다.
+- 감사로그에 "사용자 생성" 이벤트가 기록됩니다.
+- "새 사용자 생성" 알림이 발송됩니다.
 
-```bash
-curl http://localhost:8000/api/metrics
-```
+:::tip 초기 비밀번호 안내
+각 사용자에게 초기 비밀번호를 안전한 채널로 전달하고, 첫 로그인 후 **프로필 > 비밀번호 변경**에서 즉시 비밀번호를 변경하도록 안내하세요.
+:::
 
-Grafana 대시보드: `http://localhost:3000` (기본 계정: admin / admin)
+### 8.3 추가 권한 그룹 할당
 
-Loki를 통한 로그 수집 및 분석도 지원됩니다. 자세한 내용은 [모니터링 설정 가이드](monitoring-setup)를 참조하세요.
+기본 그룹 외에 추가 권한이 필요한 경우:
 
-### 감사 로그
+1. **김철수, 이영희** (개발팀): "개발자" 커스텀 그룹을 추가 할당합니다.
+2. **최수현** (영업팀 관리자): `org_admin` 역할이므로 기본 "운영관리자" 그룹이 자동 할당되어 있습니다. 필요 시 추가 그룹을 할당합니다.
+3. **박지민** (영업팀): "영업 담당자" 커스텀 그룹을 추가 할당합니다.
+4. **정다운** (기획팀): 기본 "일반사용자" 그룹으로 충분하다면 추가 작업 불필요합니다.
 
-모든 관리 작업이 감사 로그에 기록됩니다.
+### 8.4 결과 확인
 
-**기록되는 작업:**
+1. **조직도** 페이지에서 5명이 각 부서에 올바르게 배치되었는지 확인합니다.
+2. 각 사용자의 **유효 권한**을 확인하여 의도한 대로 메뉴 접근이 설정되었는지 검증합니다.
+3. **감사로그**에서 "사용자 생성" 이벤트 5건이 정상적으로 기록되었는지 확인합니다.
 
-- Route 추가/삭제/수정
-- Provider 계정 변경
-- 사용자 관리 (생성, 삭제, 역할 변경)
-- 시스템 설정 변경
-- 로그인/로그아웃 (SSO 포함)
-- 권한 그룹/개인 권한 변경
-- 조직(회사/부서) 변경
-- 커스텀 메뉴 변경
-- OAuth 토큰 관리
+### 8.5 온보딩 알림 발송 (선택)
 
-**Web UI:** Audit Logs 페이지에서 조회 (필터: 사용자별, 작업별, 리소스별, 기간별)
+알림 관리 페이지에서 환영 알림을 생성합니다.
 
-**API:**
-
-```bash
-curl "http://localhost:8000/api/audit-logs?action=update&from_date=2026-01-01" \
-  -H "Authorization: Bearer <admin-token>"
-```
+- **범위**: `app`
+- **심각도**: `info`
+- **전달 유형**: `both` (토스트 + 공지사항)
+- **제목**: "신규 팀원 환영합니다!"
+- **메시지**: "새로운 팀원 5명이 합류했습니다. 화면 우측 상단의 ? 버튼으로 Product Tour를 시작해 보세요."
 
 ---
 
-## 백업 및 복원
+## 9. 자주 묻는 질문 (FAQ)
 
-### 데이터베이스 백업
+### Q. 사용자가 비밀번호를 잊어버렸습니다.
 
-```bash
-# PostgreSQL 백업
-docker exec vms-channel-bridge-postgres pg_dump \
-  -U vmsuser \
-  -d vms_channel_bridge \
-  -F c \
-  -f /backups/backup_$(date +%Y%m%d_%H%M%S).dump
-```
+로그인 페이지의 "비밀번호 찾기" 링크에서 비밀번호 재설정 이메일을 발송할 수 있습니다. 개발 환경에서는 MailHog 웹 UI(`http://127.0.0.1:8025`)에서 발송된 메일을 확인할 수 있습니다. 운영 환경에서는 실제 SMTP 서버를 통해 메일이 전달됩니다.
 
-### 자동 백업 스크립트
+### Q. 특정 메뉴가 사용자에게 보이지 않습니다.
 
-```bash
-#!/bin/bash
-# backup.sh
-BACKUP_DIR="./backups"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+다음 순서로 확인하세요:
 
-# PostgreSQL 백업
-docker exec vms-channel-bridge-postgres pg_dump \
-  -U vmsuser \
-  -d vms_channel_bridge \
-  -F c \
-  -f /backups/postgres_$TIMESTAMP.dump
+1. 해당 사용자의 **유효 권한**에서 해당 메뉴에 `read` 이상의 권한이 있는지 확인합니다.
+2. 메뉴가 **활성 상태**(`is_active: true`)인지 확인합니다.
+3. 사용자가 속한 권한 그룹의 grants에서 해당 메뉴가 포함되어 있는지 확인합니다.
+4. `system_admin`은 모든 활성 메뉴에 자동으로 `write` 권한을 가집니다.
 
-# Redis 백업
-docker exec vms-channel-bridge-redis redis-cli --rdb /data/dump_$TIMESTAMP.rdb
+### Q. 감사로그에서 특정 사용자의 모든 활동을 추적하고 싶습니다.
 
-# 환경 변수 백업
-cp .env $BACKUP_DIR/env_$TIMESTAMP.env
+감사로그 페이지에서 **사용자 이메일** 필터에 해당 사용자의 이메일(부분)을 입력합니다. 추가로 **기간** 필터를 조합하면 특정 기간의 활동만 추출할 수 있습니다. 결과를 CSV로 내보내어 오프라인 분석도 가능합니다.
 
-# 7일 이전 백업 삭제
-find $BACKUP_DIR -type f -mtime +7 -delete
+### Q. system_admin과 org_admin의 차이가 무엇인가요?
 
-echo "Backup completed: $TIMESTAMP"
-```
+| 기능 | system_admin | org_admin |
+|------|:---:|:---:|
+| 사용자 목록 조회 | O | O |
+| 사용자 생성/수정/삭제 | O | O (write 권한 필요) |
+| 사용자 역할 변경 | O | X |
+| 그룹 멤버 할당 | O (모든 사용자) | O (일반 사용자만) |
+| 권한 그룹 CRUD | O | X |
+| 커스텀 메뉴 CRUD | O | X |
+| 회사/부서 CRUD | O | X |
+| 조직도 조회 | O | O |
+| 감사로그 조회 | O | O (read 권한 필요) |
 
-**Cron 설정:**
+### Q. 앱마다 별도의 관리자를 두고 싶습니다.
 
-```bash
-# 매일 오전 2시 백업
-0 2 * * * /path/to/backup.sh >> /var/log/vms-backup.log 2>&1
-```
-
-### 복원
-
-```bash
-# PostgreSQL 복원
-docker exec -i vms-channel-bridge-postgres pg_restore \
-  -U vmsuser \
-  -d vms_channel_bridge \
-  -c \
-  /backups/postgres_20260401_020000.dump
-
-# Redis 복원
-docker cp backups/dump_20260401_020000.rdb vms-channel-bridge-redis:/data/dump.rdb
-docker restart vms-channel-bridge-redis
-
-# 환경 변수 복원
-cp backups/env_20260401_020000.env .env
-docker compose up -d --build
-```
+각 앱에서 독립적으로 `org_admin` 역할을 부여하고, 앱별 권한 그룹을 설정하면 됩니다. 권한 그룹과 메뉴는 `app_id`로 격리되므로, 각 앱의 관리자는 자신의 앱 범위 내에서만 관리 작업을 수행합니다.
 
 ---
 
-## 보안 관리
+## 10. 관련 문서
 
-### JWT 토큰 관리
-
-- **Access Token**: 기본 24시간 만료
-- **Refresh Token**: 장기 세션 유지
-- 다중 디바이스 로그인 지원, 개별 세션 해제 가능
-
-`.env`에서 만료 시간 설정:
-
-```bash
-ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24시간
-```
-
-### 방화벽 설정
-
-프로덕션 환경에서는 필요한 포트만 개방합니다:
-
-| 포트 | 서비스 | 외부 노출 |
-|------|--------|----------|
-| 80/443 | Nginx (리버스 프록시) | O |
-| 8000 | Backend API | X (내부) |
-| 5173 | Frontend | X (내부) |
-| 5432 | PostgreSQL | X (내부) |
-| 6379 | Redis | X (내부) |
-
-```bash
-# UFW (Ubuntu)
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-```
-
-### 보안 권장 사항
-
-1. **환경 변수 보호**: `.env` 파일을 Git에 커밋하지 마세요
-2. **강력한 패스워드**: 모든 서비스에 강력한 패스워드 사용
-3. **SSL/TLS**: 프로덕션 환경에서 HTTPS 필수 ([SSL/TLS 설정](ssl-tls-setup) 참조)
-4. **정기 업데이트**: Docker 이미지 및 시스템 패키지 업데이트
-5. **최소 권한 원칙**: RBAC 역할과 권한 그룹을 활용하여 필요한 최소한의 권한만 부여
-6. **감사 로그 검토**: 정기적으로 감사 로그 확인
-7. **SSO 활용**: 가능한 경우 SSO 인증을 활성화하여 중앙 집중식 인증 관리
-
----
-
-## 서비스 관리
-
-### Docker Compose 서비스
-
-| 서비스 | 컨테이너명 | 포트 | 역할 |
-|--------|-----------|------|------|
-| backend | vms-channel-bridge-backend | 8000 | FastAPI + Provider 연결 |
-| frontend | vms-channel-bridge-frontend | 5173 | React 관리 UI |
-| postgres | vms-channel-bridge-postgres | 5432 | PostgreSQL 16 |
-| redis | vms-channel-bridge-redis | 6379 | Redis 7 (라우팅 + 캐시) |
-| prometheus | prometheus | 9090 | 메트릭 수집 |
-| grafana | grafana | 3000 | 모니터링 대시보드 |
-| loki | loki | 3100 | 로그 수집 |
-| promtail | promtail | — | 로그 수집 에이전트 |
-| mailhog | mailhog | 8025 | 개발용 메일 서버 |
-
-### 서비스 제어
-
-```bash
-# 전체 시작
-docker compose up -d
-
-# 전체 중지
-docker compose down
-
-# 특정 서비스 재시작
-docker compose restart backend
-
-# 백엔드만 재빌드
-docker compose up -d --build backend
-
-# 서비스 상태 확인
-docker compose ps
-
-# 리소스 사용량 확인
-docker stats
-```
-
-### 업데이트
-
-```bash
-# 코드 업데이트
-git pull origin main
-
-# 이미지 재빌드 및 재시작
-docker compose up -d --build
-
-# 또는 개별 서비스만
-docker compose up -d --no-deps --build backend
-docker compose up -d --no-deps --build frontend
-```
-
----
-
-## 모범 사례
-
-1. **정기 백업**: 매일 자동 백업, 월 1회 복원 테스트
-2. **모니터링**: Grafana 대시보드 정기 확인, 에러 로그 일일 검토
-3. **보안**: 강력한 패스워드, SSL/TLS 적용, 정기적 패스워드 변경
-4. **업데이트**: 월 1회 Docker 이미지 업데이트, 분기별 시스템 패키지 업데이트
-5. **문서화**: 설정 변경 사항 기록, 운영 절차서 유지
-
----
-
-## 관련 문서
-
-- [사용자 가이드](../user-guide/user-guide) — 기본 사용법
-- [배포 가이드](deployment) — 설치 및 운영
-- [Slack 설정](slack-setup) — Slack App 연동
-- [Teams 설정](teams-setup) — Azure Bot 연동
-- [모니터링 설정](monitoring-setup) — Prometheus / Grafana / Loki
-- [트러블슈팅](troubleshooting) — 문제 해결
-- [API 문서](../api/api) — REST API 레퍼런스
-
----
-
-**최종 업데이트**: 2026-04-10
-**문서 버전**: 3.1
+- [배포 가이드](./DEPLOYMENT.md) - 환경 설정 및 배포 절차
+- [모니터링 설정](./MONITORING_SETUP.md) - Prometheus/Grafana 메트릭 모니터링
+- [이메일 설정](./EMAIL_SETUP.md) - SMTP 및 메일 발송 설정
+- [SSL/TLS 설정](./SSL_TLS_SETUP.md) - HTTPS 인증서 및 리버스 프록시

@@ -1,923 +1,637 @@
-# Platform / App 분리 아키텍처 설계
+# 플랫폼과 앱의 분리 아키텍처
 
-> **문서 버전**: 1.0  
-> **작성일**: 2026-04-11  
-> **상태**: 검토 대기 (Draft)  
-> **목적**: 현재 VMS Channel Bridge 코드베이스를 **재사용 가능한 플랫폼 프레임워크**와 **앱별 비즈니스 로직**으로 분리하기 위한 아키텍처 설계
-
----
-
-## 1. 배경 및 목표
-
-### 1.1 현재 상태
-
-VMS Channel Bridge는 단일 모놀리식 구조로, 인증/RBAC/조직도/감사로그 같은 **범용 플랫폼 기능**과 Slack-Teams 메시지 브리지 같은 **앱 고유 기능**이 같은 디렉토리에 혼재되어 있다.
-
-```
-backend/app/
-├── api/           ← 플랫폼 API 15개 + 앱 API 8개 혼재
-├── models/        ← 플랫폼 모델 10개 + 앱 모델 3개 혼재
-├── services/      ← 플랫폼 서비스 7개 + 앱 서비스 10개 혼재
-└── main.py        ← 플랫폼 초기화 + 앱 초기화 단일 진입점
-```
-
-### 1.2 목표
-
-| # | 목표 | 설명 |
-|---|------|------|
-| G1 | **재사용성** | 플랫폼 레이어를 다른 프로젝트에서 코드 변경 없이 사용 |
-| G2 | **관심사 분리** | 플랫폼 업그레이드가 앱 코드에 영향 없음, 그 역도 성립 |
-| G3 | **독립 배포** | 플랫폼은 라이브러리/패키지로 배포 가능 |
-| G4 | **확장성** | 새 앱(프로젝트) 추가 시 플랫폼 코드 복사 불필요 |
-| G5 | **점진적 마이그레이션** | 한번에 전부 바꾸지 않고 단계적으로 분리 가능 |
+> **문서 버전**: 2.0  
+> **최종 업데이트**: 2026-04-13  
+> **범위**: v-platform 프레임워크와 앱 간 분리 구조, 통합 방식, 책임 경계
 
 ---
 
-## 2. 현재 코드베이스 분류
+## 1. 개요
 
-### 2.1 Backend 분류
+v-project는 **v-platform**(재사용 가능한 플랫폼 프레임워크)과 **앱**(비즈니스 로직)을 물리적으로 분리한 구조입니다. 플랫폼은 인증, RBAC, 감사로그, 알림, 메뉴, SSO, UI 컴포넌트 등 범용 기능을 제공하고, 각 앱은 자신의 고유 비즈니스 로직만 구현합니다.
 
-#### 플랫폼 영역 (재사용 가능)
+### 1.1 왜 분리했는가
 
-| 카테고리 | 모듈 | 설명 |
-|----------|------|------|
-| **인증** | `api/auth.py`, `api/auth_sso.py`, `api/auth_microsoft.py` | JWT 로그인, SSO, OAuth |
-| **사용자** | `api/users.py`, `models/user.py` | 사용자 CRUD, 역할 관리 |
-| **RBAC** | `api/permissions.py`, `api/permission_groups.py`, `api/menus.py` | 3단계 역할 + 메뉴 기반 권한 |
-| **조직도** | `api/organizations.py`, `models/company.py`, `models/department.py` | 회사/부서 계층 |
-| **감사** | `api/audit_logs.py`, `models/audit_log.py`, `utils/audit_logger.py` | 감사 로그 |
-| **토큰** | `services/token_service.py`, `models/refresh_token.py` | JWT 발급/갱신/폐기, 디바이스 추적 |
-| **권한 서비스** | `services/permission_service.py` | MAX(그룹, 개인) 권한 계산 |
-| **비밀번호** | `services/password_reset_service.py`, `models/password_reset_token.py` | 비밀번호 재설정 플로우 |
-| **이메일** | `services/email_service.py` | SMTP 발송 |
-| **캐시** | `services/cache_service.py` | Redis 래퍼 |
-| **암호화** | `utils/encryption.py` | Fernet 기반 토큰 암호화 |
-| **미들웨어** | `middleware/csrf.py`, `middleware/metrics.py` | CSRF, Prometheus |
-| **DB** | `db/database.py` | SQLAlchemy 엔진, 마이그레이션 러너 |
-| **SSO** | `sso/base.py`, `sso/registry.py` | SSO 프로바이더 추상화 |
-| **알림** | `services/notification_service.py` | 범용 알림 디스패처 |
-| **시스템 설정** | `api/system_settings.py`, `models/system_settings.py` | 키-값 설정 저장 |
-| **헬스체크** | `api/health.py` | Liveness/Readiness 프로브 |
+| 동기 | 설명 |
+|------|------|
+| **재사용성** | 인증/권한/감사 같은 범용 기능을 매 프로젝트마다 재구현하지 않습니다. `v-platform`을 그대로 가져와 새 앱을 시작합니다. |
+| **독립 배포** | 플랫폼 업데이트가 앱 코드에 영향을 주지 않고, 앱 변경이 플랫폼을 건드리지 않습니다. |
+| **팀 소유권 분리** | 플랫폼 팀과 앱 팀이 각자의 코드베이스를 독립적으로 관리합니다. |
+| **확장성** | 새 앱을 추가할 때 플랫폼 코드를 복사하지 않고 의존성으로 사용합니다. |
+| **일관성** | 모든 앱이 동일한 인증 체계, 권한 모델, UI 패턴을 공유합니다. |
 
-#### 앱 영역 (Chat Bridge 고유)
+### 1.2 현재 운영 중인 앱
 
-| 카테고리 | 모듈 | 설명 |
-|----------|------|------|
-| **어댑터** | `adapters/base.py`, `slack_provider.py`, `teams_provider.py` | 플랫폼별 메시지 프로바이더 |
-| **브리지** | `services/websocket_bridge.py` | 코어 메시지 라우팅 엔진 |
-| **라우팅** | `services/route_manager.py` | Redis 기반 동적 채널 라우팅 |
-| **메시지** | `api/messages.py`, `models/message.py`, `services/message_service.py` | 메시지 이력/통계/검색 |
-| **계정** | `api/accounts_crud.py`, `models/account.py` | Slack/Teams 자격증명 관리 |
-| **웹훅** | `api/teams_webhook.py`, `api/teams_notifications.py` | Teams Bot Framework 수신 |
-| **큐** | `services/message_queue.py` | 배치 메시지 큐 (50건/5초) |
-| **명령어** | `services/command_processor.py` | `/vms`, `/bridge` 커맨드 파싱 |
-| **이벤트** | `services/event_broadcaster.py`, `services/websocket_manager.py` | 실시간 이벤트 브로드캐스트 |
-| **구독** | `services/teams_subscription_manager.py` | Teams Graph API 구독 |
-| **포맷터** | `utils/message_formatter.py`, `utils/emoji_mapper.py` | 크로스 플랫폼 메시지 변환 |
-| **스키마** | `schemas/common_message.py` | CommonMessage (Zowe Chat 패턴) |
-
-### 2.2 Frontend 분류
-
-#### 플랫폼 영역
-
-| 카테고리 | 파일/디렉토리 | 설명 |
-|----------|-------------|------|
-| **API 클라이언트** | `lib/api/client.ts` | Axios + 인터셉터, 토큰 갱신, 에러 처리 |
-| **인증 API** | `lib/api/auth.ts`, `users.ts`, `permissions.ts`, `organizations.ts`, `permission-groups.ts` | 플랫폼 API 호출 |
-| **상태 관리** | `store/auth.ts`, `permission.ts`, `notification.ts`, `systemSettings.ts`, `sessionSettings.ts` | 인증/권한/알림 Zustand 스토어 |
-| **라우트 가드** | `components/ProtectedRoute.tsx` | 인증 + RBAC 라우트 보호 |
-| **레이아웃** | `components/layout/*` | Sidebar, TopBar, ContentHeader |
-| **UI 라이브러리** | `components/ui/*` (17개 컴포넌트) | Button, Card, Modal, Table, Tabs, Badge 등 |
-| **테마** | `hooks/useTheme.ts`, `components/settings/ThemeSettings.tsx` | 다크모드 + 컬러 프리셋 |
-| **인증 훅** | `hooks/useTokenExpiry.ts`, `useActivityDetection.ts`, `useIdleTimeout.ts`, `useTabSync.ts` | 토큰/세션 관리 |
-| **네비게이션** | `lib/navigation.tsx`, `lib/resolveStartPage.ts` | 메뉴→NavItem 변환, 시작 페이지 결정 |
-| **알림** | `components/notifications/*` | Bell, Popover, Toast |
-| **타입** | `lib/api/types.ts` (공통 부분) | User, Permission, AuditLog 타입 |
-
-#### 앱 영역
-
-| 카테고리 | 파일/디렉토리 | 설명 |
-|----------|-------------|------|
-| **페이지** | `pages/Channels.tsx`, `Messages.tsx`, `Statistics.tsx`, `Integrations.tsx` | 앱 고유 페이지 |
-| **대시보드** | `components/dashboard/*` | 브리지 상태, 메시지 플로우 위젯 |
-| **채널** | `components/channels/*` | 라우트 관리 UI |
-| **메시지** | `components/messages/*` | 메시지 검색/필터 |
-| **프로바이더** | `components/providers/*` | Slack/Teams 프로바이더 카드 |
-| **통계** | `components/statistics/*` | 메시지 차트 |
-| **모니터링** | `components/monitoring/*` | 서비스 헬스 |
-| **스토어** | `store/routes.ts`, `providers.ts`, `bridge.ts`, `config.ts` | 앱 상태 |
-| **API** | `lib/api/messages.ts`, `bridge.ts`, `providers.ts`, `routes.ts`, `config.ts` | 앱 API |
-| **유틸** | `lib/utils/platform.ts` | Slack/Teams 플랫폼 설정 |
-
-### 2.3 인프라 분류
-
-| 구분 | 플랫폼 | 앱 |
-|------|--------|-----|
-| **Docker** | postgres, redis, mailhog, nginx | 앱별 backend/frontend 이미지 |
-| **의존성** | FastAPI, SQLAlchemy, jose, passlib, React, Zustand, Tailwind | slack-bolt, botbuilder-core, recharts |
-| **마이그레이션** | 17개 (users, RBAC, organizations, menus, audit) | 5개 (messages, accounts, delivery) |
-| **환경변수** | DATABASE_URL, REDIS_URL, SECRET_KEY, SMTP_* | SLACK_*, TEAMS_* |
+| 앱 | 역할 | 포트 (Backend/Frontend) |
+|----|------|----------------------|
+| v-channel-bridge | Slack / Teams 메시지 브리지 | 8000 / 5173 |
+| v-platform-template | 새 앱 시작 템플릿 (최소 구성 예시) | 8002 / 5174 |
+| v-platform-portal | 통합 앱 포털, SSO Relay, 앱 런처 | 8080 / 5180 |
 
 ---
 
-## 3. 제안 아키텍처
-
-### 3.1 계층 구조
+## 2. 레이어 구조
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Application Layer                     │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
-│  │  Chat Bridge  │ │  Future App  │ │  Another App     │ │
-│  │  (VMS Channel Bridge)│ │  (Project B) │ │  (Project C)     │ │
-│  └──────┬───────┘ └──────┬───────┘ └────────┬─────────┘ │
-├─────────┼────────────────┼──────────────────┼───────────┤
-│         │       Platform Layer              │           │
-│  ┌──────┴───────────────────────────────────┴─────────┐ │
-│  │  vms-platform (공유 프레임워크)                       │ │
-│  │  ┌─────────┐ ┌──────┐ ┌────────┐ ┌──────────────┐  │ │
-│  │  │  Auth   │ │ RBAC │ │ Audit  │ │ Organization │  │ │
-│  │  │  + SSO  │ │      │ │  Log   │ │              │  │ │
-│  │  └─────────┘ └──────┘ └────────┘ └──────────────┘  │ │
-│  │  ┌─────────┐ ┌──────┐ ┌────────┐ ┌──────────────┐  │ │
-│  │  │  User   │ │ Menu │ │ Theme  │ │   UI Kit     │  │ │
-│  │  │  Mgmt   │ │ Mgmt │ │        │ │              │  │ │
-│  │  └─────────┘ └──────┘ └────────┘ └──────────────┘  │ │
-│  └─────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────┤
-│                  Infrastructure Layer                    │
-│  ┌──────────┐ ┌───────┐ ┌─────────┐ ┌───────────────┐  │
-│  │PostgreSQL│ │ Redis │ │ SMTP    │ │ Docker Compose│  │
-│  └──────────┘ └───────┘ └─────────┘ └───────────────┘  │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                       앱 레이어                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │ v-channel-   │  │ v-platform-  │  │ v-platform-  │    │
+│  │ bridge       │  │ template     │  │ portal       │    │
+│  │              │  │              │  │              │    │
+│  │ Slack/Teams  │  │ 최소 구성     │  │ AppRegistry  │    │
+│  │ 메시지 브리지 │  │ 스캐폴딩     │  │ SSO Relay    │    │
+│  │ 어댑터/큐    │  │ 대시보드     │  │ 앱 런처       │    │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
+│         │                 │                 │             │
+├─────────┴─────────────────┴─────────────────┴─────────────┤
+│                    v-platform (프레임워크)                   │
+│                                                            │
+│  인증(JWT/SSO) | RBAC(3단계 권한) | 감사로그 | 알림 시스템    │
+│  사용자 관리 | 조직도 | 메뉴 관리 | 시스템 설정 | 헬스체크     │
+│  WebSocket | Prometheus 메트릭 | CSRF | Rate Limiting       │
+│  UI Kit | 레이아웃 | 테마 | 스토어 | 훅                      │
+│                                                            │
+├────────────────────────────────────────────────────────────┤
+│                    인프라 레이어                             │
+│  PostgreSQL 16 | Redis 7 | Docker Compose | MailHog        │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 디렉토리 구조 (제안)
+### 2.1 핵심 원칙
+
+- **v-platform은 불변 프레임워크입니다.** 앱이 플랫폼 코드를 직접 수정하지 않습니다.
+- **앱은 가변 비즈니스 로직입니다.** 앱별 라우터, 모델, 서비스, 페이지를 자유롭게 추가합니다.
+- **의존 방향은 단방향입니다.** 앱 -> 플랫폼 OK, 플랫폼 -> 앱 금지.
+
+---
+
+## 3. 디렉토리 구조
 
 ```
-vms-channel-bridge/                          # 현재 프로젝트 (앱)
-├── platform/                          # ★ 플랫폼 패키지 (추출 대상)
-│   ├── backend/
-│   │   ├── platform/                  # Python 패키지: vms_platform
-│   │   │   ├── __init__.py            # 패키지 진입점 + create_platform_app()
-│   │   │   ├── core/
-│   │   │   │   ├── config.py          # PlatformConfig (필수/선택 설정)
-│   │   │   │   ├── database.py        # DB 엔진, 세션, 마이그레이션 러너
-│   │   │   │   ├── security.py        # JWT, bcrypt, Fernet, CSRF
-│   │   │   │   └── exceptions.py      # 공통 예외 클래스
-│   │   │   │
-│   │   │   ├── models/                # 플랫폼 SQLAlchemy 모델
-│   │   │   │   ├── base.py            # DeclarativeBase (앱과 공유)
-│   │   │   │   ├── user.py
-│   │   │   │   ├── audit_log.py
-│   │   │   │   ├── refresh_token.py
-│   │   │   │   ├── password_reset_token.py
-│   │   │   │   ├── menu_item.py
-│   │   │   │   ├── user_permission.py
-│   │   │   │   ├── permission_group.py
-│   │   │   │   ├── company.py
-│   │   │   │   ├── department.py
-│   │   │   │   └── system_settings.py
-│   │   │   │
-│   │   │   ├── schemas/               # Pydantic 스키마
-│   │   │   │   ├── auth.py
-│   │   │   │   ├── user.py
-│   │   │   │   ├── permission.py
-│   │   │   │   ├── audit_log.py
-│   │   │   │   └── organization.py
-│   │   │   │
-│   │   │   ├── api/                   # FastAPI 라우터
-│   │   │   │   ├── auth.py
-│   │   │   │   ├── users.py
-│   │   │   │   ├── permissions.py
-│   │   │   │   ├── permission_groups.py
-│   │   │   │   ├── menus.py
-│   │   │   │   ├── organizations.py
-│   │   │   │   ├── audit_logs.py
-│   │   │   │   ├── system_settings.py
-│   │   │   │   ├── health.py
-│   │   │   │   └── notifications.py
-│   │   │   │
-│   │   │   ├── services/              # 비즈니스 로직
-│   │   │   │   ├── token_service.py
-│   │   │   │   ├── permission_service.py
-│   │   │   │   ├── password_reset_service.py
-│   │   │   │   ├── email_service.py
-│   │   │   │   ├── cache_service.py
-│   │   │   │   └── notification_service.py
-│   │   │   │
-│   │   │   ├── middleware/
-│   │   │   │   ├── csrf.py
-│   │   │   │   └── metrics.py
-│   │   │   │
-│   │   │   ├── sso/                   # SSO 프로바이더
-│   │   │   │   ├── base.py
-│   │   │   │   ├── registry.py
-│   │   │   │   └── microsoft.py
-│   │   │   │
-│   │   │   ├── utils/
-│   │   │   │   ├── auth.py            # get_current_user, require_permission 등
-│   │   │   │   ├── audit_logger.py
-│   │   │   │   └── encryption.py
-│   │   │   │
-│   │   │   └── migrations/            # 플랫폼 마이그레이션
-│   │   │       ├── 001_users.py
-│   │   │       ├── 002_rbac_menus.py
-│   │   │       ├── 003_organizations.py
-│   │   │       ├── 004_permission_groups.py
-│   │   │       └── ...
-│   │   │
-│   │   ├── pyproject.toml             # 패키지 정의
-│   │   └── requirements.txt
+v-project/
+├── platform/                              # v-platform 프레임워크
+│   ├── backend/v_platform/                # Python 패키지
+│   │   ├── app.py                         # PlatformApp 클래스 (진입점)
+│   │   ├── core/                          # database, logging, exceptions
+│   │   ├── models/                        # 플랫폼 모델 13개
+│   │   ├── api/                           # 플랫폼 라우터 18개
+│   │   ├── services/                      # 14개 서비스
+│   │   ├── middleware/                    # CSRF, Prometheus metrics
+│   │   ├── sso/                           # Microsoft, Generic OIDC
+│   │   ├── utils/                         # auth, audit_logger, encryption, filters
+│   │   ├── schemas/                       # Pydantic 스키마
+│   │   ├── monitoring/                    # 메트릭 레지스트리
+│   │   └── migrations/                    # p001 ~ p026
 │   │
-│   └── frontend/
-│       └── platform/                  # npm 패키지: @vms/platform
-│           ├── package.json
-│           ├── src/
-│           │   ├── index.ts           # 진입점 — 전체 re-export
-│           │   │
-│           │   ├── api/               # API 클라이언트
-│           │   │   ├── client.ts      # Axios 인스턴스 + 인터셉터
-│           │   │   ├── auth.ts
-│           │   │   ├── users.ts
-│           │   │   ├── permissions.ts
-│           │   │   ├── organizations.ts
-│           │   │   ├── permission-groups.ts
-│           │   │   ├── auditLogs.ts
-│           │   │   └── systemSettings.ts
-│           │   │
-│           │   ├── stores/            # Zustand 스토어
-│           │   │   ├── auth.ts
-│           │   │   ├── permission.ts
-│           │   │   ├── notification.ts
-│           │   │   ├── systemSettings.ts
-│           │   │   └── sessionSettings.ts
-│           │   │
-│           │   ├── hooks/             # React 훅
-│           │   │   ├── useTheme.ts
-│           │   │   ├── useTokenExpiry.ts
-│           │   │   ├── useActivityDetection.ts
-│           │   │   ├── useIdleTimeout.ts
-│           │   │   ├── useKeyboardShortcuts.ts
-│           │   │   ├── useSidebar.tsx
-│           │   │   └── useTabSync.ts
-│           │   │
-│           │   ├── components/        # 공통 컴포넌트
-│           │   │   ├── ui/            # 디자인 시스템 (17개)
-│           │   │   ├── layout/        # Sidebar, TopBar, ContentHeader
-│           │   │   ├── auth/          # SSOButton, TokenExpiryManager
-│           │   │   ├── notifications/ # Bell, Popover, Toast
-│           │   │   └── ProtectedRoute.tsx
-│           │   │
-│           │   ├── lib/               # 유틸리티
-│           │   │   ├── navigation.tsx
-│           │   │   ├── resolveStartPage.ts
-│           │   │   └── utils/
-│           │   │
-│           │   ├── types/             # 공통 타입 정의
-│           │   │   ├── auth.ts
-│           │   │   ├── user.ts
-│           │   │   ├── permission.ts
-│           │   │   ├── audit.ts
-│           │   │   └── common.ts
-│           │   │
-│           │   └── styles/            # CSS 변수, Tailwind 프리셋
-│           │       ├── tokens.css     # 시맨틱 토큰
-│           │       └── tailwind-preset.ts
-│           │
-│           └── tsconfig.json
+│   └── frontend/v-platform-core/          # npm 패키지: @v-platform/core
+│       └── src/
+│           ├── pages/                     # 18개 플랫폼 페이지
+│           ├── providers/                 # PlatformProvider
+│           ├── api/                       # API 클라이언트
+│           ├── stores/                    # 6개 Zustand 스토어
+│           ├── hooks/                     # 12개 훅
+│           ├── components/                # 65+ 컴포넌트
+│           └── lib/                       # navigation, tour, websocket, utils
 │
-├── backend/                           # 앱 백엔드 (현재 구조 유지)
-│   └── app/
-│       ├── main.py                    # 앱 진입점 (플랫폼 import + 앱 라우터 등록)
-│       ├── adapters/                  # Slack, Teams 프로바이더
-│       ├── api/                       # 앱 전용 API (bridge, messages, accounts 등)
-│       ├── models/                    # 앱 전용 모델 (Message, Account 등)
-│       ├── schemas/                   # 앱 전용 스키마 (CommonMessage 등)
-│       ├── services/                  # 앱 전용 서비스 (bridge, queue 등)
-│       ├── utils/                     # 앱 전용 유틸 (emoji_mapper 등)
-│       └── migrations/               # 앱 전용 마이그레이션
+├── apps/
+│   ├── v-channel-bridge/                  # 앱: 메시지 브리지
+│   │   ├── backend/app/                   # 앱 전용 API, 모델, 서비스, 어댑터
+│   │   └── frontend/src/                  # 앱 전용 페이지, 컴포넌트
+│   │
+│   ├── v-platform-template/               # 앱: 템플릿
+│   │   ├── backend/app/main.py            # PlatformApp만 (~30줄)
+│   │   └── frontend/src/                  # 최소 앱 전용 UI
+│   │
+│   └── v-platform-portal/                 # 앱: 포털
+│       ├── backend/app/                   # 포털 API, AppRegistry, 모델
+│       └── frontend/src/                  # 포털 전용 UI
 │
-├── frontend/                          # 앱 프론트엔드
-│   └── src/
-│       ├── App.tsx                    # 앱 라우트 등록
-│       ├── pages/                     # 앱 전용 페이지
-│       ├── components/                # 앱 전용 컴포넌트
-│       ├── store/                     # 앱 전용 스토어 (routes, bridge, providers)
-│       └── lib/api/                   # 앱 전용 API (messages, bridge 등)
-│
-├── docker-compose.yml                 # 인프라 + 서비스 정의
-└── .env                               # 환경변수
+└── docker-compose.yml                     # 전체 서비스 (프로필 지원)
 ```
-
-### 3.3 패키지화 방식 비교
-
-| 방식 | 장점 | 단점 | 적합도 |
-|------|------|------|--------|
-| **A. 모노레포 로컬 패키지** | 단일 저장소, 즉시 반영, 별도 배포 불필요 | 버전 관리 어려움 | **권장** |
-| **B. 별도 Git 저장소 + npm/PyPI** | 완전한 독립 배포, 시맨틱 버전 관리 | 개발 속도 저하, 디버깅 불편 | 성숙 단계에 적합 |
-| **C. Git Submodule** | 저장소 분리 가능 | 관리 복잡, 충돌 발생 가능 | 비권장 |
-
-**권장: 방식 A → B 순차 전환**
-
-1단계: 모노레포 내 `platform/` 디렉토리로 분리 (로컬 참조)
-2단계: 안정화 후 별도 패키지로 배포
 
 ---
 
-## 4. 핵심 설계 결정
+## 4. 백엔드 통합 방식
 
-### 4.1 플랫폼 초기화 패턴 (Backend)
+### 4.1 PlatformApp 클래스
 
-플랫폼이 FastAPI 앱을 생성하되, 앱이 자신의 라우터와 이벤트를 등록하는 구조.
+모든 앱의 백엔드 진입점은 `PlatformApp` 인스턴스를 생성하는 것으로 시작합니다. `PlatformApp`은 FastAPI 애플리케이션을 내부에 감싸고, 플랫폼의 모든 미들웨어와 라우터를 자동으로 등록합니다.
 
 ```python
-# platform/backend/platform/__init__.py
+# platform/backend/v_platform/app.py
 
 class PlatformApp:
-    """플랫폼 프레임워크 인스턴스"""
+    def __init__(
+        self,
+        app_name: str = "v-platform",
+        version: str = "0.1.0",
+        description: str = "",
+        lifespan: Optional[Callable] = None,
+        cors_origins: Optional[list[str]] = None,
+        app_menu_keys: Optional[list[str]] = None,
+    ):
+        self.app_name = app_name
+        self.app_menu_keys = app_menu_keys
 
-    def __init__(self, config: PlatformConfig):
-        self.config = config
+        # 구조화 로깅 설정 (app_name 라벨 자동 주입)
+        configure_platform_logging(app_name=app_name)
+
         self.fastapi = FastAPI(
-            title=config.app_name,
-            lifespan=self._lifespan,
+            title=f"{app_name} API",
+            description=description,
+            version=version,
+            lifespan=lifespan,
         )
-        self._setup_middleware()
+        self.fastapi.state.app_id = app_name  # 모든 request에서 접근 가능
+
+        self._setup_middleware(cors_origins)
+        self._setup_rate_limiter()
         self._register_platform_routers()
-
-    def _setup_middleware(self):
-        """CORS, CSRF, Rate Limiting, Metrics"""
-        ...
-
-    def _register_platform_routers(self):
-        """인증, 사용자, RBAC, 감사 등 플랫폼 라우터 자동 등록"""
-        self.fastapi.include_router(auth_router, prefix="/api/auth")
-        self.fastapi.include_router(users_router, prefix="/api/users")
-        self.fastapi.include_router(permissions_router, prefix="/api/permissions")
-        # ... 플랫폼 라우터 15개
 
     def register_app_routers(self, *routers):
         """앱 전용 라우터 등록"""
         for router in routers:
             self.fastapi.include_router(router)
 
-    def on_startup(self, callback):
-        """앱 초기화 훅 등록"""
-        self._startup_hooks.append(callback)
+    def init_platform(self):
+        """DB 초기화, SSO 프로바이더 설정, 앱 메뉴 분류"""
+        init_db()
+        init_sso_providers()
+        if self.app_menu_keys:
+            self._classify_app_menus()
+```
 
-    def on_shutdown(self, callback):
-        """앱 종료 훅 등록"""
-        self._shutdown_hooks.append(callback)
+### 4.2 PlatformApp 생성자 파라미터
 
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `app_name` | `str` | 앱 식별자. `request.app.state.app_id`에 설정됩니다. |
+| `version` | `str` | FastAPI 문서에 표시되는 버전 |
+| `description` | `str` | FastAPI 문서 설명 |
+| `lifespan` | `Callable` | FastAPI lifespan 컨텍스트 매니저 (startup/shutdown) |
+| `cors_origins` | `list[str]` | CORS 허용 오리진. 기본값은 `127.0.0.1:3000`, `127.0.0.1:5173` |
+| `app_menu_keys` | `list[str]` | 이 앱에 속하는 메뉴의 `permission_key` 목록. 해당 메뉴의 `app_id`를 자동 설정합니다. |
 
-# ─── 앱 측 사용 예시 ───
+### 4.3 PlatformApp이 자동으로 등록하는 라우터 (18개)
 
-# backend/app/main.py
-from platform import PlatformApp, PlatformConfig
+| 라우터 | 프리픽스 | 역할 |
+|--------|----------|------|
+| `auth` | `/api/auth` | JWT 로그인, 회원가입, 토큰 갱신 |
+| `auth_sso` | `/api/auth/sso` | SSO 로그인 (Generic OIDC) |
+| `auth_microsoft` | `/api/auth/microsoft` | Microsoft OAuth |
+| `users` | `/api/users` | 사용자 CRUD |
+| `user_oauth` | `/api/users/oauth` | 사용자별 OAuth 토큰 |
+| `permissions` | `/api/permissions` | 개인 메뉴 권한 |
+| `permission_groups` | `/api/permission-groups` | 권한 그룹 |
+| `menus` | `/api/menus` | 동적 메뉴 |
+| `organizations` | `/api/organizations` | 회사/부서 조직도 |
+| `audit_logs` | `/api/audit-logs` | 감사 로그 |
+| `system_settings` | `/api/system-settings` | 시스템 설정 (브랜딩 포함) |
+| `health` | `/api/health` | 헬스체크 (DB, Redis + 커스텀) |
+| `notifications` | `/api/notifications` | 실시간 알림 (WebSocket 기반) |
+| `persistent_notifications` | `/api/notifications-v2` | 영속 알림 CRUD (DB 기반, scope) |
+| `metrics` | `/metrics` | Prometheus 메트릭 익스포트 |
+| `websocket` | `/api/ws` | WebSocket 연결 관리 |
+| `uploads` | `/api/uploads` | 파일 업로드 |
 
-config = PlatformConfig(
-    app_name="VMS Channel Bridge",
-    database_url=os.getenv("DATABASE_URL"),
-    redis_url=os.getenv("REDIS_URL"),
-    secret_key=os.getenv("SECRET_KEY"),
-    cors_origins=["http://localhost:5173"],
-    # 플랫폼 기능 토글
-    features=PlatformFeatures(
-        sso_enabled=True,
-        audit_log_enabled=True,
-        organizations_enabled=True,
-    ),
+### 4.4 미들웨어 자동 설정
+
+`PlatformApp` 생성 시 다음 미들웨어가 자동으로 등록됩니다:
+
+1. **MetricsMiddleware** -- Prometheus HTTP 요청 카운터 및 응답 시간 히스토그램
+2. **CORSMiddleware** -- Cross-Origin Resource Sharing 허용
+3. **CSRFMiddleware** -- CSRF 공격 방어
+
+Rate Limiter(SlowAPI)도 자동으로 설정됩니다.
+
+### 4.5 앱에서의 사용법
+
+#### v-channel-bridge (실전 앱)
+
+```python
+# apps/v-channel-bridge/backend/app/main.py
+
+from v_platform.app import PlatformApp
+from v_platform.api.health import health_registry, ServiceHealth
+
+# PlatformApp 생성 — 플랫폼 전체 기능이 자동 포함됨
+platform = PlatformApp(
+    app_name="v-channel-bridge",
+    version="2.0.0",
+    description="Slack / Teams Message Bridge",
+    lifespan=lifespan,
+    app_menu_keys=[
+        "channels", "messages", "statistics",
+        "integrations", "monitoring",
+    ],
 )
 
-platform = PlatformApp(config)
-
-# 앱 라우터 등록
-from app.api import bridge, messages, accounts_crud, teams_webhook
+# 앱 전용 라우터만 추가 등록
 platform.register_app_routers(
     bridge.router,
     messages.router,
     accounts_crud.router,
+    accounts_test.router,
     teams_webhook.router,
+    teams_notifications.router,
+    monitoring.router,
 )
 
-# 앱 수명주기 이벤트
-@platform.on_startup
-async def init_bridge():
-    """Chat Bridge 초기화"""
-    route_manager = RouteManager(platform.redis)
-    bridge = WebSocketBridge(route_manager)
-    await bridge.start()
-
-app = platform.fastapi  # uvicorn이 사용할 ASGI 앱
+# ASGI 앱 노출
+app = platform.fastapi
 ```
 
-### 4.2 모델 공유 패턴 (DeclarativeBase)
-
-플랫폼과 앱이 같은 DB를 사용하므로, `Base` 클래스를 플랫폼에서 제공하고 앱이 이를 상속.
+#### v-platform-template (최소 앱)
 
 ```python
-# platform/backend/platform/models/base.py
-from sqlalchemy.orm import DeclarativeBase
+# apps/v-platform-template/backend/app/main.py
 
-class Base(DeclarativeBase):
-    """플랫폼 + 앱 공유 Base 클래스"""
-    pass
+from v_platform.app import PlatformApp
 
+platform = PlatformApp(
+    app_name="v-platform-template",
+    version="1.0.0",
+    description="v-platform 새 앱 템플릿",
+    lifespan=lifespan,
+)
 
-# platform/backend/platform/models/user.py
-from .base import Base
-
-class User(Base):
-    __tablename__ = "users"
-    ...
-
-
-# backend/app/models/message.py (앱 측)
-from platform.models.base import Base  # 같은 Base 사용
-
-class Message(Base):
-    __tablename__ = "messages"
-    ...
+# 앱 전용 라우터 없음 — 플랫폼 기능만으로 동작
+app = platform.fastapi
 ```
 
-### 4.3 마이그레이션 분리
+### 4.6 커스텀 헬스체크 등록
 
-플랫폼과 앱의 마이그레이션을 별도 디렉토리에 관리하되, 실행 순서를 보장.
-
-```
-platform/backend/platform/migrations/
-  p001_users.py
-  p002_rbac_menus.py
-  p003_organizations.py
-  ...
-
-backend/migrations/
-  a001_messages.py
-  a002_accounts.py
-  ...
-```
-
-**실행 순서**: 플랫폼 마이그레이션 → 앱 마이그레이션 (접두어로 구분)
+앱은 `HealthRegistry`를 통해 자체 서비스의 헬스 상태를 플랫폼 `/api/health` 응답에 포함시킬 수 있습니다.
 
 ```python
-# database.py
-def run_migrations(engine):
-    run_directory(engine, "platform/migrations/", prefix="p")  # 플랫폼 먼저
-    run_directory(engine, "app/migrations/", prefix="a")       # 앱 이후
+from v_platform.api.health import health_registry, ServiceHealth
+
+def _check_bridge() -> ServiceHealth:
+    b = get_bridge()
+    if b and b.is_running:
+        return ServiceHealth(status="healthy")
+    return ServiceHealth(status="unhealthy", error="Bridge not running")
+
+health_registry.register("bridge", _check_bridge)
 ```
 
-### 4.4 프론트엔드 플랫폼 패키지 구조
+결과 `/api/health` 응답:
 
-```typescript
-// platform/frontend/platform/src/index.ts
-
-// ── 컴포넌트 ──
-export { PlatformProvider } from './providers/PlatformProvider';
-export { ProtectedRoute } from './components/ProtectedRoute';
-export { Layout, Sidebar, TopBar, ContentHeader } from './components/layout';
-export { ThemeProvider, useTheme } from './hooks/useTheme';
-export * from './components/ui';  // Button, Card, Modal, Table ...
-
-// ── 스토어 ──
-export { useAuthStore } from './stores/auth';
-export { usePermissionStore } from './stores/permission';
-export { useNotificationStore } from './stores/notification';
-
-// ── API ──
-export { createApiClient } from './api/client';
-
-// ── 타입 ──
-export type { User, UserRole, Permission, AuditLog } from './types';
-
-// ── 훅 ──
-export { useTokenExpiry, useIdleTimeout, useTabSync } from './hooks';
+```json
+{
+  "status": "healthy",
+  "version": "2.0.0",
+  "services": {
+    "database": {"status": "healthy", "response_time_ms": 4.1},
+    "redis": {"status": "healthy", "response_time_ms": 12.0},
+    "bridge": {"status": "healthy"}
+  }
+}
 ```
 
-앱에서의 사용:
+### 4.7 app_id의 전파
+
+`PlatformApp` 생성 시 `app_name`이 `request.app.state.app_id`에 설정됩니다. 플랫폼의 모든 API 핸들러는 이 값을 참조하여 앱별 데이터 격리를 수행합니다.
+
+```
+PlatformApp(app_name="v-channel-bridge")
+    │
+    └─> fastapi.state.app_id = "v-channel-bridge"
+        │
+        └─> 모든 요청에서 request.app.state.app_id 접근 가능
+            │
+            ├─> 메뉴 조회: 해당 앱 + 플랫폼 공통 메뉴만 반환
+            ├─> 감사 로그: app_id 자동 기록
+            ├─> 시스템 설정: 앱별 오버라이드 적용
+            ├─> 알림: scope 기반 필터링
+            └─> 권한 그룹: 앱별 분리
+```
+
+---
+
+## 5. 프론트엔드 통합 방식
+
+### 5.1 `@v-platform/core` 패키지
+
+프론트엔드에서 플랫폼 기능은 `@v-platform/core` 패키지로 제공됩니다. 앱은 이 패키지에서 페이지, 컴포넌트, 훅, 스토어를 import하여 사용합니다.
+
+```
+platform/frontend/v-platform-core/src/
+├── pages/           # 18개 플랫폼 페이지 (Login, Settings, Admin 등)
+├── providers/       # PlatformProvider (Config + QueryClient)
+├── api/             # API 클라이언트 (client, auth, users, permissions...)
+├── stores/          # 6개 Zustand 스토어 (auth, permission, notification...)
+├── hooks/           # 12개 훅 (useTheme, useWebSocket, useNotifications...)
+├── components/      # 65+ 컴포넌트
+│   ├── ui/          # 25개 기본 UI (Button, Card, Modal, Table...)
+│   ├── layout/      # 11개 레이아웃 (Sidebar, TopBar, ContentHeader...)
+│   ├── settings/    # 6개 설정 (Theme, Account, Session...)
+│   ├── notifications/ # 6개 알림 (Bell, Popover, Toast, Banner...)
+│   ├── auth/        # 3개 인증 (LoginForm, RegisterForm, ProtectedRoute)
+│   ├── admin/       # 7개 관리 (MenuManagement, PermissionMatrix...)
+│   └── common/      # 3개 공통
+└── lib/             # navigation, resolveStartPage, tour, websocket, utils
+```
+
+### 5.2 앱의 App.tsx 구조
 
 ```tsx
-// frontend/src/App.tsx
+// apps/v-channel-bridge/frontend/src/App.tsx
+
 import {
   PlatformProvider,
-  ProtectedRoute,
-  Layout,
-  useAuthStore,
-} from '@vms/platform';
+  LoginPage,
+  SettingsPage,
+  AdminDashboard,
+  // ... 18개 플랫폼 페이지
+} from '@v-platform/core';
 
 // 앱 전용 페이지
-import { Channels } from './pages/Channels';
-import { Messages } from './pages/Messages';
+import Dashboard from './pages/Dashboard';
+import Channels from './pages/Channels';
+import Messages from './pages/Messages';
+import Statistics from './pages/Statistics';
 
 function App() {
   return (
-    <PlatformProvider config={{
-      apiBaseUrl: import.meta.env.VITE_API_URL,
-      appName: 'VMS Channel Bridge',
-      // 앱별 네비게이션 아이템
-      navItems: [...platformNavItems, ...appNavItems],
-    }}>
-      <Layout>
-        <Routes>
-          {/* 플랫폼 라우트는 PlatformProvider가 자동 등록 */}
-          {/* 앱 전용 라우트만 여기에 */}
-          <Route path="/channels" element={
-            <ProtectedRoute permissionKey="channels">
-              <Channels />
-            </ProtectedRoute>
-          } />
-          <Route path="/messages" element={
-            <ProtectedRoute permissionKey="messages">
-              <Messages />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </Layout>
+    <PlatformProvider config={{ appName: 'v-channel-bridge', apiUrl: '...' }}>
+      <Routes>
+        {/* 플랫폼 페이지 (코어에서 import) */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/admin/*" element={<AdminDashboard />} />
+        {/* ... */}
+
+        {/* 앱 전용 페이지 */}
+        <Route path="/channels" element={<Channels />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/statistics" element={<Statistics />} />
+      </Routes>
     </PlatformProvider>
   );
 }
 ```
 
-### 4.5 PlatformProvider 설계 (Frontend)
+### 5.3 PlatformProvider
 
-여러 Context를 단일 Provider로 합성하여, 앱 측에서 한 번만 감싸면 되게 함.
+`PlatformProvider`는 앱의 최상위에 배치되어 다음을 설정합니다:
+
+- **QueryClient** -- TanStack Query 인스턴스
+- **AppConfig** -- API URL, 앱 이름, 기능 플래그
+- **인증 상태 초기화** -- localStorage 토큰 복원
+- **WebSocket 연결** -- 실시간 이벤트 수신
+
+### 5.4 플랫폼 UI 컴포넌트 사용
+
+앱 전용 페이지에서도 플랫폼의 UI 컴포넌트를 자유롭게 사용합니다:
 
 ```tsx
-// platform/frontend/platform/src/providers/PlatformProvider.tsx
+// 앱 전용 페이지에서 플랫폼 UI 사용
+import { Card, Button, Table, Badge, ContentHeader } from '@v-platform/core';
 
-export interface PlatformConfig {
-  apiBaseUrl: string;
-  appName: string;
-  features?: {
-    sso?: boolean;
-    organizations?: boolean;
-    auditLog?: boolean;
-    notifications?: boolean;
-  };
-  navItems?: NavItem[];          // 앱이 추가할 네비게이션
-  theme?: {
-    defaultTheme?: 'light' | 'dark' | 'system';
-    colorPresets?: ColorPreset[];
-  };
-}
-
-export function PlatformProvider({
-  config,
-  children,
-}: {
-  config: PlatformConfig;
-  children: ReactNode;
-}) {
+function Channels() {
   return (
-    <PlatformConfigContext.Provider value={config}>
-      <ThemeProvider>
-        <AuthProvider>
-          <PermissionProvider>
-            <NotificationProvider>
-              <SidebarProvider>
-                {children}
-              </SidebarProvider>
-            </NotificationProvider>
-          </PermissionProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </PlatformConfigContext.Provider>
+    <>
+      <ContentHeader title="채널 관리" description="브리지 채널을 관리합니다" />
+      <div className="page-container">
+        <Card>
+          <Table data={channels} columns={columns} />
+        </Card>
+      </div>
+    </>
   );
 }
 ```
 
-### 4.6 확장 포인트 (Extension Points)
+---
 
-플랫폼이 앱에 제공하는 확장 포인트 목록:
+## 6. 앱이 플랫폼에 제공해야 할 것
 
-| 확장 포인트 | 위치 | 메커니즘 | 용도 |
-|------------|------|---------|------|
-| **App Routers** | Backend | `register_app_routers()` | 앱 API 엔드포인트 등록 |
-| **App Models** | Backend | 공유 `Base` 상속 | 앱 DB 테이블 정의 |
-| **App Migrations** | Backend | 별도 디렉토리 | 앱 스키마 변경 |
-| **Startup/Shutdown** | Backend | `on_startup()`, `on_shutdown()` | 앱 초기화/정리 |
-| **Audit Actions** | Backend | `AuditAction` enum 확장 | 앱 고유 감사 액션 |
-| **Nav Items** | Frontend | `PlatformConfig.navItems` | 앱 메뉴 항목 |
-| **App Routes** | Frontend | React Router `<Route>` | 앱 페이지 라우트 |
-| **App Stores** | Frontend | Zustand 독립 스토어 | 앱 상태 관리 |
-| **Custom Pages** | Both | 메뉴 관리 (iframe/link) | 동적 페이지 추가 |
+새 앱을 만들 때 반드시 제공해야 하는 항목입니다.
 
-### 4.7 AuditAction 확장 패턴
+### 6.1 필수 항목
 
-```python
-# platform 측: 기본 액션
-class PlatformAuditAction(str, Enum):
-    USER_LOGIN = "user.login"
-    USER_CREATE = "user.create"
-    PERMISSION_UPDATE = "permission.update"
-    ...
+| 항목 | 설명 | 예시 |
+|------|------|------|
+| `app_name` | 고유한 앱 식별자 | `"v-channel-bridge"` |
+| `main.py` | PlatformApp 인스턴스 생성 + 앱 라우터 등록 | 위 코드 참조 |
+| `lifespan` | asynccontextmanager (startup/shutdown) | 브리지 초기화, 정리 |
+| `Dockerfile` | Docker 빌드 설정 | `v_platform` 패키지 COPY 포함 |
 
-# 앱 측: 앱 고유 액션 추가
-class AppAuditAction(str, Enum):
-    BRIDGE_START = "bridge.start"
-    BRIDGE_STOP = "bridge.stop"
-    ROUTE_CREATE = "route.create"
-    MESSAGE_DELETE = "message.delete"
-    ...
+### 6.2 선택 항목
 
-# platform이 Union 타입으로 수용
-AuditAction = Union[PlatformAuditAction, AppAuditAction]
-# 또는 string enum 패턴으로 제약 없이 확장 가능하게
+| 항목 | 설명 |
+|------|------|
+| `app_menu_keys` | 앱 전용 메뉴의 permission_key 목록 (자동 app_id 태깅) |
+| 앱 전용 라우터 | `register_app_routers()`로 등록 |
+| 앱 전용 모델 | SQLAlchemy 모델 (v_platform.models.base.Base 상속) |
+| 커스텀 헬스체크 | `health_registry.register()` |
+| 앱 전용 프론트엔드 페이지 | React 컴포넌트 |
+| 앱별 투어 스텝 | Driver.js 기반 가이드 투어 |
+
+### 6.3 새 앱 생성 체크리스트
+
+```
+1. apps/{app-name}/ 디렉토리 생성
+2. backend/app/main.py — PlatformApp 인스턴스 생성
+3. frontend/src/App.tsx — PlatformProvider 래핑 + 플랫폼 페이지 import
+4. Dockerfile, Dockerfile.dev 작성
+5. docker-compose.yml에 서비스 추가 (프로필 사용 권장)
+6. 앱 전용 라우터가 있으면 register_app_routers() 호출
+7. 앱 전용 메뉴가 있으면 app_menu_keys 설정
+8. 포털에 앱 등록 (Admin UI 또는 PORTAL_APPS 환경변수)
 ```
 
 ---
 
-## 5. 의존성 분리
+## 7. 플랫폼이 앱에게 제공하는 것
 
-### 5.1 Backend 의존성
+### 7.1 백엔드 기능
 
-```
-# platform/requirements.txt (플랫폼)
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-sqlalchemy>=2.0.25
-psycopg2-binary>=2.9.9
-redis>=5.0.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-cryptography>=42.0.0
-structlog>=24.1.0
-slowapi>=0.1.9
-prometheus-client>=0.19.0
-aiosmtplib>=3.0.0
-jinja2>=3.1.0
-python-multipart>=0.0.6
-email-validator>=2.1.0
+| 기능 | 모듈 | 설명 |
+|------|------|------|
+| **JWT 인증** | `api/auth.py` | 로그인, 회원가입, 토큰 갱신, 디바이스 추적 |
+| **SSO** | `sso/microsoft.py`, `sso/generic_oidc.py` | Microsoft OAuth, Generic OIDC |
+| **RBAC** | `api/permissions.py`, `api/permission_groups.py` | 3단계 권한: 개인 + 그룹 + MAX 계산 |
+| **메뉴 관리** | `api/menus.py` | 동적 메뉴 CRUD, app_id 기반 격리, 섹션 분류 |
+| **감사 로그** | `api/audit_logs.py`, `utils/audit_logger.py` | 모든 관리 액션 자동 기록, app_id 태깅 |
+| **사용자 관리** | `api/users.py` | CRUD, 역할, 프로필, 시작 페이지, 테마 설정 |
+| **조직도** | `api/organizations.py` | 회사/부서 계층 구조 |
+| **시스템 설정** | `api/system_settings.py` | 키-값 설정, 앱별 오버라이드, 브랜딩 |
+| **알림** | `api/persistent_notifications.py` | 4단계 scope (global/app/role/user), 3가지 전달 방식 |
+| **WebSocket** | `api/websocket.py` | 실시간 이벤트 (상태, 알림, 브로드캐스트) |
+| **헬스체크** | `api/health.py` | 플러그형 HealthRegistry, DB/Redis 자동 체크 |
+| **메트릭** | `api/metrics.py`, `middleware/metrics.py` | Prometheus 메트릭 자동 수집 |
+| **캐시** | `services/cache_service.py` | Redis 래퍼 |
+| **이메일** | `services/email_service.py` | SMTP 발송 (비밀번호 재설정 등) |
+| **암호화** | `utils/encryption.py` | Fernet 기반 토큰/비밀 암호화 |
+| **CSRF** | `middleware/csrf.py` | CSRF 토큰 방어 |
+| **Rate Limiting** | SlowAPI | 엔드포인트별 요청 제한 |
 
-# backend/requirements.txt (앱 — 플랫폼 + 앱 전용)
--e ../platform/backend         # 로컬 플랫폼 패키지 참조
-slack-bolt>=1.20.0
-slack-sdk>=3.33.0
-botbuilder-core>=4.16.0
-aiohttp>=3.9.0
-aiofiles>=24.1.0
-```
+### 7.2 프론트엔드 기능
 
-### 5.2 Frontend 의존성
-
-```jsonc
-// platform/frontend/platform/package.json
-{
-  "name": "@vms/platform",
-  "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "react-router-dom": "^6.0.0"
-  },
-  "dependencies": {
-    "axios": "^1.6.0",
-    "zustand": "^4.4.0",
-    "lucide-react": "^0.309.0"
-  }
-}
-
-// frontend/package.json (앱)
-{
-  "dependencies": {
-    "@vms/platform": "workspace:*",   // 모노레포 로컬 참조
-    "recharts": "^2.15.0",            // 앱 전용
-    "@fingerprintjs/fingerprintjs": "^4.2.0"
-  }
-}
-```
+| 카테고리 | 제공 항목 |
+|----------|----------|
+| **페이지** | Login, Register, Settings, AdminDashboard, UserManagement, PermissionManagement, PermissionGroups, MenuManagement, OrganizationManagement, AuditLogs, SystemSettings, NotificationManagement, Profile, Help 등 18개 |
+| **UI 컴포넌트** | Button, Card, Modal, Table, Tabs, Badge, Select, Input, Textarea, Switch, DatePicker, Dropdown, Toast, Tooltip 등 25개 |
+| **레이아웃** | Sidebar, TopBar, ContentHeader, PageContainer, Layout, MobileNav 등 |
+| **스토어** | auth, permission, notification, systemSettings, sessionSettings, user-oauth |
+| **훅** | useTheme, useWebSocket, useNotifications, useBrowserNotification, useRealtimeStatus, useTokenExpiry, useActivityDetection, useIdleTimeout, useTabSync, useKeyboardShortcuts, useSidebar, useTour |
+| **API 클라이언트** | Axios 기반, 자동 토큰 갱신, 에러 인터셉터 |
+| **테마** | 다크모드, 7개 컬러 프리셋, CSS 변수 시맨틱 토큰 |
+| **네비게이션** | 동적 메뉴 -> NavItem 변환, 시작 페이지 결정, 메뉴 그룹 |
 
 ---
 
-## 6. 기능 토글 (Feature Flags)
+## 8. 백엔드 의존 관계
 
-플랫폼 기능 중 일부는 프로젝트마다 필요 여부가 다를 수 있으므로, 설정으로 on/off 가능하게 함.
+### 8.1 정상적인 의존 방향
 
-```python
-@dataclass
-class PlatformFeatures:
-    """플랫폼 기능 토글"""
-    # 인증
-    sso_enabled: bool = True
-    microsoft_sso: bool = True
-    password_reset: bool = True
-
-    # RBAC
-    permission_groups: bool = True
-    menu_management: bool = True
-
-    # 조직
-    organizations_enabled: bool = True
-
-    # 감사
-    audit_log_enabled: bool = True
-
-    # 알림
-    notifications_enabled: bool = True
-    email_notifications: bool = True
-
-    # 보안
-    csrf_enabled: bool = True
-    rate_limiting: bool = True
-    metrics_enabled: bool = True
+```
+┌─────────────────────────────────────────────────┐
+│ 앱 레이어                                        │
+│                                                  │
+│  apps/v-channel-bridge/backend/app/main.py       │
+│      │                                           │
+│      ├── from v_platform.app import PlatformApp  │
+│      ├── from v_platform.api.health import ...   │
+│      ├── from v_platform.core.database import ...│
+│      └── from app.api import bridge, messages... │
+│                                                  │
+│  (앱은 플랫폼을 import한다)                        │
+└──────────────────┬──────────────────────────────┘
+                   │ 의존
+┌──────────────────▼──────────────────────────────┐
+│ 플랫폼 레이어                                     │
+│                                                  │
+│  platform/backend/v_platform/                    │
+│      │                                           │
+│      ├── app.py (PlatformApp)                    │
+│      ├── core/ (database, logging)               │
+│      ├── models/ (User, MenuItem, Notification...)│
+│      ├── api/ (auth, menus, permissions...)       │
+│      └── services/ (token, permission, cache...) │
+│                                                  │
+│  (플랫폼은 앱을 import하지 않는다)                  │
+└─────────────────────────────────────────────────┘
 ```
 
-기능이 비활성화되면 해당 라우터는 등록되지 않고, 관련 마이그레이션은 건너뛴다.
+### 8.2 금지된 의존 방향
 
-```python
-# platform/__init__.py
-def _register_platform_routers(self):
-    # 항상 등록
-    self.fastapi.include_router(auth_router)
-    self.fastapi.include_router(users_router)
-    self.fastapi.include_router(health_router)
-
-    # 조건부 등록
-    if self.config.features.audit_log_enabled:
-        self.fastapi.include_router(audit_logs_router)
-    if self.config.features.organizations_enabled:
-        self.fastapi.include_router(organizations_router)
-    if self.config.features.sso_enabled:
-        self.fastapi.include_router(sso_router)
-    # ...
 ```
+# 이것은 금지입니다:
+# platform/backend/v_platform/api/menus.py
+from apps.v_channel_bridge.backend.app.models import SomeModel  # WRONG!
+```
+
+플랫폼은 어떤 상황에서도 특정 앱의 코드를 import하지 않습니다. 앱별 확장이 필요한 경우 HealthRegistry처럼 레지스트리 패턴을 사용합니다.
 
 ---
 
-## 7. 마이그레이션 전략 (점진적 분리)
+## 9. 플랫폼 모델 목록
 
-### Phase 1: 경계 정의 (1~2주)
+v-platform이 관리하는 13개 모델입니다. 모든 앱이 동일한 테이블을 공유합니다.
 
-현재 코드는 그대로 두고, 내부적으로 import 경계를 정리.
-
-- [ ] `platform/` 디렉토리 생성 (빈 상태)
-- [ ] 앱 코드에서 플랫폼 모듈 import 경로를 명시적으로 정리
-- [ ] 순환 의존성 제거 (현재 `models/message.py`의 `Base`를 `models/user.py`도 사용)
-- [ ] `Base` 클래스를 독립 모듈(`models/base.py`)로 추출
-
-### Phase 2: Backend 플랫폼 추출 (2~3주)
-
-```
-이동 순서: Base → Models → Utils → Services → Schemas → API → Middleware
-```
-
-1. `platform/backend/platform/models/base.py` 생성, `Base` 이동
-2. 플랫폼 모델 10개를 `platform/backend/platform/models/`로 이동
-3. 앱 모델이 `from platform.models.base import Base`로 참조하도록 변경
-4. 서비스, 스키마, API 순차 이동
-5. `PlatformApp` 클래스 구현
-6. `main.py`를 앱 진입점으로 리팩토링
-
-### Phase 3: Frontend 플랫폼 추출 (2~3주)
-
-```
-이동 순서: Types → API Client → Stores → Hooks → UI Components → Layout → Provider
-```
-
-1. `@vms/platform` 패키지 초기 구조 생성
-2. 공통 타입(User, Permission 등) 이동
-3. API 클라이언트 + 인증/권한 스토어 이동
-4. UI 컴포넌트 + 레이아웃 이동
-5. `PlatformProvider` 구현
-6. 앱 `App.tsx`를 플랫폼 소비자로 리팩토링
-
-### Phase 4: 인프라 분리 (1주)
-
-- [ ] Docker Compose에서 플랫폼 볼륨/빌드 경로 조정
-- [ ] 마이그레이션 러너 이원화 (플랫폼 → 앱)
-- [ ] 환경변수 분류 (PLATFORM_* vs APP_*)
-- [ ] CI/CD 파이프라인 업데이트
-
-### Phase 5: 검증 및 안정화 (1~2주)
-
-- [ ] 전체 테스트 통과 확인
-- [ ] 새 프로젝트에서 플랫폼만 import하여 빌드 테스트
-- [ ] 문서 업데이트
+| 모델 | 테이블 | app_id 격리 | 설명 |
+|------|--------|-----------|------|
+| `User` | `users` | X | 사용자 (전 앱 공유) |
+| `RefreshToken` | `refresh_tokens` | O | JWT 갱신 토큰 |
+| `PasswordResetToken` | `password_reset_tokens` | X | 비밀번호 재설정 |
+| `MenuItem` | `menu_items` | O | 동적 메뉴 |
+| `UserPermission` | `user_permissions` | X (메뉴 경유) | 사용자별 메뉴 권한 |
+| `PermissionGroup` | `permission_groups` | O | 권한 그룹 |
+| `PermissionGroupGrant` | `permission_group_grants` | X (그룹 경유) | 그룹별 메뉴 권한 |
+| `UserGroupMembership` | `user_group_memberships` | X | 사용자-그룹 매핑 |
+| `AuditLog` | `audit_logs` | O (자동 태깅) | 감사 로그 |
+| `Company` | `companies` | X | 회사 |
+| `Department` | `departments` | X | 부서 |
+| `SystemSettings` | `system_settings` | O | 키-값 설정 |
+| `Notification` | `notifications` | O | 영속 알림 |
+| `NotificationRead` | `notification_reads` | X | 읽음 추적 |
+| `NotificationAppOverride` | `notification_app_overrides` | O | 앱별 알림 활성화 |
+| `UserOAuthToken` | `user_oauth_tokens` | X | OAuth 토큰 |
 
 ---
 
-## 8. 새 프로젝트 생성 시나리오
+## 10. Docker 서비스 구성
 
-플랫폼 분리 완료 후, 새 프로젝트(예: "VMS Ticket System") 생성 흐름:
+```yaml
+# docker-compose.yml (프로필 기반)
+
+# 기본 서비스 (항상 실행)
+services:
+  postgres:         # PostgreSQL 16
+  redis:            # Redis 7
+  mailhog:          # 개발용 메일 서버
+  v-channel-bridge-backend:   # 포트 8000
+  v-channel-bridge-frontend:  # 포트 5173
+
+# template 프로필
+  v-platform-template-backend:   # 포트 8002, profiles: [template]
+  v-platform-template-frontend:  # 포트 5174, profiles: [template]
+
+# portal 프로필
+  v-platform-portal-backend:     # 포트 8080, profiles: [portal]
+  v-platform-portal-frontend:    # 포트 5180, profiles: [portal]
+```
+
+시작 명령:
 
 ```bash
-# 1. 새 프로젝트 생성
-mkdir vms-ticket-system && cd vms-ticket-system
+# 기본 (v-channel-bridge만)
+docker compose up -d --build
 
-# 2. 플랫폼 패키지 참조
-#    (모노레포라면 symlink 또는 workspace, 별도 패키지라면 pip/npm install)
-pip install vms-platform          # Backend
-npm install @vms/platform         # Frontend
-
-# 3. 앱 진입점 작성
-# backend/app/main.py
-from vms_platform import PlatformApp, PlatformConfig
-
-config = PlatformConfig(
-    app_name="VMS Ticket System",
-    database_url="...",
-    features=PlatformFeatures(
-        organizations_enabled=False,  # 이 앱에서는 조직도 불필요
-    ),
-)
-platform = PlatformApp(config)
-
-# 앱 고유 라우터만 등록
-from app.api import tickets, sprints
-platform.register_app_routers(tickets.router, sprints.router)
-
-app = platform.fastapi
+# 모든 앱
+docker compose --profile template --profile portal up -d --build
 ```
 
-**얻는 것 (무료로)**:
-- 로그인/회원가입/SSO
-- 사용자 관리 + 역할
-- RBAC + 메뉴 권한
-- 감사 로그
-- 시스템 설정
-- 테마 (라이트/다크/컬러 프리셋)
-- UI 컴포넌트 라이브러리
-- 레이아웃 (사이드바/탑바)
+---
 
-**추가로 만들 것**:
-- Ticket 모델 + API
-- Sprint 모델 + API
-- 티켓 관련 페이지/컴포넌트
+## 11. 데이터 흐름 예시
+
+### 11.1 사용자 로그인 -> 메뉴 로딩 -> 권한 체크
+
+```
+[사용자]
+    │
+    ├─ POST /api/auth/login ──> [플랫폼 auth 라우터]
+    │       └─ JWT 발급 + RefreshToken 저장
+    │
+    ├─ GET /api/menus ──> [플랫폼 menus 라우터]
+    │       └─ app_id=NULL (공통) + app_id="v-channel-bridge" (앱) 메뉴 반환
+    │
+    ├─ GET /api/permissions/matrix ──> [플랫폼 permissions 라우터]
+    │       └─ MAX(개인 권한, 그룹 권한) 매트릭스 반환
+    │
+    └─ GET /api/bridge/status ──> [앱 bridge 라우터]
+            └─ 브리지 연결 상태 반환
+```
+
+### 11.2 관리자가 알림을 생성하는 흐름
+
+```
+[관리자]
+    │
+    ├─ POST /api/notifications-v2 ──> [플랫폼 persistent_notifications 라우터]
+    │       ├─ DB에 Notification 레코드 저장 (scope=app)
+    │       └─ WebSocket으로 해당 앱 사용자에게 실시간 push
+    │
+    └─ [일반 사용자 브라우저]
+            ├─ WebSocket 수신 -> Toast 표시
+            └─ GET /api/notifications-v2 -> 알림 벨 목록 갱신
+```
 
 ---
 
-## 9. 리스크 및 트레이드오프
+## 12. 요약
 
-| 리스크 | 영향 | 완화 방안 |
-|--------|------|----------|
-| **순환 의존성** | 앱 모델이 플랫폼 모델(User)을 FK 참조 | `Base` 공유 + 지연 import 패턴 |
-| **플랫폼 업그레이드 호환성** | 플랫폼 스키마 변경이 앱에 영향 | 시맨틱 버전 관리, 마이그레이션 안전망 |
-| **과도한 추상화** | 단순한 것이 복잡해질 수 있음 | "3번 반복되면 추상화" 원칙 적용 |
-| **초기 비용** | 분리 작업에 6~10주 소요 | 점진적 마이그레이션으로 기능 개발과 병행 |
-| **타입 공유** | 프론트-백 타입 동기화 필요 | OpenAPI 스키마 자동 생성 고려 |
-| **테스트 분리** | 플랫폼/앱 테스트 경계 모호 | 플랫폼 단위테스트 + 앱 통합테스트 분리 |
-
----
-
-## 10. 대안 비교
-
-### 대안 A: 현재 구조 유지 + 복사
-
-새 프로젝트마다 전체 코드를 복사하고 앱 코드만 교체.
-
-- **장점**: 즉시 가능, 추가 설계 불필요
-- **단점**: 플랫폼 버그 수정 시 모든 프로젝트에 수동 반영, 시간이 갈수록 드리프트
-
-### 대안 B: 마이크로서비스 분리
-
-인증/RBAC를 독립 서비스로 운영.
-
-- **장점**: 완전한 독립 배포, 언어 무관
-- **단점**: 네트워크 호출 오버헤드, 운영 복잡도 대폭 증가, 현재 규모에 과도
-
-### 대안 C: 라이브러리 추출 (제안안)
-
-플랫폼을 패키지로 추출, 앱이 라이브러리로 참조.
-
-- **장점**: 적절한 분리, 공유 DB 유지, 점진적 전환 가능
-- **단점**: 패키지 관리 필요, import 경로 변경 작업
-
-**결론: 대안 C 권장** — 현재 프로젝트 규모와 팀 상황에 가장 적합.
-
----
-
-## 11. 수량 요약
-
-> 아래는 분리 설계 시점의 계획치입니다. 최종 실제 수량은 CLAUDE.md를 참조하세요.
-> **최종 상태 (2026-04-13)**: v-platform 18 라우터, 14 모델, 14 서비스, 24 마이그레이션, 18 페이지, 12 훅, 65+ 컴포넌트
-
-| 항목 | 플랫폼 | 앱 (Chat Bridge) | 계획 합계 |
-|------|--------|-------------------|----------|
-| Backend API 라우터 | 15개 | 8개 | 23개 |
-| Backend 모델 | 10개 | 3개 | 13개 |
-| Backend 서비스 | 7개 | 10개 | 17개 |
-| DB 마이그레이션 | 17개 | 5개 | 22개 |
-| Frontend 스토어 | 5개 | 5개 | 10개 |
-| Frontend API 모듈 | 8개 | 5개 | 13개 |
-| Frontend UI 컴포넌트 | 17개 | 0개 | 17개 |
-| Frontend 레이아웃 컴포넌트 | 8개 | 0개 | 8개 |
-| Frontend 앱 컴포넌트 | 0개 | ~40개 | ~40개 |
-| Python 의존성 | ~16개 | ~5개 | ~21개 |
-
-**플랫폼이 전체 코드의 약 55~60%를 차지** — 재사용 가치가 충분.
-
----
-
-## 12. 결론
-
-현재 VMS Channel Bridge의 코드베이스는 이미 관심사가 명확히 구분되어 있어, 물리적 분리의 기반이 잘 갖춰져 있다.
-
-**핵심 제안:**
-1. 모노레포 내 `platform/` 디렉토리로 시작 (대안 C)
-2. Backend는 `PlatformApp` 클래스 + `register_app_routers()` 패턴
-3. Frontend는 `PlatformProvider` + `@vms/platform` npm 패키지
-4. 기능 토글로 플랫폼 모듈을 프로젝트별 선택적 활성화
-5. 점진적 마이그레이션 (Phase 1~5, 총 7~11주)
-
-다음 단계: 이 문서 검토 → Phase 1 (경계 정의) 착수
+| 항목 | 설명 |
+|------|------|
+| **분리 단위** | `platform/` (프레임워크) vs `apps/{name}/` (비즈니스 로직) |
+| **백엔드 통합** | `PlatformApp` 인스턴스 생성 + `register_app_routers()` |
+| **프론트엔드 통합** | `@v-platform/core`에서 import + `PlatformProvider` 래핑 |
+| **데이터 격리** | `app_id` 컬럼으로 메뉴/알림/설정/권한/감사로그 분리 |
+| **의존 방향** | 앱 -> 플랫폼 (단방향), 플랫폼 -> 앱 금지 |
+| **확장 방식** | 레지스트리 패턴 (HealthRegistry, app_menu_keys) |
+| **인프라** | Docker Compose 프로필, 동일 PostgreSQL/Redis 공유 |

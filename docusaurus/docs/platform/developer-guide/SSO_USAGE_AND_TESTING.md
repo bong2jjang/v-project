@@ -1,446 +1,800 @@
+---
+id: sso-usage-and-testing
+title: SSO 사용법 및 테스트 가이드
+sidebar_position: 7
+tags: [guide, developer]
+---
+
 # SSO (Single Sign-On) 사용법 및 테스트 가이드
 
-> **작성일**: 2026-04-10  
-> **설계 문서**: [HYBRID_SSO_LOGIN_PLAN.md](/docs/design/HYBRID_SSO_LOGIN_PLAN)  
-> **관련 코드**: `backend/app/sso/`, `backend/app/api/auth_sso.py`, `frontend/src/pages/SSOCallback.tsx`
+v-platform은 **OIDC (OpenID Connect)** 기반 SSO를 지원합니다. Microsoft 365와 Generic OIDC 두 가지 Provider를 내장하며, 환경 변수만 교체하면 온프레미스 IdP(Keycloak, Okta, Auth0 등)로 전환할 수 있습니다.
 
 ---
 
-## 1. 개요
+## 1. SSO 아키텍처
 
-VMS Channel Bridge는 기존 ID/PW 로그인과 **SSO 로그인을 병행**하는 하이브리드 인증을 지원합니다.
+### 1.1 전체 구조
 
-| 인증 방식 | 설명 |
-|-----------|------|
-| **Local** | 기존 이메일 + 비밀번호 로그인 |
-| **Microsoft SSO** | Azure AD(Microsoft Entra ID) OpenID Connect |
-| **Generic OIDC** | 범용 OIDC (Keycloak, Okta, ADFS 등 — 온프레미스 대응) |
+```
+┌───────────────────────────────────────────────────────┐
+│  SSO 시스템                                            │
+│                                                       │
+│  BaseSSOProvider (ABC)                                │
+│      ├── MicrosoftSSOProvider                         │
+│      └── GenericOIDCProvider                          │
+│                                                       │
+│  SSOProviderRegistry (싱글톤)                          │
+│      register() / get() / get_all_active()            │
+│                                                       │
+│  init_sso_providers()                                 │
+│      환경 변수 → Provider 생성 → Registry 등록          │
+└───────────────────────────────────────────────────────┘
+```
 
-**핵심 원리**: SSO는 "이 사람이 누구인지(Authentication)"만 확인하고, 내부 JWT 토큰을 발급합니다. 인가(Authorization)는 기존 RBAC 시스템이 그대로 담당합니다.
+### 1.2 파일 구조
+
+```
+platform/backend/v_platform/sso/
+├── __init__.py          # init_sso_providers() — 환경 변수 기반 자동 등록
+├── base.py              # BaseSSOProvider (ABC) + SSOUserInfo (dataclass)
+├── registry.py          # SSOProviderRegistry (싱글톤)
+├── microsoft.py         # MicrosoftSSOProvider
+└── generic_oidc.py      # GenericOIDCProvider
+
+platform/backend/v_platform/api/
+└── auth_sso.py          # SSO API 엔드포인트 (/api/auth/sso/*)
+
+platform/frontend/v-platform-core/src/
+├── pages/SSOCallback.tsx      # SSO 콜백 팝업 페이지
+├── components/oauth/
+│   └── SSOLoginButtons.tsx    # 로그인 페이지 SSO 버튼
+└── stores/auth.ts             # postMessage 수신 로직
+```
 
 ---
 
-## 2. 인증 흐름 요약
+## 2. Provider 인터페이스
 
+### 2.1 BaseSSOProvider (추상 클래스)
+
+모든 SSO Provider가 구현해야 하는 인터페이스입니다.
+
+```python
+# platform/backend/v_platform/sso/base.py
+
+class BaseSSOProvider(ABC):
+    """SSO Provider 인터페이스 — 모든 SSO 구현체가 상속"""
+
+    @abstractmethod
+    def get_provider_name(self) -> str:
+        """Provider 식별자 (URL 경로에 사용)"""
+        ...
+
+    @abstractmethod
+    def get_display_name(self) -> str:
+        """UI에 표시할 이름 (e.g., 'Microsoft 365')"""
+        ...
+
+    @abstractmethod
+    def get_icon(self) -> str:
+        """UI 아이콘 식별자 (e.g., 'microsoft', 'key')"""
+        ...
+
+    @abstractmethod
+    async def get_authorization_url(self, state: str, redirect_uri: str) -> str:
+        """인증 서버 리다이렉트 URL 생성"""
+        ...
+
+    @abstractmethod
+    async def handle_callback(
+        self, code: str, state: str, redirect_uri: str
+    ) -> SSOUserInfo:
+        """인증 서버 콜백 처리 → SSOUserInfo 반환"""
+        ...
+
+    @abstractmethod
+    def is_configured(self) -> bool:
+        """필수 설정값이 모두 존재하는지 확인"""
+        ...
 ```
-사용자 → [MS SSO 로그인 버튼 클릭]
-  → Backend: GET /api/auth/sso/microsoft/login
-    → Microsoft 인증 페이지로 리다이렉트 (state 토큰 포함)
-      → 사용자가 MS 계정으로 인증
-        → Microsoft → Backend: GET /api/auth/sso/microsoft/callback?code=xxx&state=yyy
-          → Backend: code로 Access Token 교환 → MS Graph API /me 호출 → 이메일 확보
-            → 이메일로 내부 User 조회 (없으면 자동 생성)
-              → 내부 JWT 발급 → Frontend /sso/callback?token=xxx 으로 리다이렉트
-                → Frontend: 토큰 저장 → 대시보드 이동
+
+### 2.2 SSOUserInfo (데이터클래스)
+
+모든 Provider가 콜백 처리 후 반환하는 공통 사용자 정보입니다.
+
+```python
+# platform/backend/v_platform/sso/base.py
+
+@dataclass
+class SSOUserInfo:
+    """SSO 인증 후 반환되는 사용자 정보 (모든 Provider 공통)"""
+
+    email: str                              # 사용자 이메일 (필수)
+    display_name: str                       # 표시 이름 (필수)
+    provider_user_id: str                   # Provider 측 고유 ID
+    provider_name: str                      # "microsoft", "corporate_sso" 등
+    avatar_url: Optional[str] = None        # 프로필 이미지 URL
+    raw_claims: Optional[dict] = field(     # 원본 토큰 클레임 (디버깅용)
+        default=None, repr=False
+    )
 ```
 
 ---
 
-## 3. 적용 방법 (Microsoft SSO)
+## 3. SSOProviderRegistry
 
-### 3.1 사전 준비: Azure App Registration
+### 3.1 싱글톤 레지스트리
 
-Azure Portal에서 앱을 등록해야 합니다.
+```python
+# platform/backend/v_platform/sso/registry.py
 
-#### Step 1: Azure Portal → App Registration
+class SSOProviderRegistry:
+    """SSO Provider 등록/조회"""
 
-1. [Azure Portal](https://portal.azure.com) 로그인
-2. **Microsoft Entra ID** (구 Azure Active Directory) → **App registrations** → **New registration**
-3. 앱 정보 입력:
+    def __init__(self):
+        self._providers: dict[str, BaseSSOProvider] = {}
 
-| 항목 | 값 |
-|------|------|
-| Name | `VMS Channel Bridge SSO` |
-| Supported account types | **Single tenant** (이 조직만) 또는 **Multitenant** (선택) |
-| Redirect URI (Web) | `http://localhost:8000/api/auth/sso/microsoft/callback` |
+    def register(self, provider: BaseSSOProvider) -> None:
+        """Provider 등록 (is_configured() 검사 포함)"""
+        name = provider.get_provider_name()
+        if not provider.is_configured():
+            logger.warning("sso_provider_not_configured", provider=name)
+            return
+        self._providers[name] = provider
+        logger.info("sso_provider_registered", provider=name)
 
-4. **Register** 클릭
+    def get(self, name: str) -> BaseSSOProvider | None:
+        """이름으로 Provider 조회"""
+        return self._providers.get(name)
 
-#### Step 2: Client Secret 생성
+    def get_all_active(self) -> list[BaseSSOProvider]:
+        """활성화된 모든 Provider 목록"""
+        return list(self._providers.values())
 
-1. 등록된 앱 → **Certificates & secrets** → **New client secret**
-2. Description: `VMS Channel Bridge SSO Secret`
-3. Expires: 적절한 만료 기간 선택 (권장: 24 months)
-4. **Add** → 생성된 **Value**를 즉시 복사 (나중에 다시 볼 수 없음)
+    def get_provider_info(self) -> list[dict]:
+        """프론트엔드에 전달할 활성 SSO Provider 목록"""
+        return [
+            {
+                "name": p.get_provider_name(),
+                "display_name": p.get_display_name(),
+                "icon": p.get_icon(),
+            }
+            for p in self._providers.values()
+        ]
 
-#### Step 3: 필요한 값 확인
-
-앱 **Overview** 페이지에서:
-
-| 필요한 값 | 위치 |
-|-----------|------|
-| `SSO_MICROSOFT_TENANT_ID` | Directory (tenant) ID |
-| `SSO_MICROSOFT_CLIENT_ID` | Application (client) ID |
-| `SSO_MICROSOFT_CLIENT_SECRET` | Step 2에서 복사한 Secret Value |
-
-#### Step 4: API 권한 확인
-
-앱 → **API permissions** 에서 다음 권한이 있는지 확인:
-
-| 권한 | 타입 | 용도 |
-|------|------|------|
-| `openid` | Delegated | OpenID Connect 기본 |
-| `email` | Delegated | 이메일 주소 조회 |
-| `profile` | Delegated | 사용자 이름 조회 |
-| `User.Read` | Delegated | MS Graph /me 호출 |
-
-> 보통 기본 등록 시 `User.Read`와 `openid`, `profile`은 자동 추가됩니다. 없으면 **Add a permission** → **Microsoft Graph** → **Delegated permissions** 에서 추가하세요.
-
-### 3.2 환경 변수 설정
-
-`.env` 파일에 다음 변수를 추가합니다:
-
-```bash
-# ─── SSO: Microsoft Entra ID ─────────────────────
-SSO_MICROSOFT_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-SSO_MICROSOFT_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-SSO_MICROSOFT_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# 전역 인스턴스
+sso_registry = SSOProviderRegistry()
 ```
 
-### 3.3 docker-compose.yml에 환경 변수 전달
-
-`docker-compose.yml`의 backend 서비스 environment 섹션에 추가:
-
-```yaml
-backend:
-  environment:
-    # ... 기존 변수들 ...
-    - SSO_MICROSOFT_TENANT_ID=${SSO_MICROSOFT_TENANT_ID}
-    - SSO_MICROSOFT_CLIENT_ID=${SSO_MICROSOFT_CLIENT_ID}
-    - SSO_MICROSOFT_CLIENT_SECRET=${SSO_MICROSOFT_CLIENT_SECRET}
-```
-
-### 3.4 재배포
-
-```bash
-docker compose up -d --build
-```
-
-백엔드 로그에서 SSO 초기화 확인:
-
-```bash
-docker logs vms-channel-bridge-backend 2>&1 | grep sso
-```
-
-정상이면 다음과 같은 로그가 출력됩니다:
-
-```
-sso_provider_registered    provider=microsoft
-sso_providers_initialized  count=1 providers=['microsoft']
-```
-
-### 3.5 Redirect URI 주의사항
-
-| 환경 | Redirect URI |
-|------|-------------|
-| 로컬 개발 | `http://localhost:8000/api/auth/sso/microsoft/callback` |
-| 스테이징 | `https://staging.example.com/api/auth/sso/microsoft/callback` |
-| 프로덕션 | `https://channel-bridge.example.com/api/auth/sso/microsoft/callback` |
-
-Azure App Registration의 Redirect URI에 **사용하는 환경의 URI를 모두 등록**해야 합니다.
-
-> **중요**: `http://`는 `localhost`에서만 허용됩니다. 외부 도메인은 반드시 `https://`가 필요합니다.
+:::note register() 동작
+`is_configured()`가 `False`를 반환하면 Provider가 등록되지 않고 경고 로그만 남깁니다. 환경 변수가 설정되지 않은 Provider는 자동으로 비활성화됩니다.
+:::
 
 ---
 
-## 4. 적용 방법 (Generic OIDC — 온프레미스)
+## 4. 환경 변수 기반 자동 등록
 
-Keycloak, Okta, ADFS 등 표준 OIDC를 지원하는 IdP에 대응합니다.
+### 4.1 init_sso_providers() 함수
 
-### 4.1 IdP에 클라이언트 등록
+`PlatformApp.init_platform()` 호출 시 자동 실행됩니다.
 
-IdP 관리 콘솔에서:
+```python
+# platform/backend/v_platform/sso/__init__.py
 
-1. 새 Client(Application) 생성
-2. Client ID / Client Secret 발급
-3. Redirect URI 등록: `http://localhost:8000/api/auth/sso/{provider_name}/callback`
+def init_sso_providers():
+    """환경 변수 기반 SSO Provider 자동 등록"""
 
-### 4.2 환경 변수 설정
+    # --- Microsoft SSO (Teams 자격증명 재사용) ---
+    sso_tenant = os.getenv("TEAMS_TENANT_ID", "")
+    sso_client = os.getenv("TEAMS_APP_ID", "")
+    sso_secret = os.getenv("TEAMS_APP_PASSWORD", "")
 
-```bash
-# ─── SSO: Generic OIDC (예: Keycloak) ────────────
-SSO_OIDC_ISSUER_URL=https://keycloak.example.com/realms/main
-SSO_OIDC_CLIENT_ID=vms-channel-bridge
-SSO_OIDC_CLIENT_SECRET=xxxxxxxxxxxxxxxx
+    if sso_tenant and sso_client and sso_secret:
+        sso_registry.register(
+            MicrosoftSSOProvider(
+                tenant_id=sso_tenant,
+                client_id=sso_client,
+                client_secret=sso_secret,
+            )
+        )
 
-# 선택 사항 (기본값 있음)
-SSO_OIDC_PROVIDER_NAME=corporate_sso          # URL 경로에 사용
-SSO_OIDC_DISPLAY_NAME=회사 통합인증             # 로그인 버튼 텍스트
-SSO_OIDC_ICON=building                         # 아이콘: microsoft|key|building|shield
-SSO_OIDC_SCOPES=openid email profile           # OIDC Scopes
-SSO_OIDC_EMAIL_CLAIM=email                     # 이메일 클레임 키
-SSO_OIDC_NAME_CLAIM=preferred_username         # 표시 이름 클레임 키
-SSO_OIDC_SUB_CLAIM=sub                         # 고유 ID 클레임 키
+    # --- Generic OIDC (고객사 SSO) ---
+    oidc_issuer = os.getenv("SSO_OIDC_ISSUER_URL", "")
+    oidc_client = os.getenv("SSO_OIDC_CLIENT_ID", "")
+    oidc_secret = os.getenv("SSO_OIDC_CLIENT_SECRET", "")
+
+    if oidc_issuer and oidc_client and oidc_secret:
+        sso_registry.register(
+            GenericOIDCProvider(
+                provider_name=os.getenv("SSO_OIDC_PROVIDER_NAME", "corporate_sso"),
+                display_name=os.getenv("SSO_OIDC_DISPLAY_NAME", "회사 SSO"),
+                icon=os.getenv("SSO_OIDC_ICON", "key"),
+                issuer_url=oidc_issuer,
+                client_id=oidc_client,
+                client_secret=oidc_secret,
+                scopes=os.getenv("SSO_OIDC_SCOPES", "openid email profile"),
+                email_claim=os.getenv("SSO_OIDC_EMAIL_CLAIM", "email"),
+                name_claim=os.getenv("SSO_OIDC_NAME_CLAIM", "name"),
+                sub_claim=os.getenv("SSO_OIDC_SUB_CLAIM", "sub"),
+            )
+        )
+
+    active = sso_registry.get_all_active()
+    if active:
+        logger.info("sso_providers_initialized",
+                     count=len(active),
+                     providers=[p.get_provider_name() for p in active])
+    else:
+        logger.info("sso_no_providers_configured")
 ```
 
-> **OIDC Discovery**: `SSO_OIDC_ISSUER_URL/.well-known/openid-configuration` 에서 authorization_endpoint, token_endpoint, userinfo_endpoint를 자동으로 조회합니다. 별도 설정 불필요.
+### 4.2 Microsoft SSO 환경 변수
+
+Teams 봇 등록 시 받은 자격증명을 재사용합니다.
+
+| 환경 변수 | 설명 | 예시 |
+|-----------|------|------|
+| `TEAMS_TENANT_ID` | Azure AD 테넌트 ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `TEAMS_APP_ID` | Azure 애플리케이션 ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `TEAMS_APP_PASSWORD` | Azure 클라이언트 시크릿 | `abc123~xyz789...` |
+
+```env
+# .env
+TEAMS_TENANT_ID=12345678-1234-1234-1234-123456789abc
+TEAMS_APP_ID=abcdefgh-abcd-abcd-abcd-abcdefghijkl
+TEAMS_APP_PASSWORD=secret~password~here
+```
+
+### 4.3 Generic OIDC 환경 변수
+
+Keycloak, Okta, Auth0 등 표준 OIDC Provider를 연결합니다.
+
+| 환경 변수 | 필수 | 기본값 | 설명 |
+|-----------|------|--------|------|
+| `SSO_OIDC_ISSUER_URL` | O | - | OIDC Issuer URL |
+| `SSO_OIDC_CLIENT_ID` | O | - | 클라이언트 ID |
+| `SSO_OIDC_CLIENT_SECRET` | O | - | 클라이언트 시크릿 |
+| `SSO_OIDC_PROVIDER_NAME` | X | `"corporate_sso"` | URL 경로용 식별자 |
+| `SSO_OIDC_DISPLAY_NAME` | X | `"회사 SSO"` | UI 표시 이름 |
+| `SSO_OIDC_ICON` | X | `"key"` | Lucide 아이콘 이름 |
+| `SSO_OIDC_SCOPES` | X | `"openid email profile"` | OAuth2 스코프 |
+| `SSO_OIDC_EMAIL_CLAIM` | X | `"email"` | 이메일 클레임 키 |
+| `SSO_OIDC_NAME_CLAIM` | X | `"name"` | 이름 클레임 키 |
+| `SSO_OIDC_SUB_CLAIM` | X | `"sub"` | 고유 ID 클레임 키 |
+
+```env
+# .env — Keycloak 예시
+SSO_OIDC_ISSUER_URL=https://keycloak.example.com/realms/my-realm
+SSO_OIDC_CLIENT_ID=v-platform
+SSO_OIDC_CLIENT_SECRET=my-client-secret
+SSO_OIDC_PROVIDER_NAME=keycloak
+SSO_OIDC_DISPLAY_NAME=Keycloak SSO
+SSO_OIDC_ICON=key
+```
+
+:::tip 온프레미스 전환
+Microsoft SSO에서 고객사 SSO로 전환하려면:
+1. `TEAMS_*` 환경 변수 제거 (또는 비움)
+2. `SSO_OIDC_*` 환경 변수 설정
+3. Docker 재시작
+
+코드 변경 없이 환경 변수만으로 SSO Provider를 전환할 수 있습니다.
+:::
 
 ---
 
-## 5. 테스트 시나리오
+## 5. 인증 플로우
 
-### 5.1 사전 확인: SSO Provider 등록 상태
+### 5.1 전체 시퀀스
 
-```bash
-# Provider 목록 API 호출
-curl http://localhost:8000/api/auth/sso/providers
+```
+사용자           프론트엔드           백엔드             IdP (Microsoft/OIDC)
+  │                │                  │                      │
+  │─ SSO 버튼 클릭 →│                  │                      │
+  │                │─ 팝업 열기 ──────→│                      │
+  │                │  GET /api/auth/   │                      │
+  │                │  sso/{provider}/  │                      │
+  │                │  authorize        │                      │
+  │                │                  │─ state 생성           │
+  │                │                  │─ auth URL 생성 ──────→│
+  │                │                  │                      │
+  │                │← 302 Redirect ───│                      │
+  │                │                  │                      │
+  │─ IdP 로그인 ──→│                  │                      │
+  │                │                  │                      │
+  │                │                  │← code + state ───────│
+  │                │                  │                      │
+  │                │  GET /api/auth/   │                      │
+  │                │  sso/{provider}/  │                      │
+  │                │  callback         │                      │
+  │                │                  │─ code → token 교환 ──→│
+  │                │                  │← 사용자 정보 ─────────│
+  │                │                  │                      │
+  │                │                  │─ 사용자 생성/업데이트  │
+  │                │                  │─ JWT 발행             │
+  │                │                  │─ HTML 응답            │
+  │                │                  │  (postMessage)        │
+  │                │                  │                      │
+  │                │← postMessage ────│                      │
+  │                │  {access_token,   │                      │
+  │                │   user}           │                      │
+  │                │                  │                      │
+  │← 로그인 완료 ──│                  │                      │
 ```
 
-**기대 응답** (Microsoft SSO 설정 시):
+### 5.2 Authorize 엔드포인트
+
+```python
+# /api/auth/sso/{provider}/authorize
+
+@router.get("/api/auth/sso/{provider}/authorize")
+async def sso_authorize(provider: str, request: Request):
+    sso_provider = sso_registry.get(provider)
+    if not sso_provider:
+        raise HTTPException(404, "SSO provider not found")
+
+    # state 토큰 생성 (CSRF 방지, 10분 유효)
+    state = secrets.token_urlsafe(32)
+    _pending_states[state] = {
+        "provider": provider,
+        "created_at": datetime.utcnow(),
+    }
+
+    # redirect_uri 구성
+    redirect_uri = str(request.base_url) + f"api/auth/sso/{provider}/callback"
+
+    # IdP 인증 URL로 리다이렉트
+    auth_url = await sso_provider.get_authorization_url(state, redirect_uri)
+    return RedirectResponse(auth_url)
+```
+
+### 5.3 Callback 엔드포인트
+
+```python
+# /api/auth/sso/{provider}/callback
+
+@router.get("/api/auth/sso/{provider}/callback")
+async def sso_callback(provider: str, code: str, state: str, request: Request):
+    # 1. State 검증 (CSRF 방지, 10분 만료)
+    pending = _pending_states.pop(state, None)
+    if not pending:
+        raise HTTPException(400, "Invalid state")
+    if (datetime.utcnow() - pending["created_at"]).seconds > 600:
+        raise HTTPException(400, "State expired")
+
+    # 2. Provider에서 사용자 정보 획득
+    sso_provider = sso_registry.get(provider)
+    redirect_uri = str(request.base_url) + f"api/auth/sso/{provider}/callback"
+    user_info: SSOUserInfo = await sso_provider.handle_callback(code, state, redirect_uri)
+
+    # 3. DB 사용자 생성 또는 업데이트
+    db_user = get_or_create_sso_user(user_info)
+
+    # 4. JWT 토큰 발행
+    access_token = TokenService.create_access_token(db_user)
+    refresh_token = TokenService.create_refresh_token(db_user)
+
+    # 5. postMessage HTML 응답
+    return _render_sso_popup_result(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=db_user,
+    )
+```
+
+### 5.4 postMessage 팝업 패턴
+
+SSO 콜백은 HTML 페이지를 반환하여, 부모 창(로그인 페이지)에 `window.opener.postMessage()`로 토큰을 전달합니다.
+
+```python
+def _render_sso_popup_result(access_token, refresh_token, user):
+    """SSO 성공 후 팝업에서 부모 창으로 결과 전달"""
+    html = f"""
+    <html>
+    <body>
+    <script>
+        window.opener.postMessage({{
+            type: 'sso_success',
+            access_token: '{access_token}',
+            user: {{
+                id: {user.id},
+                email: '{user.email}',
+                username: '{user.username}',
+                role: '{user.role}'
+            }}
+        }}, window.location.origin);
+        window.close();
+    </script>
+    </body>
+    </html>
+    """
+    # refresh_token은 HttpOnly 쿠키로 전달
+    response = HTMLResponse(html)
+    response.set_cookie("refresh_token", refresh_token, httponly=True, ...)
+    response.set_cookie("csrf_token", csrf_token, ...)
+    return response
+```
+
+:::warning 보안 고려사항
+- **postMessage origin 제한**: `window.location.origin`으로 동일 출처만 허용
+- **refresh_token**: `HttpOnly` 쿠키로 전달 (JavaScript 접근 불가)
+- **state 토큰**: CSRF 방지, 10분 유효기간
+- **_pending_states**: 인메모리 저장 (단일 인스턴스 환경)
+:::
+
+### 5.5 프론트엔드 수신
+
+로그인 페이지에서 `window.addEventListener("message", ...)`로 SSO 결과를 수신합니다.
+
+```tsx
+// LoginPage에서 SSO 팝업 열기
+const handleSSOLogin = (providerName: string) => {
+  const popup = window.open(
+    `/api/auth/sso/${providerName}/authorize`,
+    "sso_popup",
+    "width=500,height=600"
+  );
+};
+
+// postMessage 수신
+useEffect(() => {
+  const handler = (event: MessageEvent) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data?.type === "sso_success") {
+      const { access_token, user } = event.data;
+      authStore.setAuth(access_token, user);
+      navigate("/");
+    }
+  };
+  window.addEventListener("message", handler);
+  return () => window.removeEventListener("message", handler);
+}, []);
+```
+
+---
+
+## 6. SSO 사용자 자동 생성
+
+SSO로 처음 로그인한 사용자는 자동으로 계정이 생성됩니다.
+
+### 6.1 생성 규칙
+
+| 필드 | 값 |
+|------|-----|
+| `email` | SSO Provider가 반환한 이메일 |
+| `username` | 이메일의 `@` 앞부분 |
+| `display_name` | `SSOUserInfo.display_name` |
+| `role` | `user` (기본 역할) |
+| `sso_provider` | Provider 이름 (예: `"microsoft"`) |
+| `sso_provider_id` | `SSOUserInfo.provider_user_id` |
+| `is_active` | `True` |
+
+### 6.2 기존 사용자 매칭
+
+이메일이 일치하는 기존 사용자가 있으면 SSO 정보를 업데이트합니다. 새 계정을 생성하지 않고 기존 계정에 SSO를 연결합니다.
+
+---
+
+## 7. Provider별 설정 가이드
+
+### 7.1 Microsoft 365 설정
+
+#### Azure Portal 등록
+
+1. **Azure Portal** > **App registrations** > **New registration**
+2. **Redirect URI** 추가:
+   - Type: Web
+   - URI: `http://127.0.0.1:8000/api/auth/sso/microsoft/callback`
+   - 프로덕션: `https://your-domain.com/api/auth/sso/microsoft/callback`
+3. **Certificates & secrets** > **New client secret** 생성
+4. **API permissions** 추가:
+   - `User.Read` (기본)
+   - `openid`, `email`, `profile` (OIDC 스코프)
+
+#### 환경 변수 설정
+
+```env
+TEAMS_TENANT_ID=12345678-1234-1234-1234-123456789abc
+TEAMS_APP_ID=abcdefgh-abcd-abcd-abcd-abcdefghijkl
+TEAMS_APP_PASSWORD=~client-secret-value~
+```
+
+#### Microsoft SSO 엔드포인트
+
+- Authorization: `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`
+- Token: `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`
+- UserInfo: Microsoft Graph API (`https://graph.microsoft.com/v1.0/me`)
+
+### 7.2 Keycloak 설정
+
+#### Keycloak 관리자 설정
+
+1. **Realm** 생성 (또는 기존 Realm 사용)
+2. **Clients** > **Create client**
+   - Client ID: `v-platform`
+   - Client Protocol: `openid-connect`
+   - Access Type: `confidential`
+   - Valid Redirect URIs: `http://127.0.0.1:8000/api/auth/sso/keycloak/callback`
+3. **Credentials** 탭에서 Client Secret 복사
+
+#### 환경 변수 설정
+
+```env
+SSO_OIDC_ISSUER_URL=https://keycloak.example.com/realms/my-realm
+SSO_OIDC_CLIENT_ID=v-platform
+SSO_OIDC_CLIENT_SECRET=keycloak-client-secret
+SSO_OIDC_PROVIDER_NAME=keycloak
+SSO_OIDC_DISPLAY_NAME=Keycloak SSO
+SSO_OIDC_ICON=key
+```
+
+### 7.3 Okta 설정
+
+```env
+SSO_OIDC_ISSUER_URL=https://your-org.okta.com/oauth2/default
+SSO_OIDC_CLIENT_ID=okta-client-id
+SSO_OIDC_CLIENT_SECRET=okta-client-secret
+SSO_OIDC_PROVIDER_NAME=okta
+SSO_OIDC_DISPLAY_NAME=Okta SSO
+SSO_OIDC_ICON=key
+```
+
+### 7.4 Auth0 설정
+
+```env
+SSO_OIDC_ISSUER_URL=https://your-tenant.auth0.com
+SSO_OIDC_CLIENT_ID=auth0-client-id
+SSO_OIDC_CLIENT_SECRET=auth0-client-secret
+SSO_OIDC_PROVIDER_NAME=auth0
+SSO_OIDC_DISPLAY_NAME=Auth0 SSO
+SSO_OIDC_ICON=key
+```
+
+---
+
+## 8. 커스텀 Provider 구현
+
+### 8.1 새 Provider 만들기
+
+`BaseSSOProvider`를 상속하여 새 Provider를 구현합니다.
+
+```python
+# platform/backend/v_platform/sso/my_custom.py
+
+from v_platform.sso.base import BaseSSOProvider, SSOUserInfo
+
+
+class MyCustomSSOProvider(BaseSSOProvider):
+    def __init__(self, api_url: str, api_key: str):
+        self._api_url = api_url
+        self._api_key = api_key
+
+    def get_provider_name(self) -> str:
+        return "my_custom"
+
+    def get_display_name(self) -> str:
+        return "My Custom SSO"
+
+    def get_icon(self) -> str:
+        return "shield"
+
+    def is_configured(self) -> bool:
+        return bool(self._api_url and self._api_key)
+
+    async def get_authorization_url(self, state: str, redirect_uri: str) -> str:
+        params = urlencode({
+            "client_id": self._api_key,
+            "redirect_uri": redirect_uri,
+            "state": state,
+            "response_type": "code",
+            "scope": "openid email profile",
+        })
+        return f"{self._api_url}/authorize?{params}"
+
+    async def handle_callback(
+        self, code: str, state: str, redirect_uri: str
+    ) -> SSOUserInfo:
+        # 1. code → access_token 교환
+        token_response = await self._exchange_code(code, redirect_uri)
+
+        # 2. access_token으로 사용자 정보 조회
+        user_data = await self._get_user_info(token_response["access_token"])
+
+        return SSOUserInfo(
+            email=user_data["email"],
+            display_name=user_data["name"],
+            provider_user_id=user_data["sub"],
+            provider_name="my_custom",
+            raw_claims=user_data,
+        )
+```
+
+### 8.2 Provider 등록
+
+`init_sso_providers()` 함수에 등록 로직을 추가합니다.
+
+```python
+# platform/backend/v_platform/sso/__init__.py
+
+from v_platform.sso.my_custom import MyCustomSSOProvider
+
+def init_sso_providers():
+    # ... 기존 코드 ...
+
+    # --- Custom SSO ---
+    custom_url = os.getenv("SSO_CUSTOM_API_URL", "")
+    custom_key = os.getenv("SSO_CUSTOM_API_KEY", "")
+
+    if custom_url and custom_key:
+        sso_registry.register(
+            MyCustomSSOProvider(
+                api_url=custom_url,
+                api_key=custom_key,
+            )
+        )
+```
+
+---
+
+## 9. API 엔드포인트 레퍼런스
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `GET` | `/api/auth/sso/providers` | 활성 SSO Provider 목록 |
+| `GET` | `/api/auth/sso/{provider}/authorize` | 인증 시작 (IdP로 리다이렉트) |
+| `GET` | `/api/auth/sso/{provider}/callback` | IdP 콜백 처리 (postMessage HTML) |
+
+### 9.1 Provider 목록 응답 예시
 
 ```json
-[
-  {
-    "name": "microsoft",
-    "display_name": "Microsoft 365",
-    "icon": "microsoft"
-  }
-]
-```
+GET /api/auth/sso/providers
 
-**SSO 미설정 시**: `[]` (빈 배열)
-
----
-
-### 5.2 시나리오 1: SSO 로그인 (신규 사용자)
-
-> 기존에 VMS Channel Bridge 계정이 없는 사용자가 SSO로 최초 로그인
-
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | http://localhost:5173/login 접속 | ID/PW 폼 아래 "Microsoft 365(으)로 로그인" 버튼 표시 |
-| 2 | SSO 버튼 클릭 | Microsoft 로그인 페이지로 리다이렉트 |
-| 3 | MS 계정으로 인증 | 동의 화면 표시 (최초 1회) |
-| 4 | 동의 후 | `http://localhost:5173/sso/callback?token=...` 으로 리다이렉트 |
-| 5 | 자동 처리 | "로그인 처리 중..." 표시 후 대시보드로 이동 |
-
-**확인 포인트**:
-- DB에 새 User 생성됨 (`auth_method='sso'`, `sso_provider='microsoft'`)
-- 감사 로그에 "SSO login via microsoft" 기록
-- 해당 사용자는 ID/PW 로그인 불가 (비밀번호 미설정)
-
-```sql
--- DB 확인
-SELECT email, username, auth_method, sso_provider, sso_provider_id
-FROM users WHERE sso_provider IS NOT NULL;
+{
+  "providers": [
+    {
+      "name": "microsoft",
+      "display_name": "Microsoft 365",
+      "icon": "microsoft",
+      "login_url": "/api/auth/sso/microsoft/authorize"
+    },
+    {
+      "name": "corporate_sso",
+      "display_name": "회사 SSO",
+      "icon": "key",
+      "login_url": "/api/auth/sso/corporate_sso/authorize"
+    }
+  ]
+}
 ```
 
 ---
 
-### 5.3 시나리오 2: SSO 로그인 (기존 Local 사용자)
+## 10. 테스트 가이드
 
-> 기존 ID/PW 계정이 있는 사용자가 SSO로 로그인
+### 10.1 로컬 개발 환경 테스트
 
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | 기존 계정 (예: `user@company.com`)이 이미 존재 | `auth_method='local'` |
-| 2 | SSO 로그인 실행 (같은 이메일) | 기존 계정에 SSO 정보 연동 |
-| 3 | 로그인 완료 후 DB 확인 | `auth_method='hybrid'` 로 변경됨 |
+#### Mock Provider 없이 테스트
 
-**확인 포인트**:
-- 새 계정이 생성되지 않음 (기존 계정 재사용)
-- `auth_method`이 `local` → `hybrid`로 변경
-- 이후 ID/PW 로그인과 SSO 로그인 **모두 가능**
-
----
-
-### 5.4 시나리오 3: SSO 전용 사용자의 비밀번호 로그인 차단
-
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | SSO로 자동 생성된 사용자 이메일 확인 | `auth_method='sso'` |
-| 2 | 로그인 폼에서 해당 이메일 + 아무 비밀번호 입력 | `403 Forbidden` 응답 |
-| 3 | 에러 메시지 확인 | "This account uses SSO login only..." |
+1. Keycloak Docker 컨테이너 실행:
 
 ```bash
-# API로 직접 테스트
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "sso-user@company.com", "password": "anything"}'
-
-# 기대: 403 응답
+docker run -d --name keycloak \
+  -p 8180:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:latest start-dev
 ```
 
----
+2. Realm + Client 설정 (127.0.0.1:8180 관리자 콘솔)
+3. `.env`에 OIDC 환경 변수 설정
+4. Docker 재시작
 
-### 5.5 시나리오 4: 비활성 사용자의 SSO 로그인 차단
-
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | 관리자가 사용자를 비활성화 (`is_active=False`) | — |
-| 2 | 해당 사용자가 SSO 로그인 시도 | 로그인 페이지로 리다이렉트 |
-| 3 | URL 확인 | `?error=account_disabled` 파라미터 포함 |
-| 4 | 화면 | "계정이 비활성화되었습니다. 관리자에게 문의하세요." 표시 |
-
----
-
-### 5.6 시나리오 5: SSO Provider 장애 시 Fallback
-
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | SSO 버튼 클릭 → Microsoft 인증 실패 (네트워크 오류 등) | `?error=sso_failed` 파라미터 |
-| 2 | 화면 | "SSO 인증에 실패했습니다. 다시 시도해주세요." 표시 |
-| 3 | 3초 후 자동으로 로그인 페이지 이동 | — |
-| 4 | `auth_method='hybrid'` 사용자는 ID/PW로 로그인 가능 | 정상 로그인 |
-
----
-
-### 5.7 시나리오 6: SSO 미설정 시 로그인 페이지
-
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | `.env`에 `SSO_MICROSOFT_*` 변수 없음 | — |
-| 2 | http://localhost:5173/login 접속 | SSO 버튼이 **표시되지 않음** |
-| 3 | 기존 ID/PW 로그인만 사용 가능 | — |
-
-> SSO 환경 변수가 없으면 Provider가 등록되지 않고, `/api/auth/sso/providers`가 빈 배열을 반환하여 버튼이 자동으로 숨겨집니다.
-
----
-
-### 5.8 시나리오 7: State CSRF 보호 검증
-
-| 단계 | 행위 | 기대 결과 |
-|------|------|----------|
-| 1 | callback URL을 직접 조작하여 잘못된 state 전달 | `400 Bad Request` |
-| 2 | 10분 이상 된 state로 callback 호출 | `400 State expired` |
+#### 활성화 확인
 
 ```bash
-# 잘못된 state로 직접 호출 테스트
-curl "http://localhost:8000/api/auth/sso/microsoft/callback?code=fake&state=invalid"
-# 기대: 400 "Invalid or expired state"
+# 로그에서 SSO Provider 등록 확인
+docker logs v-channel-bridge-backend 2>&1 | grep sso
+
+# 기대 출력:
+# sso_provider_registered provider=microsoft
+# sso_providers_initialized count=1 providers=['microsoft']
 ```
-
----
-
-## 6. 사용자 계정 유형 요약
-
-| `auth_method` | 생성 경로 | ID/PW 로그인 | SSO 로그인 |
-|---------------|----------|-------------|-----------|
-| `local` | 회원가입 (ID/PW) | O | X (SSO 미연동) |
-| `sso` | SSO 최초 로그인 (자동 생성) | **X** (차단) | O |
-| `hybrid` | Local 사용자가 SSO 로그인 | O | O |
-
----
-
-## 7. 관리자 운영 가이드
-
-### 7.1 SSO 사용자 현황 확인
-
-```sql
--- SSO 연동 현황
-SELECT
-  email,
-  username,
-  auth_method,
-  sso_provider,
-  last_login
-FROM users
-WHERE sso_provider IS NOT NULL
-ORDER BY last_login DESC;
-```
-
-### 7.2 사용자 인증 방식 강제 변경
-
-```sql
--- SSO 전용 → 하이브리드로 전환 (비밀번호 설정이 필요한 경우)
-UPDATE users SET auth_method = 'hybrid' WHERE email = 'user@company.com';
-
--- SSO 연동 해제 (로컬로 복귀)
-UPDATE users
-SET auth_method = 'local', sso_provider = NULL, sso_provider_id = NULL
-WHERE email = 'user@company.com';
-```
-
-### 7.3 Redirect URI 변경 시
-
-도메인이 변경되면:
-1. Azure App Registration → **Authentication** → Redirect URI 수정
-2. 재배포 (Backend가 `request.base_url`을 기준으로 redirect_uri를 자동 생성하므로 코드 변경 불필요)
-
----
-
-## 8. 트러블슈팅
-
-### Q: 로그인 버튼이 안 보여요
-
-1. `.env`에 `SSO_MICROSOFT_*` 3개 변수가 모두 설정되었는지 확인
-2. Docker 재빌드: `docker compose up -d --build`
-3. Backend 로그 확인: `docker logs vms-channel-bridge-backend 2>&1 | grep sso`
-4. API 직접 호출: `curl http://localhost:8000/api/auth/sso/providers`
-
-### Q: "Invalid or expired state" 에러
-
-- SSO 인증 시작 후 10분이 지나면 state가 만료됩니다
-- 다시 SSO 버튼을 클릭하여 인증을 재시작하세요
-- Backend가 재시작되면 in-memory state가 초기화됩니다 (프로덕션에서는 Redis 사용 권장)
-
-### Q: Microsoft 동의 화면에서 "Need admin approval" 에러
-
-- Azure AD 관리자가 앱에 대한 **Admin consent**를 승인해야 합니다
-- Azure Portal → App Registration → API permissions → **Grant admin consent**
-
-### Q: SSO로 로그인했는데 권한이 없어요
-
-- SSO 최초 로그인 시 `role=user` (일반 사용자)로 생성됩니다
-- 관리자가 사용자 관리 페이지에서 역할을 변경해야 합니다
-- SSO는 인증만 담당하고, 권한(RBAC)은 내부 시스템이 관리합니다
-
-### Q: `redirect_uri` 불일치 에러 (AADSTS50011)
-
-- Azure App Registration에 등록된 Redirect URI와 실제 Backend URL이 정확히 일치해야 합니다
-- 슬래시(`/`) 유무, `http`/`https` 차이, 포트 번호 확인
-- 예시: `http://localhost:8000/api/auth/sso/microsoft/callback` (정확한 형식)
-
-### Q: 온프레미스 OIDC에서 이메일이 안 넘어와요
-
-- IdP의 클레임 매핑을 확인하세요
-- `SSO_OIDC_EMAIL_CLAIM` 환경 변수로 클레임 키를 변경할 수 있습니다
-- Keycloak: `email`, Okta: `email`, ADFS: `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`
-
----
-
-## 9. 보안 체크리스트
-
-| 항목 | 상태 | 설명 |
-|------|------|------|
-| State CSRF 보호 | ✅ | `secrets.token_urlsafe(32)`, 10분 만료 |
-| SSO 경로 CSRF 예외 | ✅ | `/api/auth/sso` 경로 CSRF 미들웨어 제외 |
-| Token URL 노출 최소화 | ✅ | SSOCallback에서 즉시 소비 후 URL 파라미터 제거 |
-| Refresh Token HttpOnly | ✅ | 쿠키로 설정, JavaScript 접근 차단 |
-| SSO 전용 계정 PW 차단 | ✅ | `auth_method='sso'`일 때 비밀번호 로그인 거부 |
-| 비활성 계정 차단 | ✅ | `is_active=False` 계정 SSO 로그인 차단 |
-| 감사 로그 | ✅ | SSO 로그인 이벤트 audit_log 기록 |
-| PKCE | ⬜ | 향후 적용 예정 (Phase 3) |
-| State Redis 이전 | ⬜ | 프로덕션 다중 인스턴스 대응 (Phase 3) |
-
----
-
-## 10. 환경별 빠른 설정 요약
-
-### 개발 환경 (로컬 Docker)
 
 ```bash
-# .env에 추가
-SSO_MICROSOFT_TENANT_ID=your-tenant-id
-SSO_MICROSOFT_CLIENT_ID=your-client-id
-SSO_MICROSOFT_CLIENT_SECRET=your-client-secret
-
-# docker-compose.yml backend environment에 추가
-# 재빌드
-docker compose up -d --build
+# API로 활성 Provider 확인
+curl http://127.0.0.1:8000/api/auth/sso/providers
 ```
 
-Azure Redirect URI: `http://localhost:8000/api/auth/sso/microsoft/callback`
+### 10.2 SSO 로그인 플로우 테스트
 
-### 프로덕션 환경
+1. 브라우저에서 `http://127.0.0.1:5173/login` 접속
+2. SSO 버튼이 표시되는지 확인
+3. SSO 버튼 클릭 → 팝업 창이 열리는지 확인
+4. IdP 로그인 완료 → 팝업이 닫히고 메인 페이지로 이동하는지 확인
+
+### 10.3 Callback URL 설정 확인
+
+IdP에 등록한 Redirect URI가 실제 요청과 정확히 일치해야 합니다.
+
+| 환경 | Callback URL |
+|------|-------------|
+| 로컬 개발 | `http://127.0.0.1:8000/api/auth/sso/{provider}/callback` |
+| 프로덕션 | `https://your-domain.com/api/auth/sso/{provider}/callback` |
+
+:::warning localhost vs 127.0.0.1
+WSL 환경에서 `localhost`가 IPv6로 해석되어 문제가 발생할 수 있습니다. 항상 `127.0.0.1`을 사용하세요. IdP의 Redirect URI도 `127.0.0.1`로 등록해야 합니다.
+:::
+
+---
+
+## 11. 트러블슈팅
+
+### 11.1 SSO 버튼이 표시되지 않음
+
+**원인**: SSO Provider가 등록되지 않음
 
 ```bash
-# .env
-SSO_MICROSOFT_TENANT_ID=prod-tenant-id
-SSO_MICROSOFT_CLIENT_ID=prod-client-id
-SSO_MICROSOFT_CLIENT_SECRET=prod-client-secret
-ENVIRONMENT=production    # 쿠키 Secure 플래그 활성화
-FRONTEND_URL=https://channel-bridge.company.com
+# 확인
+curl http://127.0.0.1:8000/api/auth/sso/providers
+# {"providers": []}  ← 비어 있음
+
+# 해결: 환경 변수 확인
+docker exec v-channel-bridge-backend env | grep -E "TEAMS_|SSO_OIDC_"
 ```
 
-Azure Redirect URI: `https://channel-bridge.company.com/api/auth/sso/microsoft/callback`
+### 11.2 "Invalid state" 오류
+
+**원인 1**: State 토큰 만료 (10분 초과)
+- 해결: SSO 팝업을 다시 열어 재시도
+
+**원인 2**: 서버 재시작으로 `_pending_states` 초기화
+- 해결: SSO 팝업을 다시 열어 재시도
+
+**원인 3**: 다중 인스턴스 환경에서 state 불일치
+- 해결: `_pending_states`는 인메모리이므로 단일 인스턴스 환경에서만 사용. 다중 인스턴스 시 Redis 기반 state 저장 필요.
+
+### 11.3 Callback에서 "redirect_uri mismatch" 오류
+
+**원인**: IdP에 등록된 Redirect URI와 실제 요청 URL 불일치
+
+```
+# IdP 등록: http://127.0.0.1:8000/api/auth/sso/microsoft/callback
+# 실제 요청: http://localhost:8000/api/auth/sso/microsoft/callback
+# → 불일치!
+```
+
+**해결**: IdP와 `FRONTEND_URL` 환경 변수의 호스트명을 정확히 일치시킵니다.
+
+### 11.4 "User email not found in token" 오류
+
+**원인**: IdP 토큰에 이메일 클레임이 없음
+
+**해결 (Generic OIDC)**: `SSO_OIDC_EMAIL_CLAIM` 환경 변수를 IdP의 이메일 클레임 키로 설정
+
+```env
+# 기본값: email
+# Keycloak에서 다른 클레임을 사용하는 경우:
+SSO_OIDC_EMAIL_CLAIM=preferred_username
+```
+
+### 11.5 팝업이 닫히지 않음
+
+**원인**: `window.opener`가 `null` (팝업 차단 등)
+
+**해결**:
+- 브라우저 팝업 차단 해제
+- 동일 출처(same-origin) 확인
+- 브라우저 콘솔에서 `postMessage` 오류 확인
+
+---
+
+## 12. 보안 체크리스트
+
+- [ ] State 토큰으로 CSRF 방지 (10분 만료)
+- [ ] `postMessage` origin 검증 (`window.location.origin`)
+- [ ] Refresh token은 `HttpOnly` 쿠키로 전달
+- [ ] Client secret은 환경 변수로만 관리 (코드에 하드코딩 금지)
+- [ ] HTTPS 사용 (프로덕션)
+- [ ] IdP Redirect URI를 정확한 경로로 제한
+- [ ] SSO로 생성된 사용자는 기본 `user` 역할 (권한 상승 방지)
+- [ ] 비활성 사용자(`is_active=False`) SSO 로그인 차단

@@ -1,286 +1,209 @@
 ---
-id: teams-setup
 title: Microsoft Teams Bot 설정 가이드
 sidebar_position: 5
-tags: [guide, admin]
 ---
 
 # Microsoft Teams Bot 설정 가이드
 
-VMS Channel Bridge의 Teams Provider (Graph API + Bot Framework)를 연동하기 위한 Azure Bot Service 설정 방법을 안내합니다.
+Azure Portal에서 Bot을 등록하고, v-channel-bridge가 Microsoft Graph API와 Bot Framework를 통해 Teams 메시지를 수신/발송할 수 있도록 설정하는 방법을 안내합니다.
+
+---
+
+## 전체 흐름 요약
+
+1. Azure Portal에서 Bot 등록 (Azure Bot Service)
+2. API 권한 설정
+3. Messaging Endpoint 구성
+4. TenantId, AppId, AppPassword 발급
+5. `.env` 파일에 반영
+6. Teams 팀에 봇 추가
+7. 관리자 UI에서 라우트 등록
 
 ---
 
 ## 사전 요구사항
 
 - Microsoft Azure 계정
-- Microsoft Teams 관리자 권한 (또는 Bot 설치 권한)
 - Azure Portal 접근 권한
+- Microsoft Teams 관리자 권한 (또는 봇 설치 권한)
+- 외부에서 접근 가능한 도메인 (Messaging Endpoint용)
 
 ---
 
-## 1. Azure AD App 등록
+## 1. Azure Portal에서 Bot 등록
 
-### 1.1 App 등록 생성
-
-1. [Azure Portal](https://portal.azure.com/)에 로그인
-2. **"App registrations"** 검색 → **"+ New registration"** 클릭
-3. 다음 정보 입력:
-   - **Name**: `VMS Channel Bridge Bot`
-   - **Supported account types**: `Accounts in this organizational directory only` (단일 테넌트)
-   - **Redirect URI**: 비워둡니다
-4. **"Register"** 클릭
-
-### 1.2 Application ID 및 Tenant ID 복사
-
-생성된 앱의 **"Overview"** 페이지에서:
-- **Application (client) ID** → `.env`의 `TEAMS_APP_ID`
-- **Directory (tenant) ID** → `.env`의 `TEAMS_TENANT_ID`
-
-### 1.3 Client Secret 생성
-
-1. **"Certificates & secrets"** → **"+ New client secret"**
-2. Description: `VMS Channel Bridge Secret`, Expires: 24 months
-3. **"Add"** 클릭
-4. 생성된 **"Value"** 즉시 복사 → `.env`의 `TEAMS_APP_PASSWORD`
-
-> **중요**: 이 값은 한 번만 표시되므로 반드시 복사해두어야 합니다!
+1. [Azure Portal](https://portal.azure.com)에 로그인합니다.
+2. **Azure Bot** 리소스를 검색하고 **Create**를 클릭합니다.
+3. 기본 설정을 입력합니다.
+   - **Bot handle**: `v-channel-bridge` (고유 이름)
+   - **Subscription**: 사용할 Azure 구독
+   - **Resource group**: 기존 그룹 선택 또는 새로 생성
+   - **Type of App**: **Multi Tenant** 선택
+4. **Create**를 클릭하고 배포가 완료될 때까지 기다립니다.
 
 ---
 
-## 2. API 권한 설정
+## 2. App Registration 확인 및 Client Secret 발급
 
-### 2.1 필수 권한 추가
+Bot 등록 시 자동으로 App Registration이 생성됩니다.
 
-1. Azure AD App에서 **"API permissions"** → **"+ Add a permission"**
-2. **"Microsoft Graph"** → **"Application permissions"** 선택
-3. 다음 권한을 추가합니다:
+1. Azure Portal > **Azure Active Directory** > **App registrations**으로 이동합니다.
+2. 위에서 생성된 앱을 찾아 클릭합니다.
+3. **Overview** 페이지에서 다음 값을 복사합니다.
+   - **Application (client) ID** --> 이후 `TEAMS_APP_ID`
+   - **Directory (tenant) ID** --> 이후 `TEAMS_TENANT_ID`
+4. **Certificates & secrets** > **Client secrets** > **New client secret**를 클릭합니다.
+5. 설명을 입력하고 만료 기간을 선택한 후 **Add**를 클릭합니다.
+6. 생성된 **Value**를 즉시 복사합니다 --> 이후 `TEAMS_APP_PASSWORD`
 
-```
-ChannelMessage.Read.All     채널 메시지 읽기
-ChannelMessage.Send         채널 메시지 전송
-Team.ReadBasic.All          팀 기본 정보 읽기
-Channel.ReadBasic.All       채널 기본 정보 읽기
-```
-
-### 2.2 선택 권한 (파일 전송, 사용자 정보)
-
-```
-Files.Read.All              파일 읽기
-Files.ReadWrite.All         파일 읽기/쓰기
-User.Read.All               사용자 정보 읽기
-ChatMessage.Read            채팅 메시지 읽기
-ChatMessage.Send            채팅 메시지 전송
-```
-
-### 2.3 관리자 동의
-
-**"Grant admin consent for [조직명]"** 클릭하여 관리자 동의를 부여합니다.
+> Client Secret은 생성 직후에만 값을 확인할 수 있습니다. 이 시점에서 반드시 복사해 두세요.
 
 ---
 
-## 3. Bot Service 생성
+## 3. API 권한 설정
 
-### 3.1 Azure Bot 리소스 생성
+1. App Registration > **API permissions** > **Add a permission**을 클릭합니다.
+2. **Microsoft Graph** > **Application permissions**를 선택합니다.
+3. 다음 권한을 추가합니다.
 
-1. Azure Portal에서 **"Azure Bot"** 검색 → **"+ Create"**
-2. 다음 정보 입력:
-   - **Bot handle**: 고유한 이름 (예: `vms-channel-bridge-bot`)
-   - **Subscription**: Azure 구독 선택
-   - **Resource group**: 기존 그룹 또는 새로 생성
-   - **Pricing tier**: `F0 (Free)` 또는 필요에 따라 선택
-   - **Microsoft App ID**:
-     - Type of App: `Multi Tenant`
-     - Creation type: `Use existing app registration`
-     - App ID: 위에서 생성한 Application (client) ID
-3. **"Review + create"** → **"Create"**
+| 권한 | 설명 |
+|------|------|
+| `ChannelMessage.Read.All` | Teams 채널 메시지 읽기 |
+| `ChannelMessage.Send` | Teams 채널에 메시지 전송 |
+| `Team.ReadBasic.All` | 팀 기본 정보 읽기 |
 
-### 3.2 Messaging Endpoint 설정
+4. **Grant admin consent** 버튼을 클릭하여 관리자 동의를 부여합니다.
 
-1. Bot 리소스에서 **"Configuration"** 클릭
-2. **"Messaging endpoint"** 설정:
-   ```
-   https://{your-domain}/api/teams/webhook
-   ```
-   VMS Channel Bridge의 Teams Webhook 엔드포인트를 지정합니다.
-
-### 3.3 Teams 채널 활성화
-
-1. Bot 리소스에서 **"Channels"** 클릭
-2. **"Microsoft Teams"** 아이콘 클릭
-3. **"Microsoft Teams Commercial"** 선택
-4. 약관 동의 후 **"Apply"**
+Status 열에 모든 권한이 "Granted"로 표시되어야 합니다.
 
 ---
 
-## 4. Teams에 Bot 설치
+## 4. Messaging Endpoint 구성
 
-### 방법 1: Developer Portal 사용 (권장)
+1. Azure Portal에서 생성한 **Azure Bot** 리소스로 이동합니다.
+2. **Configuration**을 클릭합니다.
+3. **Messaging endpoint**에 다음 URL을 입력합니다.
 
-1. [Teams Developer Portal](https://dev.teams.microsoft.com/) 접속
-2. **"Apps"** → **"+ New app"**
-3. 기본 정보 입력:
-   - **App name**: `VMS Channel Bridge`
-   - **App ID**: Azure AD App의 Application (client) ID
-4. **"App features"** → **"Bot"** → Bot ID 입력
-5. Scope: **Team**, **Personal**, **Group chat** 선택
-6. **"Publish"** → **"Publish to your org"** 또는 직접 설치
+```
+https://{your-domain}/api/teams/webhook
+```
 
-### 방법 2: 팀에 직접 추가
+이 URL은 `apps/v-channel-bridge/backend/app/api/teams_webhook.py`에 정의된 엔드포인트입니다. Bot Framework가 Teams Activity를 이 엔드포인트로 POST 하면, `TeamsProvider`의 `BotFrameworkAdapter`가 JWT 인증을 수행하고 메시지를 처리합니다.
 
-1. Teams에서 원하는 팀/채널로 이동
-2. 채널 이름 옆의 **"..."** → **"Manage channel"**
-3. Bot 앱 검색하여 추가
+4. **Microsoft Teams** 채널을 활성화합니다.
+   - **Channels** 메뉴에서 **Microsoft Teams**를 클릭하고 활성화합니다.
 
 ---
 
-## 5. 채널 ID 확인
+## 5. 환경 변수 설정
 
-### 방법 1: Graph Explorer 사용
-
-1. [Microsoft Graph Explorer](https://developer.microsoft.com/graph/graph-explorer) 접속
-2. 로그인 후 다음 쿼리 실행:
-
-```
-GET https://graph.microsoft.com/v1.0/me/joinedTeams
-```
-
-3. 팀 ID 확인 후 채널 목록 조회:
-
-```
-GET https://graph.microsoft.com/v1.0/teams/{team-id}/channels
-```
-
-4. 채널 ID 복사 (형식: `19:xxxx@thread.tacv2`)
-
-### 방법 2: VMS Channel Bridge API 사용
-
-Provider 계정이 등록된 후:
+프로젝트 루트의 `.env` 파일에 다음 값을 추가합니다.
 
 ```bash
-curl http://localhost:8000/api/bridge/channels/msteams \
-  -H "Authorization: Bearer <token>"
-```
-
-Teams에 연결된 모든 팀과 채널 목록이 반환됩니다.
-
-### 방법 3: Teams 링크에서 추출
-
-1. Teams에서 채널 우클릭 → **"Get link to channel"**
-2. URL에서 채널 ID 추출:
-   ```
-   https://teams.microsoft.com/l/channel/19%3axxxxxxxxxx%40thread.tacv2/...
-   ```
-3. URL 디코딩: `19:xxxx@thread.tacv2`
-
----
-
-## 6. 환경 변수 설정
-
-`.env` 파일에 다음 값을 입력합니다:
-
-```bash
-TEAMS_TENANT_ID=your-tenant-id
-TEAMS_APP_ID=your-application-client-id
+TEAMS_TENANT_ID=your-azure-tenant-id
+TEAMS_APP_ID=your-azure-app-id
 TEAMS_APP_PASSWORD=your-client-secret-value
 ```
 
+v-channel-bridge는 시작 시 `.env`의 값을 DB(`accounts` 테이블)로 자동 마이그레이션합니다. `apps/v-channel-bridge/backend/app/main.py`의 `migrate_env_to_db()` 함수가 이 작업을 수행합니다.
+
+### 선택 환경 변수
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `TEAMS_NOTIFICATION_URL` | Graph API Change Notifications 수신 URL | `{BACKEND_URL}/api/teams/notifications` |
+| `BRIDGE_TYPE` | 브리지 타입 | `native` |
+
 ---
 
-## 7. VMS Channel Bridge에 계정 등록
+## 6. Teams 팀에 봇 추가
 
-### Web UI
+1. Microsoft Teams 클라이언트를 엽니다.
+2. **Apps** > **Manage your apps**으로 이동합니다.
+3. **Upload a custom app**을 클릭합니다 (관리자 권한 필요).
+4. Bot의 App ID를 사용하여 앱을 팀에 추가합니다.
 
-1. Settings 페이지 → Provider 섹션
-2. "+" 버튼 → Teams 선택
-3. Tenant ID, App ID, App Password 입력
-4. "저장" → "연결 테스트" 클릭
+또는 Teams Admin Center에서 조직 전체에 배포할 수 있습니다.
 
-### API
+---
 
-```bash
-curl -X POST http://localhost:8000/api/accounts-db \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "platform": "msteams",
-    "account_name": "my-org",
-    "tenant_id": "your-tenant-id",
-    "app_id": "your-app-id",
-    "app_password": "your-client-secret"
-  }'
+## 7. 채널 ID 포맷 주의사항
+
+Teams 채널 ID는 v-channel-bridge 내부에서 `{teamId}:{channelId}` 형식으로 저장됩니다.
+
+예시:
+```
+19:abc123def456@thread.tacv2
 ```
 
+위 값이 팀 ID `team-uuid-1234`에 속한 경우, Redis에는 다음과 같이 저장됩니다.
+
+```
+route:teams:team-uuid-1234:19:abc123def456@thread.tacv2
+```
+
+`apps/v-channel-bridge/backend/app/adapters/teams_provider.py`의 `_parse_channel_ref()` 함수가 이 형식을 파싱합니다. 라우트를 API로 직접 등록할 때는 이 형식을 정확히 맞춰야 합니다.
+
 ---
 
-## 8. 연결 테스트
+## 서비스 시작 및 연결 확인
 
 ```bash
-# 서비스 시작
+# v-channel-bridge 전체 시작
 docker compose up -d --build
 
-# Backend 로그에서 Teams 연결 확인
-docker logs vms-channel-bridge-backend --tail=50 | grep -i teams
-
-# 채널 목록 조회 테스트
-curl http://localhost:8000/api/bridge/channels/msteams \
-  -H "Authorization: Bearer <token>"
+# 백엔드 로그에서 Teams 연결 확인
+docker logs v-channel-bridge-backend --tail=50 | grep -i teams
 ```
 
-Settings 페이지에서 "연결 테스트" 버튼으로도 확인할 수 있습니다.
+정상 연결 시 다음과 같은 로그가 출력됩니다.
+
+```
+INFO: Teams Provider registered: teams-default
+INFO: v-channel-bridge started
+```
 
 ---
 
-## Teams 채널 ID 형식
+## 라우트 등록
 
-VMS Channel Bridge에서 Teams 채널 ID는 `{teamId}:{channelId}` 형식으로 저장됩니다:
+Teams 봇이 정상 등록되면 관리자 UI에서 라우트를 등록합니다.
 
-```
-예: a1b2c3d4-e5f6-7890-abcd-ef1234567890:19:xxxx@thread.tacv2
-```
-
-Route 설정 시 UI의 채널 드롭다운에서 자동으로 이 형식이 사용됩니다.
+1. 브라우저에서 `http://127.0.0.1:5173`에 접속합니다.
+2. **Channels** 페이지에서 **라우트 추가**를 클릭합니다.
+3. 소스(Slack)/타겟(Teams) 또는 소스(Teams)/타겟(Slack) 조합을 선택합니다.
+4. Teams 채널은 드롭다운에서 팀과 채널을 선택할 수 있습니다.
+5. 메시지 모드와 양방향 여부를 설정한 후 **저장**합니다.
 
 ---
 
-## 문제 해결
+## 자주 묻는 질문
 
-### 인증 오류 (401 Unauthorized)
+### Messaging Endpoint를 로컬에서 테스트하려면
 
-- `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD`, `TEAMS_TENANT_ID`가 정확한지 확인
-- Client Secret이 만료되지 않았는지 확인
-- Azure AD App에 필요한 API 권한 + 관리자 동의가 부여되었는지 확인
+로컬 개발 환경에서는 외부 도메인이 없으므로 ngrok 같은 터널링 도구를 사용합니다.
 
-### Bot이 메시지를 수신하지 못함
+```bash
+ngrok http 8000
+```
 
-- Messaging Endpoint가 `https://{domain}/api/teams/webhook`으로 설정되었는지 확인
-- Bot이 Teams 팀/채널에 추가되었는지 확인
-- Azure Bot의 Channels 설정에서 Teams가 활성화되었는지 확인
+생성된 HTTPS URL을 Azure Bot의 Messaging endpoint에 설정합니다.
 
-### 메시지 전송 실패
+### Client Secret이 만료되었을 때
 
-- Bot에 `ChannelMessage.Send` 권한이 있는지 확인
-- Teams 관리 센터에서 Bot 정책이 허용되었는지 확인
-- 채널 ID가 올바른 형식인지 확인
+Azure Portal > App Registration > **Certificates & secrets**에서 새 Secret을 생성하고, `.env`의 `TEAMS_APP_PASSWORD`를 갱신한 뒤 서비스를 재시작합니다. 또는 관리자 UI의 **Integrations** 페이지에서 계정 정보를 수정할 수 있습니다.
 
-### 파일 첨부 실패
+### Graph API 권한이 Granted 되지 않습니다
 
-- `Files.Read.All` 및 `Files.ReadWrite.All` 권한 확인
-- 관리자 동의가 부여되었는지 확인
-- 인라인 이미지는 `hostedContents`를 통해 전송됩니다
+Azure AD 글로벌 관리자 권한이 필요합니다. IT 관리자에게 **Grant admin consent** 승인을 요청하세요.
 
 ---
 
 ## 관련 문서
 
-- [Slack 설정 가이드](slack-setup) — Slack App 연동
-- [관리자 가이드](admin-guide) — 시스템 관리
-- [트러블슈팅](troubleshooting) — 문제 해결
-- [Microsoft Teams Bot 개발 문서](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/what-are-bots)
-- [Azure Bot Service 문서](https://learn.microsoft.com/en-us/azure/bot-service/)
-- [Microsoft Graph API 문서](https://learn.microsoft.com/en-us/graph/overview)
+- [Slack 설정 가이드](./SLACK_SETUP.md)
+- [트러블슈팅](./TROUBLESHOOTING.md)
 
 ---
 
-**최종 업데이트**: 2026-04-07
-**문서 버전**: 3.0
+**최종 업데이트**: 2026-04-13

@@ -1,330 +1,545 @@
 # 알림 및 메시징 시스템 설계
 
-> **작성일**: 2026-04-11  
-> **상태**: 설계 검토 대기  
-> **목적**: 플랫폼 레벨 알림/토스트 시스템을 멀티앱 환경에 맞게 확장 — 앱별 알림, 전역 공지, 역할 기반 선택 전송
+> scope 기반 알림 전달, 3가지 delivery_type, WebSocket 실시간 브로드캐스트, 앱별 시스템 알림 오버라이드
 
 ---
 
-## 1. 현재 상태
+## 1. 개요
 
-### 1.1 이미 플랫폼에 있는 것
+v-platform의 알림 시스템은 **영속 알림**(DB 저장)과 **실시간 알림**(WebSocket 브로드캐스트)을 통합한다. 4단계 scope로 대상을 지정하고, 3가지 delivery_type으로 전달 방식을 제어하며, 앱별로 시스템 알림을 독립적으로 활성/비활성화한다.
 
-| 컴포넌트 | 위치 | 역할 |
-|----------|------|------|
-| `notification.ts` (store) | `@v-platform/core/stores/` | 알림/토스트 상태 관리 (Zustand) |
-| `Toast.tsx` | `@v-platform/core/components/notifications/` | 토스트 메시지 UI |
-| `ToastContainer.tsx` | `@v-platform/core/components/notifications/` | 토스트 컨테이너 |
-| `NotificationBell.tsx` | `@v-platform/core/components/notifications/` | 알림 벨 아이콘 + 뱃지 |
-| `NotificationPopover.tsx` | `@v-platform/core/components/notifications/` | 알림 목록 팝오버 |
-| `useNotifications.ts` | `@v-platform/core/hooks/` | WebSocket 알림 수신 훅 |
-| `useBrowserNotification.ts` | `@v-platform/core/hooks/` | 데스크톱 알림 |
+### 핵심 특성
 
-**앱별 구현 불필요** — 모든 앱이 `@v-platform/core`에서 import하여 사용.
-
-### 1.2 현재 알림 타입
-
-```typescript
-// 심각도
-type NotificationSeverity = "critical" | "error" | "warning" | "info" | "success";
-
-// 카테고리
-type NotificationCategory = "service" | "message" | "config" | "user" | "system" | "session";
-
-// 역할 필터 (기존)
-requiredRole?: "admin" | "user";
-```
-
-### 1.3 현재 한계
-
-| 문제 | 설명 |
+| 항목 | 설명 |
 |------|------|
-| **앱 구분 없음** | 모든 알림이 앱 구분 없이 표시 |
-| **전역 전송 불가** | 앱 간 공지/알림 전송 메커니즘 없음 |
-| **역할 기반 선택 전송 불가** | `requiredRole`이 있지만 프론트엔드 필터링만 (백엔드 미지원) |
-| **백엔드 알림 API 없음** | 알림 생성/조회/관리 API 없음 (프론트엔드 메모리만) |
-| **영속성 없음** | 새로고침하면 알림 사라짐 |
+| scope | global / app / role / user |
+| delivery_type | toast / announcement / both |
+| 시스템 알림 | `is_system=True`, 삭제 불가, 앱별 override 가능 |
+| 커스텀 알림 | 관리자가 생성, 앱별 `app_id` 자동 바인딩 |
+| 실시간 전달 | WebSocket `notifications` 채널 브로드캐스트 |
+| 읽음 추적 | `notification_reads` 테이블, 사용자별 독립 관리 |
 
 ---
 
-## 2. 목표 아키텍처
+## 2. 데이터 모델
 
-### 2.1 알림 범위 (Scope)
+### 2.1 Notification (notifications 테이블)
 
 ```
-┌──────────────────────────────────────────────────┐
-│                 알림 범위 (Scope)                   │
-│                                                    │
-│  ┌─────────────┐                                  │
-│  │   GLOBAL     │  전역 알림 — 모든 앱에 표시       │
-│  │   (전역)     │  예: 시스템 점검, 긴급 공지        │
-│  └──────┬──────┘                                  │
-│         │                                          │
-│  ┌──────┴──────┐  ┌──────────────┐                │
-│  │  APP         │  │  APP          │               │
-│  │  (앱별)     │  │  (앱별)      │               │
-│  │ v-channel-  │  │ v-platform-  │  ...           │
-│  │ bridge      │  │ template     │               │
-│  └──────┬──────┘  └──────┬───────┘               │
-│         │                 │                        │
-│  ┌──────┴──────┐  ┌──────┴───────┐               │
-│  │  USER        │  │  ROLE         │               │
-│  │  (개인)     │  │  (역할별)    │               │
-│  │ 특정 사용자  │  │ admin만      │               │
-│  └─────────────┘  └──────────────┘               │
-└──────────────────────────────────────────────────┘
++------------------+------------------+----------------------------------------+
+| 컬럼             | 타입             | 설명                                   |
++------------------+------------------+----------------------------------------+
+| id               | Integer PK       | 자동 증가                              |
+| title            | String(200)      | 알림 제목                              |
+| message          | Text             | 알림 본문                              |
+| severity         | String(20)       | critical/error/warning/info/success    |
+| category         | String(50)       | system/service/message/config/user     |
+| scope            | String(20)       | global/app/role/user                   |
+| app_id           | String(50)       | NULL=global, 값=앱별                   |
+| target_role      | String(50)       | scope=role일 때 대상 역할              |
+| target_user_id   | Integer FK       | scope=user일 때 대상 사용자            |
+| source           | String(100)      | 발생 원천 (admin, system 등)           |
+| link             | String(500)      | 관련 페이지 링크                       |
+| metadata         | JSON             | 추가 컨텍스트 데이터                   |
+| is_active        | Boolean          | 활성 여부                              |
+| is_system        | Boolean          | 시스템 기본 알림 여부 (삭제 불가)       |
+| delivery_type    | String(20)       | toast/announcement/both                |
+| expires_at       | DateTime         | 만료 시각 (NULL=무기한)                |
+| created_by       | Integer FK       | 생성자 (users.id)                      |
+| created_at       | DateTime         | 생성 시각                              |
++------------------+------------------+----------------------------------------+
+
+인덱스:
+  idx_notifications_scope_app      (scope, app_id)
+  idx_notifications_active_created (is_active, created_at)
 ```
 
-### 2.2 알림 분류
+### 2.2 NotificationAppOverride (notification_app_overrides 테이블)
 
-| Scope | 대상 | 예시 | 저장 |
-|-------|------|------|------|
-| **GLOBAL** | 전 앱 전 사용자 | 시스템 점검 공지, 긴급 알림 | DB |
-| **APP** | 특정 앱 사용자 | 브리지 연결 끊김, 설정 변경 | DB |
-| **ROLE** | 특정 역할 사용자 | 관리자 승인 요청, 보안 경고 | DB |
-| **USER** | 특정 사용자 | 비밀번호 만료 경고, 세션 만료 | DB |
-| **TOAST** | 현재 사용자 즉시 | 저장 성공, 에러 발생 | 메모리 (기존) |
+시스템 알림(`is_system=True`)의 활성/비활성 상태를 앱별로 독립 관리한다.
+
+```
++------------------+------------------+----------------------------------------+
+| 컬럼             | 타입             | 설명                                   |
++------------------+------------------+----------------------------------------+
+| id               | Integer PK       | 자동 증가                              |
+| notification_id  | Integer FK       | notifications.id (CASCADE)             |
+| app_id           | String(50)       | 앱 식별자                              |
+| is_active        | Boolean          | 해당 앱에서의 활성 여부                |
+| updated_at       | DateTime         | 수정 시각                              |
++------------------+------------------+----------------------------------------+
+
+UNIQUE: (notification_id, app_id)
+```
+
+### 2.3 NotificationRead (notification_reads 테이블)
+
+사용자별 읽음 상태를 추적한다.
+
+```
++------------------+------------------+----------------------------------------+
+| 컬럼             | 타입             | 설명                                   |
++------------------+------------------+----------------------------------------+
+| id               | Integer PK       | 자동 증가                              |
+| notification_id  | Integer FK       | notifications.id (CASCADE)             |
+| user_id          | Integer FK       | users.id (CASCADE)                     |
+| read_at          | DateTime         | 읽은 시각                              |
++------------------+------------------+----------------------------------------+
+
+UNIQUE: (notification_id, user_id)
+```
 
 ---
 
-## 3. 설계 상세
+## 3. Scope 계층
 
-### 3.1 DB 스키마 (신규)
-
-```sql
-CREATE TABLE notifications (
-    id SERIAL PRIMARY KEY,
-    -- 알림 내용
-    title VARCHAR(200) NOT NULL,
-    message TEXT NOT NULL,
-    severity VARCHAR(20) NOT NULL DEFAULT 'info',   -- critical/error/warning/info/success
-    category VARCHAR(50) NOT NULL DEFAULT 'system',  -- service/message/config/user/system/session
-    
-    -- 범위 (Scope)
-    scope VARCHAR(20) NOT NULL DEFAULT 'app',        -- global/app/role/user
-    app_id VARCHAR(50),                              -- NULL=global, value=특정 앱
-    target_role VARCHAR(50),                         -- NULL=모든 역할, 'system_admin'=관리자만
-    target_user_id INTEGER REFERENCES users(id),     -- NULL=모든 사용자, value=특정 사용자
-    
-    -- 메타데이터
-    source VARCHAR(100),                             -- 발생 출처 (api, system, admin)
-    link VARCHAR(500),                               -- 클릭 시 이동 URL
-    metadata JSONB,                                  -- 추가 데이터
-    
-    -- 상태
-    is_active BOOLEAN DEFAULT TRUE,                  -- 비활성화 가능
-    expires_at TIMESTAMP WITH TIME ZONE,             -- 만료 시간 (선택)
-    
-    -- 발신자
-    created_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    INDEX idx_notifications_scope (scope, app_id),
-    INDEX idx_notifications_active (is_active, created_at DESC)
-);
-
-CREATE TABLE notification_reads (
-    id SERIAL PRIMARY KEY,
-    notification_id INTEGER REFERENCES notifications(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    UNIQUE (notification_id, user_id)
-);
-```
-
-### 3.2 알림 API (신규)
+알림은 4단계 scope로 전달 범위를 지정한다.
 
 ```
-# 알림 조회 (현재 앱 + 전역 + 본인 대상)
-GET /api/notifications
-  → scope=global OR (scope=app AND app_id=current) OR (scope=role AND target_role=my_role) OR (scope=user AND target_user_id=me)
-
-# 알림 읽음 처리
-POST /api/notifications/{id}/read
-
-# 전체 읽음
-POST /api/notifications/read-all
-
-# 알림 생성 (관리자)
-POST /api/notifications
-  body: { title, message, severity, scope, app_id?, target_role?, target_user_id? }
-
-# 알림 삭제 (관리자)
-DELETE /api/notifications/{id}
++--------+   global: 전 앱 전 사용자
+|        |
++--------+
+    |
++--------+   app: 특정 앱 사용자 (app_id 매칭)
+|        |
++--------+
+    |
++--------+   role: 특정 역할 사용자 (target_role 매칭)
+|        |
++--------+
+    |
++--------+   user: 특정 사용자 (target_user_id 매칭)
+|        |
++--------+
 ```
 
-### 3.3 알림 전송 패턴
+### 3.1 Scope별 필터 규칙
 
-#### 패턴 A: 토스트 (즉시, 메모리)
-```typescript
-// 기존과 동일 — 현재 사용자에게 즉시 표시, DB 저장 안 함
-addToast({
-  severity: "success",
-  title: "저장 완료",
-  message: "설정이 저장되었습니다.",
-});
-```
+| scope | 조건 | app_id | target_role | target_user_id |
+|-------|------|--------|-------------|----------------|
+| global | 전 앱 전 사용자 | NULL | - | - |
+| app | `app_id == 현재 앱` | 필수 | - | - |
+| role | `target_role == 사용자 역할` + `app_id == 현재 앱` | 필수 | 필수 | - |
+| user | `target_user_id == 사용자 ID` + `app_id == 현재 앱` | 필수 | - | 필수 |
 
-#### 패턴 B: 앱 알림 (영속, DB)
+### 3.2 시스템 알림의 특수 scope 동작
+
+시스템 알림(`is_system=True`)은 커스텀 알림과 다르게 동작한다:
+
+| scope | 시스템 알림 동작 |
+|-------|-----------------|
+| global | 전 사용자에게 전달 (커스텀과 동일) |
+| role | `target_role`이 NULL -- system_admin, org_admin에게만 전달 |
+| user | `target_user_id`가 NULL -- 전 사용자에게 전달 (본인 알림 용도) |
+
+### 3.3 Scope 필터 생성 코드
+
+`PersistentNotificationService._build_scope_filter()`가 이 규칙을 구현한다:
+
 ```python
-# Backend에서 앱 사용자 전체에게 알림
-NotificationService.create(
-    title="브리지 연결 끊김",
-    message="Slack Provider 연결이 끊어졌습니다.",
-    severity="warning",
-    scope="app",
-    app_id="v-channel-bridge",
+conditions = [
+    Notification.scope == "global",
+    and_(Notification.scope == "app", Notification.app_id == app_id),
+    # 커스텀 role: target_role 정확히 매칭
+    and_(
+        Notification.scope == "role",
+        Notification.is_system.is_(False),
+        Notification.target_role == user_role,
+        Notification.app_id == app_id,
+    ),
+    # 커스텀 user: target_user_id 정확히 매칭
+    and_(
+        Notification.scope == "user",
+        Notification.is_system.is_(False),
+        Notification.target_user_id == user_id,
+        Notification.app_id == app_id,
+    ),
+    # 시스템 user: 모든 사용자에게
+    and_(Notification.scope == "user", Notification.is_system.is_(True)),
+]
+# 시스템 role: system_admin, org_admin에게만
+if user_role in ("system_admin", "org_admin"):
+    conditions.append(
+        and_(Notification.scope == "role", Notification.is_system.is_(True))
+    )
+```
+
+---
+
+## 4. Delivery Type
+
+알림의 전달 방식을 3가지로 구분한다.
+
+| delivery_type | 용도 | WebSocket | DB 저장 | UI 표시 |
+|---------------|------|-----------|---------|---------|
+| `toast` | 즉시 알림 | O | O | 토스트 팝업 |
+| `announcement` | 공지사항 | X | O | 로그인 시 팝업 |
+| `both` | 즉시 + 공지 | O | O | 토스트 + 팝업 |
+
+### 4.1 WebSocket 브로드캐스트 조건
+
+알림 생성 시 `delivery_type`이 `toast` 또는 `both`인 경우에만 WebSocket으로 실시간 전달한다:
+
+```python
+if data.delivery_type in ("toast", "both"):
+    ws_notif = NotificationService.create_notification(
+        severity=data.severity,
+        category=data.category,
+        title=data.title,
+        message=data.message,
+        source="admin",
+        link=data.link,
+        persistent=True,
+    )
+    ws_notif["persistent_id"] = notif.id
+    await NotificationService.broadcast_notification(ws_notif)
+```
+
+### 4.2 공지사항 팝업
+
+`announcement` 또는 `both` 타입의 미읽은 알림은 `GET /api/notifications-v2/announcements` 엔드포인트로 조회한다. 프론트엔드는 로그인 후 이 엔드포인트를 호출하여 미읽은 공지를 팝업으로 표시한다.
+
+---
+
+## 5. 시스템 알림과 앱별 오버라이드
+
+### 5.1 시스템 알림 특성
+
+| 속성 | 값 |
+|------|-----|
+| `is_system` | `True` |
+| 생성 | 마이그레이션/시드 데이터로 생성 |
+| 삭제 | 불가 (API에서 403 반환) |
+| 수정 | `is_active` 토글만 가능 (앱별 override) |
+| 범위 | 앱별 독립적 활성/비활성 |
+
+### 5.2 앱별 Override 메커니즘
+
+시스템 알림의 `is_active`를 토글하면, 원본 알림의 값은 변경하지 않고 `notification_app_overrides` 테이블에 앱별 레코드를 생성/갱신한다.
+
+```
+시스템 알림 (is_active=True)
+  |
+  +-- v-channel-bridge:   override 없음 -> True (원본)
+  +-- v-platform-template: override(is_active=False) -> False
+  +-- v-platform-portal:  override(is_active=True) -> True
+```
+
+### 5.3 Override 생성 (upsert)
+
+```python
+def set_app_override(db, notification_id, app_id, is_active):
+    override = db.query(NotificationAppOverride).filter(
+        NotificationAppOverride.notification_id == notification_id,
+        NotificationAppOverride.app_id == app_id,
+    ).first()
+    if override:
+        override.is_active = is_active    # 기존 레코드 갱신
+    else:
+        override = NotificationAppOverride(
+            notification_id=notification_id,
+            app_id=app_id,
+            is_active=is_active,
+        )
+        db.add(override)                  # 신규 레코드 생성
+    db.commit()
+```
+
+### 5.4 조회 시 비활성 알림 제외
+
+사용자 뷰에서는 앱별로 비활성화된 시스템 알림을 제외한다:
+
+```python
+disabled_ids = _get_disabled_system_ids(db, app_id)
+if disabled_ids:
+    query = query.filter(~Notification.id.in_(disabled_ids))
+```
+
+### 5.5 관리자 뷰
+
+관리자 뷰(`admin_view=true`)에서는 시스템 알림 + 해당 앱의 커스텀 알림을 모두 표시한다. 시스템 알림의 `is_active`는 `app_overrides` 맵에서 해당 앱의 값을 반영한다.
+
+---
+
+## 6. API 엔드포인트
+
+### 6.1 Persistent Notifications API (`/api/notifications-v2`)
+
+| 메서드 | 경로 | 설명 | 권한 |
+|--------|------|------|------|
+| GET | `/api/notifications-v2` | 알림 목록 | 인증 사용자 |
+| POST | `/api/notifications-v2` | 알림 생성 | 인증 사용자 |
+| PUT | `/api/notifications-v2/{id}` | 알림 수정 | 인증 사용자 |
+| POST | `/api/notifications-v2/{id}/read` | 읽음 처리 | 인증 사용자 |
+| POST | `/api/notifications-v2/read-all` | 전체 읽음 | 인증 사용자 |
+| GET | `/api/notifications-v2/system-status` | 시스템 알림 상태 | 인증 사용자 |
+| GET | `/api/notifications-v2/announcements` | 미읽은 공지 | 인증 사용자 |
+| DELETE | `/api/notifications-v2/{id}` | 알림 삭제 | 인증 사용자 |
+
+### 6.2 목록 조회 파라미터
+
+```
+GET /api/notifications-v2?limit=50&offset=0&unread_only=false&admin_view=false
+```
+
+| 파라미터 | 기본값 | 설명 |
+|----------|--------|------|
+| `limit` | 50 | 최대 100 |
+| `offset` | 0 | 페이지네이션 |
+| `unread_only` | false | 미읽은 알림만 |
+| `admin_view` | false | true: 시스템+앱 전체 알림 / false: scope 기반 필터 |
+
+### 6.3 알림 생성 스키마
+
+```python
+class NotificationCreate(BaseModel):
+    title: str                                    # 최대 200자
+    message: str
+    severity: str = "info"                        # critical|error|warning|info|success
+    category: str = "system"
+    scope: str = "app"                            # global|app|role|user
+    target_role: Optional[str] = None             # scope=role 필수
+    target_user_id: Optional[int] = None          # scope=user 필수
+    link: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    delivery_type: str = "toast"                  # toast|announcement|both
+```
+
+### 6.4 생성 시 유효성 검사
+
+| 조건 | 에러 |
+|------|------|
+| `scope == "global"` | 400: 커스텀 알림은 global 불가 |
+| `scope == "role"` + `target_role` 없음 | 400: 대상 역할 필수 |
+| `scope == "user"` + `target_user_id` 없음 | 400: 대상 사용자 ID 필수 |
+
+커스텀 알림은 `global` scope를 사용할 수 없다. global scope는 시스템 알림(마이그레이션 시드)에서만 사용한다.
+
+### 6.5 삭제 규칙
+
+| 알림 유형 | 삭제 가능 | 응답 |
+|-----------|-----------|------|
+| 커스텀 | O | `{"status": "deleted"}` |
+| 시스템 | X | 403: "시스템 기본 알림은 삭제할 수 없습니다. 비활성화만 가능합니다." |
+
+---
+
+## 7. WebSocket 실시간 알림
+
+### 7.1 NotificationService
+
+`NotificationService`는 WebSocket 기반 실시간 알림 생성/브로드캐스트를 담당한다.
+
+```python
+class NotificationService:
+    CRITICAL = "critical"
+    ERROR = "error"
+    WARNING = "warning"
+    INFO = "info"
+    SUCCESS = "success"
+
+    @staticmethod
+    def create_notification(severity, category, title, message, source, ...):
+        return {
+            "id": f"notif_{uuid4().hex[:12]}",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "severity": severity,
+            "title": title,
+            "message": message,
+            ...
+        }
+
+    @staticmethod
+    async def broadcast_notification(notification):
+        await manager.broadcast(
+            {"type": "notification", "data": notification},
+            channel="notifications",
+        )
+```
+
+### 7.2 편의 메서드
+
+서비스 코드에서 간편하게 알림을 전송할 수 있는 정적 메서드:
+
+| 메서드 | severity | 기본 category |
+|--------|----------|---------------|
+| `notify_success()` | success | service |
+| `notify_error()` | error | service |
+| `notify_warning()` | warning | service |
+| `notify_info()` | info | system |
+| `notify_critical()` | critical | service |
+
+### 7.3 영속 알림과 실시간 알림의 연결
+
+영속 알림 생성 시 WebSocket으로도 브로드캐스트하면, 실시간 알림 데이터에 `persistent_id` 필드를 추가하여 프론트엔드에서 영속 알림과 연결한다:
+
+```python
+ws_notif["persistent_id"] = notif.id
+await NotificationService.broadcast_notification(ws_notif)
+```
+
+---
+
+## 8. app_id 자동 바인딩
+
+모든 알림 API에서 `app_id`는 `request.app.state.app_id`에서 자동으로 가져온다.
+
+```python
+app_id = getattr(request.app.state, "app_id", None)
+```
+
+`PlatformApp` 생성 시 `self.fastapi.state.app_id = app_name`으로 설정되므로:
+
+| 앱 | app_id |
+|----|--------|
+| v-channel-bridge | `"v-channel-bridge"` |
+| v-platform-template | `"v-platform-template"` |
+| v-platform-portal | `"v-platform-portal"` |
+
+커스텀 알림 생성 시 이 `app_id`가 자동으로 알림에 바인딩된다. global scope 알림은 `app_id = NULL`로 저장된다.
+
+---
+
+## 9. 알림 응답 구조
+
+```python
+class NotificationResponse(BaseModel):
+    id: int
+    title: str
+    message: str
+    severity: str                        # critical|error|warning|info|success
+    category: str
+    scope: str                           # global|app|role|user
+    app_id: Optional[str] = None
+    target_role: Optional[str] = None
+    target_user_id: Optional[int] = None
+    source: Optional[str] = None
+    link: Optional[str] = None
+    is_active: bool
+    is_system: bool = False
+    delivery_type: str = "toast"
+    expires_at: Optional[str] = None
+    created_by: Optional[int] = None
+    created_at: str
+    is_read: bool = False                # 현재 사용자 기준
+```
+
+### 9.1 목록 응답 래퍼
+
+```python
+class NotificationListResponse(BaseModel):
+    notifications: list[NotificationResponse]
+    total: int
+    unread_count: int
+```
+
+---
+
+## 10. 알림 수명 주기
+
+### 10.1 생성 흐름
+
+```
+관리자 UI
+  |
+  v
+POST /api/notifications-v2
+  |
+  +-- PersistentNotificationService.create()  --> DB 저장
+  |
+  +-- delivery_type in ("toast", "both")?
+        |
+        +-- Yes --> NotificationService.broadcast_notification()
+        |              --> WebSocket manager.broadcast()
+        |                     --> 프론트엔드 토스트
+        +-- No  --> (DB에만 저장, 공지사항으로만 표시)
+```
+
+### 10.2 조회 흐름
+
+```
+프론트엔드
+  |
+  v
+GET /api/notifications-v2
+  |
+  +-- admin_view=true?
+  |     |
+  |     +-- Yes --> list_all(db, app_id) -- 시스템+앱 전체
+  |     +-- No  --> list_for_user(db, user_id, role, app_id)
+  |                    |
+  |                    +-- scope 필터 적용
+  |                    +-- 앱별 비활성 시스템 알림 제외
+  |                    +-- 만료된 알림 제외
+  v
+NotificationListResponse
+```
+
+### 10.3 읽음 처리
+
+```
+POST /api/notifications-v2/{id}/read
+  |
+  +-- notification_reads 테이블에 (notification_id, user_id) 삽입
+  +-- 이미 읽음이면 무시 (UNIQUE 제약)
+
+POST /api/notifications-v2/read-all
+  |
+  +-- scope 필터로 접근 가능한 알림 조회
+  +-- 읽지 않은 알림에 대해 일괄 read 레코드 생성
+```
+
+---
+
+## 11. severity 수준
+
+| severity | 용도 | UI 색상 (일반적) |
+|----------|------|-----------------|
+| `critical` | 긴급 장애, 보안 사고 | 빨강 |
+| `error` | 오류 발생 | 빨강 |
+| `warning` | 주의 필요 | 노랑 |
+| `info` | 정보 안내 | 파랑 |
+| `success` | 작업 완료 | 초록 |
+
+---
+
+## 12. 만료 처리
+
+`expires_at` 필드가 설정된 알림은 만료 시각이 지나면 조회에서 자동으로 제외된다:
+
+```python
+base_filter = and_(
+    Notification.is_active.is_(True),
+    or_(Notification.expires_at.is_(None), Notification.expires_at > now),
 )
 ```
 
-#### 패턴 C: 전역 공지 (영속, 전 앱)
-```python
-# Backend에서 모든 앱 모든 사용자에게 공지
-NotificationService.create(
-    title="시스템 점검 예정",
-    message="2026-04-15 02:00~04:00 서비스 점검이 예정되어 있습니다.",
-    severity="info",
-    scope="global",
-    expires_at=datetime(2026, 4, 15, 4, 0),
-)
-```
-
-#### 패턴 D: 역할 기반 선택 전송
-```python
-# 관리자에게만 전송
-NotificationService.create(
-    title="새 사용자 승인 요청",
-    message="신규 사용자 john@example.com 가입 승인 대기 중입니다.",
-    severity="info",
-    scope="role",
-    target_role="system_admin",
-)
-```
-
-#### 패턴 E: 특정 사용자 전송
-```python
-# 특정 사용자에게만 전송
-NotificationService.create(
-    title="비밀번호 변경 권장",
-    message="90일 이상 비밀번호를 변경하지 않았습니다.",
-    severity="warning",
-    scope="user",
-    target_user_id=user.id,
-)
-```
-
-### 3.4 실시간 전달 (WebSocket)
-
-```
-1. Backend: 알림 생성 → DB 저장
-2. Backend: WebSocket으로 대상 클라이언트에 push
-3. Frontend: useNotifications 훅이 WebSocket 메시지 수신
-4. Frontend: notification store에 추가 → 벨 뱃지 + 토스트
-```
-
-### 3.5 프론트엔드 알림 UI 개선
-
-```
-┌─────────────────────────────────┐
-│ 🔔 알림 (3)                      │
-├─────────────────────────────────┤
-│ 🌐 [전역] 시스템 점검 예정       │  ← scope=global
-│    2026-04-15 02:00~04:00       │
-│                          2분 전  │
-├─────────────────────────────────┤
-│ ⚠️ [v-channel-bridge]           │  ← scope=app
-│    Slack Provider 연결 끊김      │
-│                          5분 전  │
-├─────────────────────────────────┤
-│ 🔒 [관리자] 새 사용자 승인 요청   │  ← scope=role
-│    john@example.com 가입 대기    │
-│                         10분 전  │
-└─────────────────────────────────┘
-```
-
-### 3.6 관리자 알림 관리 페이지
-
-```
-┌──────────────────────────────────────────┐
-│ 📢 알림 관리 (관리자)                      │
-├──────────────────────────────────────────┤
-│ [+ 새 알림 보내기]                        │
-│                                          │
-│ 범위: ○ 전역  ○ 이 앱  ○ 역할별  ○ 사용자  │
-│ 역할: [system_admin ▾]                   │
-│ 심각도: [info ▾]                         │
-│ 제목: [________________________]         │
-│ 내용: [________________________]         │
-│ 만료: [2026-04-15 04:00      ]           │
-│                                          │
-│                        [취소] [전송]      │
-├──────────────────────────────────────────┤
-│ 기존 알림 목록                            │
-│ ┌─────────┬────────┬────────┬──────┐     │
-│ │ 시간     │ 범위    │ 제목    │ 상태 │     │
-│ ├─────────┼────────┼────────┼──────┤     │
-│ │ 10분 전  │ 전역    │ 점검공지 │ 활성 │     │
-│ │ 1시간 전 │ 관리자  │ 승인요청 │ 읽음 │     │
-│ └─────────┴────────┴────────┴──────┘     │
-└──────────────────────────────────────────┘
-```
+만료된 알림은 DB에서 삭제되지 않고 필터링으로만 제외된다. 필요 시 관리자가 수동으로 삭제한다.
 
 ---
 
-## 4. 구현 계획
+## 13. 프론트엔드 통합
 
-### Phase N1: 백엔드 알림 서비스 (1주)
+### 13.1 알림 스토어 (notification.ts)
 
-| # | 작업 | 설명 |
-|---|------|------|
-| 1 | `notifications` 테이블 생성 (마이그레이션) | scope, app_id, target_role, target_user_id |
-| 2 | `notification_reads` 테이블 생성 | 읽음 처리 추적 |
-| 3 | `NotificationService` 구현 | create, list, mark_read, delete |
-| 4 | 알림 API 엔드포인트 구현 | GET/POST/DELETE /api/notifications |
-| 5 | scope 기반 필터링 로직 | global + app + role + user 조합 조회 |
+Zustand 기반 알림 스토어가 실시간 알림 상태를 관리한다.
 
-### Phase N2: 프론트엔드 연동 (1주)
+### 13.2 useNotifications 훅
 
-| # | 작업 | 설명 |
-|---|------|------|
-| 6 | notification store 확장 | DB 알림 + 메모리 토스트 통합 |
-| 7 | 알림 API 클라이언트 | fetchNotifications, markRead, createNotification |
-| 8 | NotificationBell 개선 | scope 뱃지, 미읽음 카운트 |
-| 9 | NotificationPopover 개선 | scope 표시, 읽음 처리, 무한 스크롤 |
-| 10 | WebSocket 연동 | 실시간 알림 push 수신 |
+알림 목록 조회, 읽음 처리, 미읽은 수 카운트를 제공한다.
 
-### Phase N3: 관리자 UI + 자동 알림 (1주)
+### 13.3 WebSocket 연결
 
-| # | 작업 | 설명 |
-|---|------|------|
-| 11 | 알림 관리 페이지 | 전송 폼 + 기존 알림 목록 |
-| 12 | 자동 알림 훅 | 비밀번호 만료, Provider 끊김 등 자동 생성 |
-| 13 | 만료 알림 자동 정리 | 스케줄러 또는 조회 시 필터 |
-| 14 | 알림 설정 (사용자) | 카테고리별 수신 on/off |
+`useWebSocket` 훅이 `/api/ws` WebSocket 엔드포인트에 연결하여 `notifications` 채널의 메시지를 수신한다. `type: "notification"` 메시지를 받으면 토스트를 표시하고 알림 목록을 갱신한다.
+
+### 13.4 공지사항 팝업
+
+로그인 후 `GET /api/notifications-v2/announcements`를 호출하여 미읽은 `announcement`/`both` 알림을 팝업으로 표시한다. 사용자가 확인하면 `POST /api/notifications-v2/{id}/read`로 읽음 처리한다.
 
 ---
 
-## 5. 기존 토스트와의 관계
+## 14. 관련 문서
 
-| 구분 | 토스트 (기존) | 알림 (신규) |
-|------|-------------|-----------|
-| **저장** | 메모리 (새로고침 시 사라짐) | DB (영속) |
-| **대상** | 현재 사용자만 | 범위별 (전역/앱/역할/사용자) |
-| **표시** | 화면 하단 자동 사라짐 | 벨 아이콘 + 팝오버 목록 |
-| **생성** | 프론트엔드 직접 | 백엔드 API |
-| **용도** | 즉시 피드백 (저장 성공 등) | 공지, 경고, 승인 요청 등 |
-
-**공존**: 토스트는 즉시 피드백용으로 유지, 알림은 영속적 중요 메시지용으로 추가.
-
----
-
-## 6. 기대 효과
-
-| Before | After |
-|--------|-------|
-| 앱 내 메모리 알림만 | 전역/앱/역할/사용자별 영속 알림 |
-| 새로고침 시 사라짐 | DB 저장, 읽음 추적 |
-| 관리자가 공지 불가 | 관리자 알림 관리 페이지 |
-| WebSocket 로컬 이벤트만 | WebSocket으로 실시간 push |
-| 역할 필터 프론트엔드만 | 백엔드 scope 기반 필터링 |
+- [멀티 앱 데이터 격리](./MULTI_APP_DATA_ISOLATION.md) -- app_id 기반 알림 격리
+- [플랫폼/앱 분리 아키텍처](./PLATFORM_APP_SEPARATION_ARCHITECTURE.md) -- PlatformApp 구조
+- [v-platform-portal 설계](./V_PLATFORM_PORTAL_DESIGN.md) -- 포털 알림 관리

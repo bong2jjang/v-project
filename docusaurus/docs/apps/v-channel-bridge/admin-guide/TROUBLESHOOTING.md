@@ -1,353 +1,237 @@
 ---
-id: troubleshooting
-title: VMS Channel Bridge 트러블슈팅 가이드
+title: v-channel-bridge 트러블슈팅
 sidebar_position: 9
-tags: [guide, admin]
 ---
 
-# VMS Channel Bridge 트러블슈팅 가이드
+# v-channel-bridge 트러블슈팅
 
-이 문서는 VMS Channel Bridge Light-Zowe 아키텍처에서 발생할 수 있는 일반적인 문제와 해결 방법을 안내합니다.
-
----
-
-## 서비스 시작 문제
-
-### Docker 연결 실패
-
-**증상:**
-
-```
-Error: Docker or Docker Compose not found
-Cannot connect to the Docker daemon
-```
-
-**해결 방법:**
-
-```bash
-# Docker 설치 확인
-docker --version
-docker compose version
-
-# Docker 서비스 상태 (Linux)
-sudo systemctl status docker
-sudo systemctl start docker
-
-# Docker 권한 추가 (Linux)
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-Windows의 경우 Docker Desktop이 실행 중인지 확인합니다.
-
-### Backend 시작 실패
-
-**증상:**
-
-- Backend 컨테이너가 반복 재시작
-- `docker compose ps`에서 backend가 "Restarting" 상태
-
-**확인 사항:**
-
-```bash
-# 로그 확인
-docker logs vms-channel-bridge-backend --tail=100
-
-# 일반적인 원인:
-# 1. PostgreSQL 연결 실패 → postgres 컨테이너 상태 확인
-# 2. Redis 연결 실패 → redis 컨테이너 상태 확인
-# 3. .env 설정 오류 → DATABASE_URL, REDIS_URL 확인
-```
-
-**해결 방법:**
-
-```bash
-# 의존 서비스 먼저 확인
-docker compose ps postgres redis
-
-# 전체 재빌드
-docker compose down
-docker compose up -d --build
-```
-
-### Provider 연결 실패
-
-**증상:**
-
-- Dashboard에서 Provider 상태가 "Disconnected"
-- Backend 로그에 Slack/Teams 연결 오류
-
-**Slack Provider:**
-
-```bash
-# Slack API 연결 테스트
-curl -H "Authorization: Bearer xoxb-YOUR-TOKEN" \
-  https://slack.com/api/auth.test
-
-# 확인 사항:
-# - Bot Token (xoxb-)이 유효한지
-# - App Token (xapp-)이 유효한지 (Socket Mode 필수)
-# - Bot이 채널에 초대되었는지
-```
-
-**Teams Provider:**
-
-```bash
-# 확인 사항:
-# - Tenant ID, App ID, App Password가 정확한지
-# - Client Secret이 만료되지 않았는지
-# - Azure AD App에 필요한 API 권한이 부여되었는지
-# - Teams 채널에서 Bot이 활성화되었는지
-```
-
-**Settings 페이지에서 "연결 테스트" 버튼으로 검증할 수 있습니다.**
+운영 중 자주 발생하는 문제의 증상, 점검 방법, 해결 순서를 정리합니다. 모든 항목은 "증상 > 점검 명령 > 해결" 3단 구조로 구성되어 있습니다.
 
 ---
 
-## 메시지 전달 문제
+## 1. Slack Socket Mode 연결 실패
 
-### 메시지가 전송되지 않음
+### 증상
 
-**체크리스트:**
+백엔드 로그에 다음과 유사한 메시지가 반복됩니다.
 
-1. Dashboard에서 브리지 상태가 "Connected"인가?
-2. Routes 페이지에서 해당 Route가 활성화 상태인가?
-3. Slack Bot이 소스 채널에 초대되었나?
-4. Teams Bot이 대상 채널에 추가되었나?
-
-**진단:**
-
-```bash
-# Backend 로그에서 메시지 라우팅 확인
-docker logs vms-channel-bridge-backend --tail=200 | grep -i "route\|message\|error"
-
-# Redis에서 Route 확인
-docker exec vms-channel-bridge-redis redis-cli KEYS "route:*"
-
-# Messages 페이지에서 실패 메시지의 에러 메시지 확인
+```
+ERROR: Failed to connect provider    platform=slack
+WARNING: Failed to process account slack-default: ...
 ```
 
-**일반적인 원인:**
+또는 서비스가 시작되지만 Slack 메시지가 수신되지 않습니다.
 
-- Slack/Teams 토큰 만료
-- 잘못된 채널 ID
-- 네트워크 연결 문제
-- Route 미설정 또는 비활성화
-
-### 파일/이미지가 전달되지 않음
-
-**Slack → Teams:**
-
-- Slack Bot에 `files:read` 권한이 있는지 확인
-- Teams App에 `ChannelMessage.Send` 권한이 있는지 확인
-- Backend 로그에서 파일 다운로드/업로드 에러 확인
-
-**Teams → Slack:**
-
-- Teams App에 `Files.Read.All` 권한이 있는지 확인
-- Slack Bot에 `files:write` 권한이 있는지 확인
-- 파일 크기 제한 확인
-
-### 메시지 지연
-
-**진단:**
+### 점검 명령
 
 ```bash
-# 리소스 사용량 확인
-docker stats --no-stream
+# 백엔드 로그 확인
+docker logs v-channel-bridge-backend --tail=100 | grep -i "slack\|socket"
 
-# Redis 상태 확인
-docker exec vms-channel-bridge-redis redis-cli INFO server
-
-# PostgreSQL 연결 수 확인
-docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
-  -c "SELECT count(*) FROM pg_stat_activity;"
+# .env 파일에서 토큰 형식 확인
+grep "SLACK_" .env
 ```
 
-**해결 방법:**
+### 해결
 
-- MessageQueue 배치 크기 및 flush 간격 확인 (기본: 50개 / 5초)
-- Redis 메모리 확인 및 정리
-- PostgreSQL 인덱스 재구성
-
----
-
-## 데이터베이스 문제
-
-### PostgreSQL 연결 실패
+1. **App-Level Token 확인**: `SLACK_APP_TOKEN`이 `xapp-`로 시작하는지 확인합니다. Bot Token(`xoxb-`)과 혼동하지 않도록 합니다.
+2. **Socket Mode 활성화 확인**: Slack API 포털 > 앱 설정 > Socket Mode가 ON인지 확인합니다.
+3. **`connections:write` scope 확인**: App-Level Token 생성 시 이 scope가 포함되어야 합니다.
+4. **네트워크 확인**: Docker 컨테이너에서 Slack 서버(`wss://wss-primary.slack.com`)로 WebSocket 연결이 가능한지 확인합니다. 프록시 환경이라면 `HTTPS_PROXY` 환경 변수를 설정합니다.
+5. 토큰을 변경한 후에는 서비스를 재시작합니다.
 
 ```bash
-# 컨테이너 상태 확인
-docker logs vms-channel-bridge-postgres --tail=50
-
-# 연결 테스트
-docker exec vms-channel-bridge-backend python -c "
-from app.db.database import engine
-from sqlalchemy import text
-with engine.connect() as conn:
-    result = conn.execute(text('SELECT 1'))
-    print('DB OK:', result.fetchone())
-"
-```
-
-### 디스크 공간 부족
-
-```bash
-# 디스크 사용량 확인
-df -h
-
-# Docker 디스크 정리
-docker system prune -a --volumes
-
-# 오래된 메시지 삭제
-docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
-  -c "DELETE FROM messages WHERE created_at < NOW() - INTERVAL '90 days';"
-```
-
-### 성능 저하
-
-```bash
-# PostgreSQL 성능 확인
-docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
-  -c "SELECT * FROM pg_stat_activity WHERE state = 'active';"
-
-# Redis 메모리 확인
-docker exec vms-channel-bridge-redis redis-cli INFO memory
-
-# 인덱스 재구성
-docker exec vms-channel-bridge-postgres psql -U vmsuser -d vms_channel_bridge \
-  -c "REINDEX DATABASE vms_channel_bridge;"
+docker compose up -d --build v-channel-bridge-backend
 ```
 
 ---
 
-## 네트워크 문제
+## 2. Teams Webhook 401 Unauthorized
 
-### WebSocket 연결 실패
+### 증상
 
-**증상:**
+Teams에서 메시지를 보내도 v-channel-bridge에 도달하지 않고, Azure Bot Service 로그 또는 백엔드 로그에 401 오류가 기록됩니다.
 
-- 실시간 업데이트가 작동하지 않음
-- 브라우저 콘솔에 `WebSocket connection failed` 에러
-
-**해결 방법:**
-
-```bash
-# Backend WebSocket 엔드포인트 테스트
-# 브라우저 콘솔에서:
-# const ws = new WebSocket('ws://localhost:8000/api/ws');
-# ws.onopen = () => console.log('Connected');
-
-# CORS 설정 확인 (backend/app/main.py)
-# Frontend URL이 allow_origins에 포함되어 있는지 확인
-
-# Nginx 리버스 프록시 사용 시 WebSocket 설정
-# location /api/ws {
-#     proxy_pass http://backend:8000;
-#     proxy_http_version 1.1;
-#     proxy_set_header Upgrade $http_upgrade;
-#     proxy_set_header Connection "upgrade";
-# }
+```
+ERROR: Teams webhook authentication failed
 ```
 
-### 컨테이너 간 통신 실패
+### 점검 명령
 
 ```bash
-# Docker 네트워크 확인
-docker network ls
-docker network inspect vms-channel-bridge_vms-channel-bridge-network
+# 백엔드 로그에서 Teams 관련 오류 확인
+docker logs v-channel-bridge-backend --tail=100 | grep -i "teams\|401\|auth"
 
-# 네트워크 재생성
-docker compose down
-docker network prune
-docker compose up -d
+# .env에서 Teams 자격증명 확인
+grep "TEAMS_" .env
 ```
 
-### 외부 API 연결 실패
+### 해결
 
-```bash
-# Slack API 테스트
-curl https://slack.com/api/api.test
-
-# Microsoft Graph API 테스트
-curl https://graph.microsoft.com/v1.0/
-
-# 프록시 환경인 경우 docker-compose.yml에 추가:
-# environment:
-#   - HTTP_PROXY=http://proxy.example.com:8080
-#   - HTTPS_PROXY=http://proxy.example.com:8080
-```
+1. **AppId/AppPassword 확인**: `.env`의 `TEAMS_APP_ID`와 `TEAMS_APP_PASSWORD`가 Azure Portal의 App Registration에 등록된 값과 일치하는지 확인합니다.
+2. **Client Secret 만료**: Azure Portal > App Registration > Certificates & secrets에서 Secret의 만료일을 확인합니다. 만료된 경우 새 Secret을 생성하고 `.env`를 갱신합니다.
+3. **Messaging Endpoint URL 확인**: Azure Bot > Configuration의 Messaging endpoint가 `https://{your-domain}/api/teams/webhook`으로 정확히 설정되어 있는지 확인합니다.
+4. **HTTPS 필수**: Bot Framework는 HTTPS만 지원합니다. 로컬 테스트 시 ngrok 등 터널링 도구를 사용하세요.
+5. **Admin Consent 확인**: Azure Portal > App Registration > API permissions에서 모든 권한의 Status가 "Granted"인지 확인합니다.
 
 ---
 
-## 포트 충돌
+## 3. 메시지 라우팅 누락
 
-**증상:**
+### 증상
+
+Slack/Teams에서 메시지를 보냈지만 상대 플랫폼에 전달되지 않습니다. 백엔드 로그에 다음과 같은 메시지가 나타납니다.
 
 ```
-port already in use
+INFO: No routing targets found    platform=slack  channel=C123456
 ```
 
-**확인 및 해결:**
+### 점검 명령
 
 ```bash
-# Windows
-netstat -ano | findstr :8000
-netstat -ano | findstr :5173
+# Redis에서 라우트 키 직접 확인
+docker exec -it redis redis-cli
 
-# Linux/macOS
-sudo lsof -i :8000
-sudo lsof -i :5173
+# Redis CLI 내부에서:
+# 모든 route 키 목록 조회
+KEYS route:*
+
+# 특정 채널의 타겟 목록 조회
+SMEMBERS route:slack:C123456
+
+# 타겟 채널 이름 확인
+HGETALL route:slack:C123456:names
+
+# 활성 상태 확인
+HGETALL route:slack:C123456:enabled
 ```
 
-`docker-compose.yml`에서 포트를 변경할 수 있습니다:
+### 해결
 
-```yaml
-services:
-  backend:
-    ports:
-      - "8001:8000"  # 호스트:컨테이너
-  frontend:
-    ports:
-      - "5174:5173"
-```
+1. **라우트 미등록**: `SMEMBERS route:{platform}:{channel_id}` 결과가 비어 있으면 라우트가 등록되지 않은 것입니다. 관리자 UI의 **Channels** 페이지에서 라우트를 등록합니다.
+2. **라우트 비활성**: `HGETALL route:{platform}:{channel_id}:enabled`에서 값이 `"0"`이면 비활성 상태입니다. UI에서 토글하거나 다음 명령으로 활성화합니다.
+   ```
+   HSET route:slack:C123456:enabled teams:T789 1
+   ```
+3. **채널 ID 불일치**: Slack 채널 ID는 `C`로 시작하는 영숫자입니다. Teams 채널 ID는 `{teamId}:{channelId}` 형식입니다. 라우트 등록 시 정확한 ID를 사용했는지 확인합니다.
+4. **봇 미초대**: Slack 채널에 봇이 초대되지 않으면 메시지 이벤트를 수신할 수 없습니다. `/invite @봇이름` 명령으로 초대합니다.
 
 ---
 
-## 로그 수집 방법
+## 4. CommonMessage 변환 에러
 
-문제 해결을 위해 다음 정보를 수집하세요:
+### 증상
+
+메시지 이벤트는 수신되지만 `transform_to_common()` 단계에서 오류가 발생합니다.
+
+```
+ERROR: Error handling Slack message    error=...
+```
+
+### 점검 명령
 
 ```bash
-# 1. 시스템 정보
-docker --version
-docker compose version
+# 상세 로그 레벨로 변경 후 재시작
+# docker-compose.yml에서 LOG_LEVEL=DEBUG 설정
+docker compose up -d --build v-channel-bridge-backend
 
-# 2. 컨테이너 상태
-docker compose ps > docker-status.txt
+# 변환 오류 로그 확인
+docker logs v-channel-bridge-backend --tail=200 | grep -i "error.*transform\|error.*common"
+```
 
-# 3. Backend 로그
-docker logs vms-channel-bridge-backend --tail=500 > backend-logs.txt
+### 해결
 
-# 4. 전체 서비스 로그
-docker compose logs --tail=200 > all-logs.txt
+1. **메시지 서브타입 확인**: `SlackProvider`는 `message_changed`, `message_deleted`, `file_share`, `thread_broadcast` 외의 서브타입을 무시합니다(`apps/v-channel-bridge/backend/app/adapters/slack_provider.py`). 예상치 못한 서브타입이라면 해당 이벤트는 정상적으로 필터링된 것입니다.
+2. **필수 필드 누락**: `CommonMessage` 스키마(`apps/v-channel-bridge/backend/app/schemas/common_message.py`)의 필수 필드(`message_id`, `timestamp`, `type`, `platform`, `user`, `channel`)가 원본 이벤트에서 추출되지 못한 경우입니다. 로그에서 `raw_message`를 확인하세요.
+3. **사용자 정보 조회 실패**: Slack `users_info` API 호출 실패 시 display_name이 빈 값일 수 있습니다. 이 경우 기본값(user_id)이 사용됩니다.
 
-# 5. 헬스체크
-curl http://localhost:8000/api/health > health-check.json
-curl http://localhost:8000/api/health/detailed \
-  -H "Authorization: Bearer <token>" >> health-check.json
+---
+
+## 5. 양방향 라우트 중복 표시
+
+### 증상
+
+관리자 UI의 Channels 페이지에서 동일한 라우트가 2건으로 표시됩니다 (예: Slack > Teams 1건, Teams > Slack 1건).
+
+### 점검 명령
+
+```bash
+# Redis에서 양방향 플래그 확인
+docker exec -it redis redis-cli
+
+HGETALL route:slack:C123:bidirectional
+HGETALL route:teams:T456:bidirectional
+```
+
+### 해결
+
+정상적인 양방향 라우트라면 `get_all_routes()` 함수가 `frozenset` 쌍으로 중복을 제거합니다(`apps/v-channel-bridge/backend/app/services/route_manager.py`). 중복이 표시된다면 다음 상황을 확인합니다.
+
+1. **bidirectional 플래그 불일치**: 정방향은 `"1"`이지만 역방향의 bidirectional 플래그가 누락된 경우입니다. 수동으로 설정합니다.
+   ```
+   HSET route:teams:T456:bidirectional slack:C123 1
+   ```
+2. **라우트 재등록**: 문제가 지속되면 해당 라우트를 삭제하고 관리자 UI에서 다시 등록합니다.
+
+---
+
+## 6. 첨부 파일 전달 누락
+
+### 증상
+
+Slack에서 파일을 공유했지만 Teams 측에 파일이 전달되지 않습니다. 텍스트 메시지만 전달됩니다.
+
+### 점검 명령
+
+```bash
+# 첨부 파일 관련 로그 확인
+docker logs v-channel-bridge-backend --tail=200 | grep -i "attachment\|download\|upload\|file"
+
+# 임시 파일 디렉토리 확인 (Docker 컨테이너 내부)
+docker exec v-channel-bridge-backend ls -la /tmp/vms-attachments/
+```
+
+### 해결
+
+1. **파일 크기 제한**: 이미지는 10MB, 일반 파일은 20MB가 상한입니다(`apps/v-channel-bridge/backend/app/utils/attachment_handler.py`의 `MAX_IMAGE_SIZE`, `MAX_FILE_SIZE`). 초과하면 다운로드가 건너뛰어집니다.
+2. **Slack 파일 접근 권한**: `files:read` scope가 없으면 파일 URL에 접근할 수 없습니다. OAuth & Permissions에서 scope를 확인하고 봇을 재설치합니다.
+3. **MIME 타입 미지원**: 지원되는 MIME 타입은 `SUPPORTED_IMAGE_TYPES`(png, jpeg, gif, webp)와 `SUPPORTED_FILE_TYPES`(pdf, docx, xlsx, zip, txt)입니다. 로그에서 해당 파일의 MIME 타입을 확인합니다.
+4. **임시 디렉토리 권한**: Docker 컨테이너 내부의 `/tmp/vms-attachments/` 디렉토리에 쓰기 권한이 있는지 확인합니다.
+5. **다운로드 실패**: Slack API에서 파일 다운로드가 실패하면 `download_status`가 `"failed"`로 기록됩니다. 로그에서 HTTP 상태 코드를 확인합니다.
+
+---
+
+## 공통 진단 명령 모음
+
+```bash
+# 전체 서비스 상태 확인
+docker compose ps
+
+# 브리지 상태 API 확인
+curl -s http://127.0.0.1:8000/api/bridge/status | python -m json.tool
+
+# Provider 목록 확인
+curl -s http://127.0.0.1:8000/api/bridge/providers -H "Authorization: Bearer {token}" | python -m json.tool
+
+# 헬스 체크
+curl -s http://127.0.0.1:8000/api/health | python -m json.tool
+
+# Redis 라우트 전체 조회 (API)
+curl -s http://127.0.0.1:8000/api/bridge/routes -H "Authorization: Bearer {token}" | python -m json.tool
+
+# Redis 직접 접근
+docker exec -it redis redis-cli
+> KEYS route:*
+> SMEMBERS route:slack:C123456
 ```
 
 ---
 
 ## 관련 문서
 
-- [관리자 가이드](admin-guide) — 시스템 관리
-- [배포 가이드](deployment) — 설치 및 운영
-- [모니터링 설정](monitoring-setup) — Prometheus / Grafana / Loki
-- [API 문서](../api/api) — REST API 레퍼런스
+- [Slack 설정 가이드](./SLACK_SETUP.md)
+- [Teams 설정 가이드](./TEAMS_SETUP.md)
 
 ---
 
-**최종 업데이트**: 2026-04-07
-**문서 버전**: 3.0
+**최종 업데이트**: 2026-04-13
