@@ -854,8 +854,9 @@ class TeamsProvider(BasePlatformProvider):
                     text=teams_msg["body"]["content"],
                     text_format="html",
                 )
-                # 스레드 답글인 경우 reply_to_id 설정
-                if message.thread_id:
+                # 팀 채널에서 스레드 답글인 경우 reply_to_id 설정
+                # (채팅에서는 reply_to_id 무시 — Graph API와 동일하게)
+                if message.thread_id and not is_chat:
                     activity.reply_to_id = message.thread_id
                 response = await turn_context.send_activity(activity)
                 if response and response.id:
@@ -904,14 +905,9 @@ class TeamsProvider(BasePlatformProvider):
         """
         try:
             if not team_id:
-                # 채팅(DM/그룹채팅): /chats/{chatId}/messages
-                if thread_id:
-                    url = (
-                        f"{self.graph_base_url}/chats/{channel_id}"
-                        f"/messages/{thread_id}/replies"
-                    )
-                else:
-                    url = f"{self.graph_base_url}/chats/{channel_id}/messages"
+                # 채팅(DM/그룹채팅): Graph API는 /chats/.../replies를 지원하지 않음
+                # 항상 top-level 메시지로 전송 (thread_id 무시)
+                url = f"{self.graph_base_url}/chats/{channel_id}/messages"
             elif thread_id:
                 url = (
                     f"{self.graph_base_url}/teams/{team_id}"
