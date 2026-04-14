@@ -36,7 +36,9 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
       getSystemNotificationStatus()
         .then((statuses) => {
           const sessionStatus = statuses.find((s) => s.category === "session");
-          setSessionNotifEnabled(sessionStatus ? sessionStatus.is_active : true);
+          setSessionNotifEnabled(
+            sessionStatus ? sessionStatus.is_active : true,
+          );
         })
         .catch(() => {
           // API 실패 시 기존 상태 유지
@@ -234,9 +236,13 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
   ]);
 
   // tokenExpiresAt 변경 시 초기 마운트 플래그 해제
+  // 단, 이전 세션의 만료된 토큰이면 플래그를 유지하여 불필요한 만료 알림 방지
   useEffect(() => {
     if (tokenExpiresAt) {
-      isInitialMount.current = false;
+      const expiresAtMs = new Date(tokenExpiresAt).getTime();
+      if (Date.now() < expiresAtMs) {
+        isInitialMount.current = false;
+      }
     } else {
       // 로그아웃 시 플래그 리셋 (다음 로그인을 위해)
       isInitialMount.current = true;
