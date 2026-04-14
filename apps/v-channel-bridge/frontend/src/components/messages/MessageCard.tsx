@@ -4,7 +4,7 @@
  * 개별 메시지 카드 — 플랫폼 아이콘, 발신자명, 상대시간, 접기/펼치기, 복사
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Badge } from "../ui/Badge";
 import type { Message } from "../../lib/api/messages";
 
@@ -138,6 +138,79 @@ function formatExactTime(timestamp: string): string {
   });
 }
 
+// ── 오류 상세 팝오버 (클릭 고정 + 복사) ──────────────────────────────────────
+function ErrorPopover({
+  label,
+  labelColor,
+  message,
+}: {
+  label: string;
+  labelColor: string;
+  message: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  }, [message]);
+
+  return (
+    <div
+      className="fixed z-[9999] px-3 py-2 text-xs bg-gray-900 text-white rounded-md shadow-xl max-w-[min(420px,90vw)] break-words leading-relaxed"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="flex-1 min-w-0">
+          <span className={`font-semibold ${labelColor}`}>{label}</span>{" "}
+          {message}
+        </p>
+        <button
+          type="button"
+          onClick={handleCopy}
+          title="오류 메시지 복사"
+          className="flex-shrink-0 p-1 rounded hover:bg-gray-700 transition-colors"
+        >
+          {copied ? (
+            <svg
+              className="w-3.5 h-3.5 text-green-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="w-3.5 h-3.5 text-gray-400 hover:text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── 상태 뱃지 ──────────────────────────────────────────────────────────────
 function StatusBadge({
   status,
@@ -146,17 +219,69 @@ function StatusBadge({
   status?: string;
   errorMessage?: string;
 }) {
-  const [tooltip, setTooltip] = useState<{
-    visible: boolean;
+  const [popover, setPopover] = useState<{
+    pinned: boolean;
+    hover: boolean;
     x: number;
     y: number;
-  }>({ visible: false, x: 0, y: 0 });
+  }>({ pinned: false, hover: false, x: 0, y: 0 });
 
-  const handleMouseEnter = (e: React.MouseEvent) => {
-    if (!errorMessage) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltip({ visible: true, x: rect.right, y: rect.bottom + 4 });
-  };
+  const visible = popover.pinned || popover.hover;
+
+  const updatePosition = useCallback((el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    setPopover((p) => ({ ...p, x: rect.right, y: rect.bottom + 4 }));
+  }, []);
+
+  const handleMouseEnter = useCallback(
+    (e: React.MouseEvent) => {
+      if (!errorMessage) return;
+      updatePosition(e.currentTarget as HTMLElement);
+      setPopover((p) => ({ ...p, hover: true }));
+    },
+    [errorMessage, updatePosition],
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    setPopover((p) => ({ ...p, hover: false }));
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!errorMessage) return;
+      e.stopPropagation();
+      updatePosition(e.currentTarget as HTMLElement);
+      setPopover((p) => ({ ...p, pinned: !p.pinned }));
+    },
+    [errorMessage, updatePosition],
+  );
+
+  // 고정 팝오버 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!popover.pinned) return;
+    const handleOutside = () => setPopover((p) => ({ ...p, pinned: false }));
+    document.addEventListener("click", handleOutside);
+    return () => document.removeEventListener("click", handleOutside);
+  }, [popover.pinned]);
+
+  const renderPopover = (label: string, labelColor: string) =>
+    visible &&
+    errorMessage && (
+      <div
+        style={{
+          position: "fixed",
+          left: Math.min(popover.x, window.innerWidth - 440),
+          top: popover.y,
+          zIndex: 9999,
+        }}
+      >
+        <ErrorPopover
+          label={label}
+          labelColor={labelColor}
+          message={errorMessage}
+        />
+      </div>
+    );
 
   switch (status) {
     case "sent":
@@ -165,48 +290,28 @@ function StatusBadge({
       return (
         <>
           <span
-            className="cursor-default"
+            className="cursor-pointer"
             onMouseEnter={handleMouseEnter}
-            onMouseLeave={() => setTooltip((p) => ({ ...p, visible: false }))}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
           >
             <Badge variant="warning">부분 성공</Badge>
           </span>
-          {tooltip.visible && errorMessage && (
-            <div
-              className="fixed z-[9999] px-3 py-2 text-xs bg-gray-900 text-white rounded-md shadow-xl max-w-[min(420px,90vw)] break-words leading-relaxed"
-              style={{
-                left: Math.min(tooltip.x, window.innerWidth - 440),
-                top: tooltip.y,
-              }}
-            >
-              <span className="font-semibold text-amber-300">상세:</span>{" "}
-              {errorMessage}
-            </div>
-          )}
+          {renderPopover("상세:", "text-amber-300")}
         </>
       );
     case "failed":
       return (
         <>
           <span
-            className="cursor-default"
+            className="cursor-pointer"
             onMouseEnter={handleMouseEnter}
-            onMouseLeave={() => setTooltip((p) => ({ ...p, visible: false }))}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
           >
             <Badge variant="danger">전송 실패</Badge>
           </span>
-          {tooltip.visible && errorMessage && (
-            <div
-              className="fixed z-[9999] px-3 py-2 text-xs bg-gray-900 text-white rounded-md shadow-xl max-w-[min(420px,90vw)] break-words leading-relaxed"
-              style={{
-                left: Math.min(tooltip.x, window.innerWidth - 440),
-                top: tooltip.y,
-              }}
-            >
-              <span className="font-semibold text-red-300">오류 상세:</span>{" "}
-              {errorMessage}
-            </div>
-          )}
+          {renderPopover("오류 상세:", "text-red-300")}
         </>
       );
     case "pending":
