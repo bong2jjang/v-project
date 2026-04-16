@@ -1,12 +1,21 @@
 /**
  * RouteList - Route 목록 표시
  *
- * 라우팅 룰 목록을 카드 형식으로 표시
+ * 라우팅 룰 목록을 카드 형식으로 표시 + Health Check 뱃지/상세 모달
  */
 
 import { useEffect, useState } from "react";
 import { useRoutesStore } from "@/store/routes";
-import type { RouteResponse } from "@/lib/api/routes";
+import type {
+  RouteResponse,
+  RouteHealthResponse,
+  RouteTestResponse,
+} from "@/lib/api/routes";
+import {
+  useAllRoutesHealth,
+  useTestRoute,
+  findHealthForRoute,
+} from "@/hooks/useRouteHealth";
 
 /** 채널 ID를 maxLen 이하로 줄여 표시하고, 전체 ID를 툴팁으로 보여주는 컴포넌트 */
 function TruncatedId({ id, maxLen = 24 }: { id: string; maxLen?: number }) {
@@ -47,6 +56,265 @@ function TruncatedId({ id, maxLen = 24 }: { id: string; maxLen?: number }) {
   );
 }
 
+/** Health 상태별 뱃지 */
+function HealthBadge({
+  health,
+  onClick,
+}: {
+  health: RouteHealthResponse | undefined;
+  onClick: () => void;
+}) {
+  if (!health) {
+    return (
+      <button
+        onClick={onClick}
+        className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-surface-elevated text-content-tertiary border border-border-subtle hover:bg-surface-raised transition-colors"
+        title="Health 확인"
+      >
+        <span className="inline-block w-2 h-2 rounded-full bg-content-tertiary" />
+        확인 전
+      </button>
+    );
+  }
+
+  const config = {
+    healthy: {
+      dot: "bg-status-success",
+      badge:
+        "bg-status-success/10 text-status-success border border-status-success/20",
+      label: "정상",
+    },
+    degraded: {
+      dot: "bg-status-warning",
+      badge:
+        "bg-status-warning/10 text-status-warning border border-status-warning/20",
+      label: "주의",
+    },
+    unhealthy: {
+      dot: "bg-status-danger",
+      badge:
+        "bg-status-danger/10 text-status-danger border border-status-danger/20",
+      label: "장애",
+    },
+  }[health.overall];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full hover:opacity-80 transition-opacity ${config.badge}`}
+      title="Health 상세 보기"
+    >
+      <span className={`inline-block w-2 h-2 rounded-full ${config.dot}`} />
+      {config.label}
+    </button>
+  );
+}
+
+/** Health 상세 모달 */
+function HealthDetailModal({
+  health,
+  route,
+  onClose,
+  onTest,
+  isTesting,
+  testResult,
+  testError,
+}: {
+  health: RouteHealthResponse | undefined;
+  route: RouteResponse;
+  onClose: () => void;
+  onTest: () => void;
+  isTesting: boolean;
+  testResult: RouteTestResponse | null;
+  testError: string | null;
+}) {
+  const target = route.targets[0];
+  const sourceName = route.source.channel_name || route.source.channel_id;
+  const targetName = target?.channel_name || target?.channel_id || "";
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case "pass":
+        return (
+          <span className="text-status-success flex-shrink-0 font-bold">
+            &#10003;
+          </span>
+        );
+      case "warn":
+        return (
+          <span className="text-status-warning flex-shrink-0 font-bold">
+            &#9888;
+          </span>
+        );
+      case "fail":
+        return (
+          <span className="text-status-danger flex-shrink-0 font-bold">
+            &#10007;
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const overallLabel = health
+    ? { healthy: "정상", degraded: "주의", unhealthy: "장애" }[health.overall]
+    : "확인 중";
+
+  const overallColor = health
+    ? {
+        healthy: "text-status-success",
+        degraded: "text-status-warning",
+        unhealthy: "text-status-danger",
+      }[health.overall]
+    : "text-content-tertiary";
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="relative bg-surface-card rounded-lg shadow-xl max-w-lg w-full">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+            <div>
+              <h3 className="text-base font-semibold text-content-primary">
+                Route Health
+              </h3>
+              <p className="text-sm text-content-secondary mt-0.5">
+                {sourceName} &#8596; {targetName}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-semibold ${overallColor}`}>
+                {overallLabel}
+              </span>
+              <button
+                onClick={onClose}
+                className="p-1 text-content-tertiary hover:text-content-primary transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Check items */}
+          <div className="px-5 py-4 space-y-2">
+            {health ? (
+              health.checks.map((check) => (
+                <div
+                  key={check.name}
+                  className="flex items-start gap-3 py-2 px-3 rounded-md bg-surface-elevated"
+                >
+                  <div className="mt-0.5">{statusIcon(check.status)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-content-primary">
+                      {formatCheckName(check.name)}
+                    </div>
+                    <div className="text-xs text-content-secondary mt-0.5">
+                      {check.detail}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-content-secondary text-sm">
+                Health Check를 실행 중입니다...
+              </div>
+            )}
+          </div>
+
+          {/* Test result */}
+          {(testResult || testError) && (
+            <div className="px-5 pb-2">
+              {testError && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-status-danger/10 border border-status-danger/20">
+                  <span className="text-status-danger flex-shrink-0 font-bold mt-0.5">
+                    &#10007;
+                  </span>
+                  <div className="text-sm text-status-danger">{testError}</div>
+                </div>
+              )}
+              {testResult &&
+                testResult.results.map((r, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2 p-3 rounded-md ${
+                      r.status === "success"
+                        ? "bg-status-success/10 border border-status-success/20"
+                        : "bg-status-danger/10 border border-status-danger/20"
+                    } ${i > 0 ? "mt-2" : ""}`}
+                  >
+                    <span
+                      className={`flex-shrink-0 font-bold mt-0.5 ${r.status === "success" ? "text-status-success" : "text-status-danger"}`}
+                    >
+                      {r.status === "success" ? "\u2713" : "\u2717"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`text-sm font-medium ${r.status === "success" ? "text-status-success" : "text-status-danger"}`}
+                      >
+                        {r.from} → {r.to}
+                        <span className="font-normal ml-2 text-xs opacity-80">
+                          {r.latency_ms}ms
+                        </span>
+                      </div>
+                      <div className="text-xs text-content-secondary mt-0.5">
+                        {r.detail}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-5 py-3 border-t border-line">
+            <div className="text-xs text-content-tertiary">
+              {health?.checked_at
+                ? `마지막 체크: ${new Date(health.checked_at).toLocaleString("ko-KR")}`
+                : ""}
+              {health?.latency_ms != null ? ` (${health.latency_ms}ms)` : ""}
+            </div>
+            <button
+              onClick={onTest}
+              disabled={isTesting}
+              className="px-3 py-1.5 text-sm bg-brand-600 text-content-inverse rounded-button hover:bg-brand-700 disabled:opacity-50 transition-colors"
+            >
+              {isTesting ? "전송 중..." : "테스트 메시지 전송"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** check name 한글 표시 */
+function formatCheckName(name: string): string {
+  const map: Record<string, string> = {
+    source_provider_connected: "소스 Provider 연결",
+    source_receiver_running: "소스 Receiver 태스크",
+    target_provider_connected: "대상 Provider 연결",
+    source_channel_accessible: "소스 채널 접근",
+    target_channel_accessible: "대상 채널 접근",
+    route_enabled: "Route 활성화 상태",
+    recent_delivery: "최근 전송 이력",
+  };
+  return map[name] || name;
+}
+
 interface RouteListProps {
   onRefresh?: () => void;
   onEdit?: (route: RouteResponse) => void;
@@ -67,6 +335,15 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
     null,
   );
   const [togglingRoute, setTogglingRoute] = useState<string | null>(null);
+  const [healthModal, setHealthModal] = useState<RouteResponse | null>(null);
+  const [testResult, setTestResult] = useState<RouteTestResponse | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  // Health Check 데이터
+  const { data: allHealth, refetch: refetchHealth } = useAllRoutesHealth(
+    routes.length > 0,
+  );
+  const testRoute = useTestRoute();
 
   useEffect(() => {
     fetchRoutes();
@@ -206,7 +483,18 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
           const isBidirectional = target?.is_bidirectional !== false;
           const messageMode = target?.message_mode || "sender_info";
           const isEnabled = target?.is_enabled !== false;
+          const saveHistory = target?.save_history !== false;
           const routeKey = `${route.source.platform}-${route.source.channel_id}-${target?.platform}-${target?.channel_id}`;
+
+          const routeHealth = target
+            ? findHealthForRoute(
+                allHealth,
+                route.source.platform,
+                route.source.channel_id,
+                target.platform,
+                target.channel_id,
+              )
+            : undefined;
 
           return (
             <div
@@ -219,7 +507,20 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
             >
               {/* ── Badge row ── */}
               <div className="flex items-center flex-wrap gap-2 px-4 pt-3 pb-0">
-                {/* Direction badge */}
+                {/* 1. Health badge */}
+                <HealthBadge
+                  health={routeHealth}
+                  onClick={() => {
+                    setHealthModal(route);
+                    setTestResult(null);
+                    setTestError(null);
+                    if (target) {
+                      refetchHealth();
+                    }
+                  }}
+                />
+
+                {/* 2. Direction badge */}
                 <span
                   className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
                     isBidirectional
@@ -264,7 +565,7 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
                   )}
                 </span>
 
-                {/* Message mode badge */}
+                {/* 3. Message mode badge */}
                 <span
                   className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
                     messageMode === "editable"
@@ -277,7 +578,34 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
                     : "👤 발신자 정보"}
                 </span>
 
-                {/* Enabled/Disabled toggle */}
+                {/* 4. History badge */}
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    saveHistory
+                      ? "bg-surface-elevated text-content-tertiary border border-border-subtle"
+                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  }`}
+                >
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {saveHistory ? "히스토리 저장" : "히스토리 OFF"}
+                </span>
+
+                {/* Separator */}
+                <div className="w-px h-4 bg-border-subtle mx-0.5" />
+
+                {/* 5. Enabled/Disabled toggle (actionable — last) */}
                 <button
                   onClick={() => handleToggle(route)}
                   disabled={readOnly || togglingRoute === routeKey}
@@ -404,6 +732,30 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 flex-shrink-0 self-start lg:self-center lg:pl-2">
+                  <button
+                    onClick={() => {
+                      setHealthModal(route);
+                      setTestResult(null);
+                      setTestError(null);
+                      refetchHealth();
+                    }}
+                    className="p-1.5 text-content-secondary hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-md transition-colors"
+                    title="Health 상세"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => onEdit?.(route)}
                     disabled={readOnly}
@@ -545,6 +897,51 @@ export function RouteList({ onRefresh, onEdit, readOnly }: RouteListProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Health Detail Modal */}
+      {healthModal && (
+        <HealthDetailModal
+          health={
+            healthModal.targets[0]
+              ? findHealthForRoute(
+                  allHealth,
+                  healthModal.source.platform,
+                  healthModal.source.channel_id,
+                  healthModal.targets[0].platform,
+                  healthModal.targets[0].channel_id,
+                )
+              : undefined
+          }
+          route={healthModal}
+          onClose={() => {
+            setHealthModal(null);
+            setTestResult(null);
+            setTestError(null);
+          }}
+          onTest={() => {
+            const t = healthModal.targets[0];
+            if (!t) return;
+            setTestResult(null);
+            setTestError(null);
+            testRoute.mutate(
+              {
+                sourcePlatform: healthModal.source.platform,
+                sourceChannel: healthModal.source.channel_id,
+                targetPlatform: t.platform,
+                targetChannel: t.channel_id,
+                direction: t.is_bidirectional ? "both" : "forward",
+              },
+              {
+                onSuccess: (data) => setTestResult(data),
+                onError: (err) => setTestError(err.message),
+              },
+            );
+          }}
+          isTesting={testRoute.isPending}
+          testResult={testResult}
+          testError={testError}
+        />
       )}
     </>
   );

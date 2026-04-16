@@ -17,6 +17,7 @@ export interface RouteTarget {
   message_mode?: string; // "sender_info" or "editable"
   is_bidirectional?: boolean; // 양방향 라우트 여부
   is_enabled?: boolean; // 활성/비활성 여부
+  save_history?: boolean; // 메시지 히스토리 저장 여부
 }
 
 export interface RouteResponse {
@@ -38,6 +39,41 @@ export interface RouteCreateRequest {
   message_mode?: string; // "sender_info" or "editable"
   is_bidirectional?: boolean; // 양방향 라우트 여부 (기본값: true)
   is_enabled?: boolean; // 활성/비활성 (기본값: true)
+  save_history?: boolean; // 메시지 히스토리 저장 여부 (기본값: true)
+}
+
+// ── Route Health Check 타입 ──
+
+export interface HealthCheckItem {
+  name: string;
+  status: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+export interface RouteHealthResponse {
+  route_id: string;
+  overall: "healthy" | "degraded" | "unhealthy";
+  checked_at: string;
+  latency_ms: number | null;
+  checks: HealthCheckItem[];
+}
+
+export interface AllRoutesHealthResponse {
+  results: RouteHealthResponse[];
+  source: "cached" | "realtime";
+}
+
+export interface TestResultItem {
+  from: string;
+  to: string;
+  status: "success" | "failed";
+  latency_ms: number;
+  detail: string;
+}
+
+export interface RouteTestResponse {
+  direction: string;
+  results: TestResultItem[];
 }
 
 /**
@@ -143,6 +179,76 @@ export const routesApi = {
         throw new Error(error.detail || "Bridge or provider not available");
       }
       throw new Error("Failed to fetch channels");
+    }
+
+    return await response.json();
+  },
+
+  // ── Route Health Check API ──
+
+  /**
+   * 전체 Route Health 조회
+   */
+  async getAllRoutesHealth(): Promise<AllRoutesHealthResponse> {
+    const response = await fetch("/api/bridge/routes/health", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch routes health");
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * 개별 Route Health 조회
+   */
+  async getRouteHealth(
+    sourcePlatform: string,
+    sourceChannel: string,
+    targetPlatform: string,
+    targetChannel: string,
+  ): Promise<RouteHealthResponse> {
+    const url = `/api/bridge/routes/${encodeURIComponent(sourcePlatform)}/${encodeURIComponent(sourceChannel)}/${encodeURIComponent(targetPlatform)}/${encodeURIComponent(targetChannel)}/health`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch route health");
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Route 테스트 메시지 전송
+   */
+  async testRoute(
+    sourcePlatform: string,
+    sourceChannel: string,
+    targetPlatform: string,
+    targetChannel: string,
+    direction: string = "forward",
+  ): Promise<RouteTestResponse> {
+    const url = `/api/bridge/routes/${encodeURIComponent(sourcePlatform)}/${encodeURIComponent(sourceChannel)}/${encodeURIComponent(targetPlatform)}/${encodeURIComponent(targetChannel)}/test`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ direction }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to send test message");
     }
 
     return await response.json();

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from ..services.websocket_bridge import get_bridge
+from ..services.route_health import RouteHealthChecker, get_health_monitor
 from ..models.user import User
 from ..utils.auth import require_permission, require_system_admin
 
@@ -27,6 +28,7 @@ class RouteConfig(BaseModel):
     message_mode: Optional[str] = "sender_info"  # "sender_info" or "editable"
     is_bidirectional: bool = True  # 양방향 라우트 (기본값: True)
     is_enabled: bool = True  # 활성/비활성 (기본값: 활성)
+    save_history: bool = True  # 메시지 히스토리 저장 (기본값: 저장)
 
 
 class RouteToggleRequest(BaseModel):
@@ -125,6 +127,7 @@ async def add_route(
         message_mode=route.message_mode,
         is_bidirectional=route.is_bidirectional,
         is_enabled=route.is_enabled,
+        save_history=route.save_history,
     )
 
     if not added:
@@ -437,6 +440,236 @@ async def reload_providers(
 
     finally:
         db.close()
+
+
+# ── Route Health Check API ────────────────────────────────
+
+
+@router.get("/routes/health")
+async def get_all_routes_health(
+    current_user: User = Depends(require_permission("channels", "read")),
+):
+    """
+    전체 Route Health 진단
+
+    모든 Route의 상태를 일괄 진단하여 반환합니다.
+    백그라운드 모니터의 마지막 결과가 있으면 그것을 반환하고,
+    없으면 실시간으로 진단합니다.
+    """
+    bridge = get_bridge()
+    if not bridge:
+        raise HTTPException(status_code=503, detail="Bridge not initialized")
+
+    # 모니터의 캐시된 결과가 있으면 우선 사용
+    monitor = get_health_monitor()
+    if monitor:
+        cached = monitor.get_last_results()
+        if cached:
+            return {"results": list(cached.values()), "source": "cached"}
+
+    # 캐시가 없으면 실시간 진단
+    checker = RouteHealthChecker(bridge)
+    results = await checker.check_all_routes()
+    return {"results": [r.to_dict() for r in results], "source": "realtime"}
+
+
+@router.get(
+    "/routes/{source_platform}/{source_channel}/{target_platform}/{target_channel}/health"
+)
+async def get_route_health(
+    source_platform: str,
+    source_channel: str,
+    target_platform: str,
+    target_channel: str,
+    current_user: User = Depends(require_permission("channels", "read")),
+):
+    """
+    개별 Route Health 진단
+
+    특정 Route의 상태를 실시간으로 진단합니다.
+    """
+    bridge = get_bridge()
+    if not bridge:
+        raise HTTPException(status_code=503, detail="Bridge not initialized")
+
+    checker = RouteHealthChecker(bridge)
+    health = await checker.check_route(
+        source_platform=source_platform,
+        source_channel=source_channel,
+        target_platform=target_platform,
+        target_channel=target_channel,
+    )
+    return health.to_dict()
+
+
+class TestMessageRequest(BaseModel):
+    """테스트 메시지 요청"""
+
+    direction: str = "forward"  # forward | reverse | both
+    message: Optional[str] = None
+
+
+@router.post(
+    "/routes/{source_platform}/{source_channel}/{target_platform}/{target_channel}/test"
+)
+async def test_route(
+    source_platform: str,
+    source_channel: str,
+    target_platform: str,
+    target_channel: str,
+    request: TestMessageRequest = TestMessageRequest(),
+    current_user: User = Depends(require_permission("channels", "write")),
+):
+    """
+    Route 테스트 메시지 전송
+
+    실제 메시지를 보내서 E2E 전송을 검증합니다.
+    대상 채널에 테스트 메시지가 전송됩니다.
+    """
+    import time
+
+    bridge = get_bridge()
+    if not bridge:
+        raise HTTPException(status_code=503, detail="Bridge not initialized")
+
+    target_provider = bridge.providers.get(target_platform)
+    if not target_provider:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Target provider '{target_platform}' not found",
+        )
+    if not target_provider.is_connected:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Target provider '{target_platform}' is not connected",
+        )
+
+    import uuid
+    from datetime import datetime, timezone
+
+    from app.schemas.common_message import (
+        CommonMessage,
+        MessageType,
+        Platform,
+        User as MsgUser,
+        Channel as MsgChannel,
+    )
+
+    test_text = request.message or "Route Health Check 테스트 메시지입니다."
+    display_text = f"[Route Health Check] {test_text}"
+
+    def _make_test_msg(to_platform: str, to_channel: str) -> CommonMessage:
+        return CommonMessage(
+            message_id=f"test-{uuid.uuid4().hex[:12]}",
+            timestamp=datetime.now(timezone.utc),
+            type=MessageType.SYSTEM,
+            platform=Platform(source_platform),
+            user=MsgUser(
+                id="system",
+                username="health-check",
+                display_name="Health Check",
+                platform=Platform(source_platform),
+            ),
+            channel=MsgChannel(
+                id=to_channel,
+                name="test",
+                platform=Platform(to_platform),
+            ),
+            text=display_text,
+            raw_message={"is_test": True},
+        )
+
+    # 채널명 조회 (Redis)
+    route_mgr = bridge.route_manager
+    source_name_key = f"route:{source_platform}:{source_channel}:source_name"
+    source_ch_name = await route_mgr.redis.get(source_name_key) or source_channel
+    target_name_key = f"route:{source_platform}:{source_channel}:names"
+    target_names = await route_mgr.redis.hgetall(target_name_key)
+    target_ch_name = target_names.get(
+        f"{target_platform}:{target_channel}", target_channel
+    )
+
+    from_label = f"{source_platform}:{source_ch_name}"
+    to_label = f"{target_platform}:{target_ch_name}"
+
+    start = time.monotonic()
+    results = []
+
+    # forward 방향 테스트
+    if request.direction in ("forward", "both"):
+        msg = _make_test_msg(target_platform, target_channel)
+        try:
+            sent = await target_provider.send_message(msg)
+            elapsed = int((time.monotonic() - start) * 1000)
+            results.append(
+                {
+                    "from": from_label,
+                    "to": to_label,
+                    "status": "success" if sent else "failed",
+                    "latency_ms": elapsed,
+                    "detail": "Test message delivered"
+                    if sent
+                    else "send_message returned False",
+                }
+            )
+        except Exception as e:
+            elapsed = int((time.monotonic() - start) * 1000)
+            results.append(
+                {
+                    "from": from_label,
+                    "to": to_label,
+                    "status": "failed",
+                    "latency_ms": elapsed,
+                    "detail": str(e),
+                }
+            )
+
+    # reverse 방향 테스트
+    if request.direction in ("reverse", "both"):
+        source_provider = bridge.providers.get(source_platform)
+        if source_provider and source_provider.is_connected:
+            msg = _make_test_msg(source_platform, source_channel)
+            reverse_start = time.monotonic()
+            try:
+                sent = await source_provider.send_message(msg)
+                elapsed = int((time.monotonic() - reverse_start) * 1000)
+                results.append(
+                    {
+                        "from": to_label,
+                        "to": from_label,
+                        "status": "success" if sent else "failed",
+                        "latency_ms": elapsed,
+                        "detail": "Test message delivered"
+                        if sent
+                        else "send_message returned False",
+                    }
+                )
+            except Exception as e:
+                elapsed = int((time.monotonic() - reverse_start) * 1000)
+                results.append(
+                    {
+                        "from": to_label,
+                        "to": from_label,
+                        "status": "failed",
+                        "latency_ms": elapsed,
+                        "detail": str(e),
+                    }
+                )
+        else:
+            results.append(
+                {
+                    "from": to_label,
+                    "to": from_label,
+                    "status": "failed",
+                    "latency_ms": 0,
+                    "detail": f"Source provider '{source_platform}' not available for reverse test",
+                }
+            )
+
+    return {
+        "direction": request.direction,
+        "results": results,
+    }
 
 
 @router.get("/logs")

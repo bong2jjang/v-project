@@ -37,6 +37,11 @@ from app.services.teams_subscription_manager import (
     set_subscription_manager,
 )
 from app.services.log_buffer import install as _install_log_buffer
+from app.services.route_health import (
+    RouteHealthMonitor,
+    set_health_monitor,
+    get_health_monitor,
+)
 from app.adapters import SlackProvider, TeamsProvider
 
 # Logging setup
@@ -244,6 +249,11 @@ async def lifespan(fastapi_app):
             set_subscription_manager(sub_mgr)
             await sub_mgr.start()
 
+        # Route Health Monitor
+        health_monitor = RouteHealthMonitor(bridge)
+        set_health_monitor(health_monitor)
+        await health_monitor.start()
+
     except Exception as e:
         logger.error("Failed to start bridge", error=str(e))
 
@@ -261,6 +271,14 @@ async def lifespan(fastapi_app):
         except Exception:
             pass
         set_subscription_manager(None)
+
+    health_mon = get_health_monitor()
+    if health_mon:
+        try:
+            await health_mon.stop()
+        except Exception:
+            pass
+        set_health_monitor(None)
 
     if bridge:
         try:

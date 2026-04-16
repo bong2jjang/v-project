@@ -44,6 +44,7 @@ class WebSocketBridge:
         self.message_queue = message_queue
         self.is_running = False
         self._tasks: List[asyncio.Task] = []
+        self._receiver_tasks: Dict[str, asyncio.Task] = {}  # platform → task
 
         logger.info(
             "WebSocketBridge initialized", has_message_queue=message_queue is not None
@@ -78,6 +79,18 @@ class WebSocketBridge:
 
             logger.info("Provider registered successfully", platform=platform_name)
 
+            # 브리지가 이미 실행 중이면 receiver 태스크도 시작
+            if self.is_running:
+                task = asyncio.create_task(
+                    self._receive_messages(platform_name, provider)
+                )
+                self._tasks.append(task)
+                self._receiver_tasks[platform_name] = task
+                logger.info(
+                    "Message receiver started for hot-added provider",
+                    platform=platform_name,
+                )
+
             return True
 
         except Exception as e:
@@ -100,6 +113,17 @@ class WebSocketBridge:
             if platform_name not in self.providers:
                 logger.warning("Provider not found", platform=platform_name)
                 return False
+
+            # receiver 태스크 취소
+            old_task = self._receiver_tasks.pop(platform_name, None)
+            if old_task and not old_task.done():
+                old_task.cancel()
+                try:
+                    await old_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                if old_task in self._tasks:
+                    self._tasks.remove(old_task)
 
             provider = self.providers[platform_name]
             await provider.disconnect()
@@ -134,6 +158,7 @@ class WebSocketBridge:
         for platform_name, provider in self.providers.items():
             task = asyncio.create_task(self._receive_messages(platform_name, provider))
             self._tasks.append(task)
+            self._receiver_tasks[platform_name] = task
 
         logger.info("Bridge started successfully")
 
@@ -352,11 +377,20 @@ class WebSocketBridge:
                         target_channel=target_channel.id,
                     )
 
+                    # 이 라우트의 save_history 조회
+                    save_history = await self.route_manager.get_save_history(
+                        source_platform=message.platform.value,
+                        source_channel=message.channel.id,
+                        target_platform=platform,
+                        target_channel=target_channel.id,
+                    )
+
                     logger.debug(
                         "Using message mode for route",
                         source=f"{message.platform.value}:{message.channel.id}",
                         target=f"{platform}:{target_channel.id}",
                         mode=message_mode,
+                        save_history=save_history,
                     )
 
                     # 타겟 채널로 메시지 업데이트
@@ -606,8 +640,8 @@ class WebSocketBridge:
                             reverse=f"{platform}:{target_channel.id}:{provider.last_sent_ts}→{message.platform.value}:{message.channel.id}:{message.message_id}",
                         )
 
-                    # 메시지 큐에 상태 추가
-                    if self.message_queue:
+                    # 메시지 큐에 상태 추가 (save_history가 True인 경우만)
+                    if self.message_queue and save_history:
                         _err = (
                             None
                             if success

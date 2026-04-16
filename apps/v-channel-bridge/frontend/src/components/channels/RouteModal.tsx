@@ -38,6 +38,7 @@ export function RouteModal({
     message_mode: "sender_info",
     is_bidirectional: true,
     is_enabled: true,
+    save_history: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,6 +61,7 @@ export function RouteModal({
           message_mode: editRoute.targets[0]?.message_mode || "sender_info",
           is_bidirectional: editRoute.targets[0]?.is_bidirectional ?? true,
           is_enabled: editRoute.targets[0]?.is_enabled ?? true,
+          save_history: editRoute.targets[0]?.save_history ?? true,
         });
       } else {
         setFormData({
@@ -72,6 +74,7 @@ export function RouteModal({
           message_mode: "sender_info",
           is_bidirectional: true,
           is_enabled: true,
+          save_history: true,
         });
       }
 
@@ -438,6 +441,58 @@ export function RouteModal({
                   </label>
                 </div>
               </div>
+
+            </div>
+
+            {/* ─── 히스토리 토글 ─── */}
+            <div className="p-4 bg-surface-elevated rounded-md border border-border-subtle flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-brand-600 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div>
+                  <h3 className="text-sm font-semibold text-content-primary">
+                    메시지 히스토리
+                  </h3>
+                  <p className="text-xs text-content-tertiary mt-0.5">
+                    {formData.save_history
+                      ? "전달된 메시지를 DB에 기록"
+                      : "메시지 전달만 하고 기록하지 않음"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.save_history}
+                onClick={() =>
+                  !readOnly &&
+                  setFormData({
+                    ...formData,
+                    save_history: !formData.save_history,
+                  })
+                }
+                disabled={readOnly}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  formData.save_history ? "bg-brand-600" : "bg-gray-300 dark:bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    formData.save_history ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
             </div>
 
             {/* ─── Divider ─── */}

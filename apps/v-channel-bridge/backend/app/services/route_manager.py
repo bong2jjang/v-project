@@ -97,6 +97,7 @@ class RouteManager:
         message_mode: Optional[str] = "sender_info",
         is_bidirectional: bool = True,  # 기본값: 양방향
         is_enabled: bool = True,  # 기본값: 활성
+        save_history: bool = True,  # 기본값: 히스토리 저장
     ) -> bool:
         """
         라우팅 룰 추가
@@ -110,6 +111,7 @@ class RouteManager:
             source_channel_name: 소스 채널 이름 (선택)
             message_mode: 메시지 모드 ("sender_info" or "editable")
             is_bidirectional: 양방향 라우트 여부 (기본값: True)
+            save_history: 메시지 히스토리 저장 여부 (기본값: True)
 
         Returns:
             추가 성공 여부
@@ -171,6 +173,10 @@ class RouteManager:
             enabled_key = f"{key}:enabled"
             await self.redis.hset(enabled_key, value, "1" if is_enabled else "0")
 
+            # 히스토리 저장 플래그
+            history_key = f"{key}:save_history"
+            await self.redis.hset(history_key, value, "1" if save_history else "0")
+
             # 양방향이면 역방향 라우트도 자동 추가
             if is_bidirectional:
                 reverse_key = self._make_route_key(target_platform, target_channel)
@@ -201,6 +207,12 @@ class RouteManager:
                 reverse_enabled_key = f"{reverse_key}:enabled"
                 await self.redis.hset(
                     reverse_enabled_key, reverse_value, "1" if is_enabled else "0"
+                )
+
+                # 역방향도 히스토리 저장 플래그
+                reverse_history_key = f"{reverse_key}:save_history"
+                await self.redis.hset(
+                    reverse_history_key, reverse_value, "1" if save_history else "0"
                 )
 
                 logger.debug(
@@ -248,7 +260,13 @@ class RouteManager:
         result = await self.redis.srem(key, value)
 
         # 타겟 관련 메타데이터 제거
-        for suffix in (":names", ":modes", ":bidirectional", ":enabled"):
+        for suffix in (
+            ":names",
+            ":modes",
+            ":bidirectional",
+            ":enabled",
+            ":save_history",
+        ):
             await self.redis.hdel(f"{key}{suffix}", value)
 
         # 마지막 타겟이 제거된 경우 소스 메타데이터 전체 삭제
@@ -475,6 +493,29 @@ class RouteManager:
             )
             return "sender_info"
 
+    async def get_save_history(
+        self,
+        source_platform: str,
+        source_channel: str,
+        target_platform: str,
+        target_channel: str,
+    ) -> bool:
+        """특정 라우트의 히스토리 저장 여부 조회"""
+        try:
+            key = self._make_route_key(source_platform, source_channel)
+            history_key = f"{key}:save_history"
+            target_value = self._make_target_value(target_platform, target_channel)
+            val = await self.redis.hget(history_key, target_value)
+            return val != "0"  # 기본값: True (저장)
+        except Exception as e:
+            logger.error(
+                "Error getting save_history",
+                source_platform=source_platform,
+                source_channel=source_channel,
+                error=str(e),
+            )
+            return True
+
     async def toggle_route_enabled(
         self,
         source_platform: str,
@@ -558,7 +599,7 @@ class RouteManager:
                 cursor, batch = await self.redis.scan(
                     cursor=cursor, match=pattern, count=100
                 )
-                # 메타데이터 키(:names, :source_name, :modes, :bidirectional, :enabled) 제외
+                # 메타데이터 키 제외
                 keys.extend(
                     [
                         k
@@ -568,6 +609,7 @@ class RouteManager:
                         and not k.endswith(":modes")
                         and not k.endswith(":bidirectional")
                         and not k.endswith(":enabled")
+                        and not k.endswith(":save_history")
                     ]
                 )
 
@@ -607,6 +649,10 @@ class RouteManager:
                     enabled_key = f"{key}:enabled"
                     enabled_dict = await self.redis.hgetall(enabled_key)
 
+                    # save_history 플래그 조회
+                    history_key = f"{key}:save_history"
+                    history_dict = await self.redis.hgetall(history_key)
+
                     # 각 source-target 쌍을 개별 Route로 생성
                     for t in targets:
                         target_value = self._make_target_value(t.platform.value, t.id)
@@ -619,6 +665,9 @@ class RouteManager:
                         is_enabled = (
                             enabled_dict.get(target_value, "1") == "1"
                         )  # 기본값: 활성
+                        save_history = (
+                            history_dict.get(target_value, "1") == "1"
+                        )  # 기본값: 저장
 
                         # 양방향 역방향은 숨김 (A↔B를 1개로 표시)
                         if is_bidirectional:
@@ -646,6 +695,7 @@ class RouteManager:
                                         "message_mode": message_mode,
                                         "is_bidirectional": is_bidirectional,
                                         "is_enabled": is_enabled,
+                                        "save_history": save_history,
                                     }
                                 ],
                             }
