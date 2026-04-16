@@ -9,7 +9,7 @@
 - 통계(message_stats): 기존 시드 데이터 삭제 후 재생성 (오늘 기준 7일치)
 
 컨테이너 내에서 실행:
-  docker exec v-channel-bridge-backend python seed_bridge_data.py
+  docker exec v-project-bridge-backend python seed_bridge_data.py
 """
 
 import asyncio

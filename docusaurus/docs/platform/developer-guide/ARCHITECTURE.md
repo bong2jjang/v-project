@@ -531,12 +531,14 @@ def _classify_app_menus(self):
 ### 8.3 시나리오: 포털에서 앱 전환
 
 ```
-1. 사용자가 Portal에서 "v-channel-bridge" 클릭
-2. Token Relay SSO로 자동 인증
-3. v-channel-bridge 프론트엔드 로딩
-4. 메뉴 API 호출 → app_id="v-channel-bridge" 메뉴만 반환
-5. 시스템 설정 API → app_id="v-channel-bridge" 브랜딩 적용
-6. 알림 API → app_id="v-channel-bridge" + NULL(전역) 알림 반환
+1. 사용자가 Portal에서 "v-channel-bridge" 카드 클릭
+2. 포털 → POST /api/auth/sso-relay/create → 1회용 코드 발급 (Redis, 30초 TTL)
+3. 새 탭: http://127.0.0.1:5173?sso_code={1회용코드}
+4. v-channel-bridge 프론트엔드 → sso_code 감지 → URL에서 즉시 제거
+5. POST /api/auth/sso-relay/exchange → 코드를 JWT + 사용자 정보로 교환 (코드 즉시 삭제)
+6. 인증 완료 → 메뉴 API 호출 → app_id="v-channel-bridge" 메뉴만 반환
+7. 시스템 설정 API → app_id="v-channel-bridge" 브랜딩 적용
+8. 알림 API → app_id="v-channel-bridge" + NULL(전역) 알림 반환
 ```
 
 ---
@@ -856,6 +858,39 @@ auth_sso → state 토큰 생성 → Provider 인증 페이지 리다이렉트
 프론트엔드 (window.addEventListener("message"))
   → access_token 수신 → useAuthStore에 저장 → 메인 페이지 이동
 ```
+
+### 12.4 SSO Relay 흐름 (포털 → 앱 자동 인증)
+
+포털에서 앱 카드를 클릭하면 **1회용 코드 기반 SSO Relay**로 별도 로그인 없이 자동 인증됩니다. URL에 JWT가 노출되지 않습니다.
+
+```
+포털 프론트엔드 (Portal.tsx → AppCard 클릭)
+  │ POST /api/auth/sso-relay/create (Authorization: Bearer <포털JWT>)
+  ▼
+포털 백엔드 (auth.py)
+  ├── secrets.token_urlsafe(32) → 1회용 코드 생성
+  ├── cache_service.set("sso:relay:{code}", {user_id, email, role}, ttl=30)
+  └── 응답: { code: "u-KmtixZE0..." }
+  ▼
+포털 프론트엔드
+  │ window.open("{앱URL}?sso_code={code}", "_blank")
+  ▼
+앱 프론트엔드 (auth store → loadUserFromStorage)
+  ├── URL에서 sso_code 파라미터 감지
+  ├── window.history.replaceState() → URL에서 코드 즉시 제거
+  │ POST /api/auth/sso-relay/exchange { code: "u-KmtixZE0..." }
+  ▼
+앱 백엔드 (auth.py)
+  ├── cache_service.get("sso:relay:{code}") → 사용자 정보 조회
+  ├── cache_service.delete("sso:relay:{code}") → 즉시 삭제 (1회용)
+  ├── DB에서 사용자 조회 (user_id)
+  └── TokenService.create_access_token() → 새 JWT 발급
+  ▼
+앱 프론트엔드
+  → JWT + 사용자 정보 수신 → localStorage 저장 → 인증 완료
+```
+
+**보안 특성**: 코드는 30초 TTL, 1회 사용 후 삭제, JWT는 URL에 노출되지 않음. 포털과 앱은 동일한 Redis와 `SECRET_KEY`를 공유해야 합니다.
 
 ---
 

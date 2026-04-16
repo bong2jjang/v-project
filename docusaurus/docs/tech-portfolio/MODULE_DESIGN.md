@@ -483,7 +483,7 @@ route:{platform}:{channel_id}:enabled       -> HGETALL  ("1" | "0")
 
 ### 4.2 v-platform-portal
 
-통합 앱 포털. AppRegistry로 앱 메타데이터를 관리하고, Token Relay SSO로 앱 간 자동 인증을 수행한다.
+통합 앱 포털. AppRegistry로 앱 메타데이터를 관리하고, SSO Relay(1회용 코드)로 앱 간 자동 인증을 수행한다.
 
 **백엔드 구조**:
 
@@ -491,23 +491,24 @@ route:{platform}:{channel_id}:enabled       -> HGETALL  ("1" | "0")
 apps/v-platform-portal/backend/app/
 ├── main.py                    # PlatformApp + 포털 라우터 등록
 ├── api/
-│   └── portal.py              # AppRegistry CRUD + Token Relay
+│   └── portal.py              # AppRegistry CRUD + 헬스/사이트맵
 ├── services/
 │   └── app_registry.py        # 앱 메타데이터 관리
-└── models/                    # (신규 추가 중)
+└── models/
+    └── portal_app.py          # PortalApp SQLAlchemy 모델
 ```
 
-**Token Relay SSO 흐름**:
+**SSO Relay 흐름** (1회용 코드, JWT 비노출):
 
 ```
 사용자 -> Portal (로그인 상태)
-  -> 앱 타일 클릭
-  -> Portal: relay_token 생성 (1회성, Redis 10초 TTL)
-  -> Browser: {app_url}/sso/relay?token=xxx 리다이렉트
-  -> App: relay_token 소비 (Redis에서 1회성 검증)
-  -> App: 동일 SECRET_KEY로 JWT 서명 검증
-  -> App: 앱 JWT 발급 + 세션 생성
-  -> 앱 대시보드로 리다이렉트
+  -> 앱 카드 클릭
+  -> Portal: POST /api/auth/sso-relay/create → 1회용 코드 생성 (Redis, 30초 TTL)
+  -> Browser: 새 탭 {app_url}?sso_code={1회용코드}
+  -> App FE: sso_code 감지 → URL에서 즉시 제거
+  -> App FE: POST /api/auth/sso-relay/exchange {code}
+  -> App BE: Redis에서 코드 조회/삭제 → 사용자 확인 → 새 JWT 발급
+  -> 앱 대시보드 표시 (인증 완료)
 ```
 
 핵심: 모든 앱이 동일한 `SECRET_KEY` 환경변수를 공유하므로 JWT 서명 상호 검증이 가능하다. relay_token의 1회성 소비로 재생 공격을 방지한다.

@@ -48,7 +48,7 @@ tags: [production, readiness, tech-portfolio, platform]
 | 영역 | 상태 | 근거 |
 |------|------|------|
 | AppRegistry CRUD | 완료 | `apps/v-platform-portal/backend/app/api/portal.py`, `services/app_registry.py` |
-| Token Relay SSO (포털 -> 앱 JWT 인계) | 완료 | 공유 SECRET_KEY 기반, 1회성 relay_token (Redis TTL) |
+| SSO Relay (포털 → 앱 자동 인증) | 완료 | 1회용 코드 기반 (Redis 30초 TTL), 공유 SECRET_KEY + Redis |
 | 앱 런처 UI (타일 그리드) | 완료 | `apps/v-platform-portal/frontend/src/pages/Portal.tsx` |
 | 앱 관리 Admin UI | 완료 | `pages/admin/AppManagement.tsx` |
 

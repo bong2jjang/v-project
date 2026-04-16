@@ -191,6 +191,42 @@ SSO 콜백은 HTML 팝업 응답을 반환하며, opener 윈도우에 `postMessa
 
 ---
 
+### SSO Relay (`/api/auth/sso-relay`)
+
+포털에서 앱으로 전환할 때 **1회용 코드** 기반의 경량 SSO를 제공합니다. URL에 JWT를 노출하지 않고, Redis에 저장된 1회용 코드를 서버 간에 교환하여 새 JWT를 발급합니다.
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|------|------|
+| POST | `/api/auth/sso-relay/create` | 인증 필요 | 1회용 SSO 코드 생성 (Redis 저장, 30초 TTL) |
+| POST | `/api/auth/sso-relay/exchange` | 공개 | 코드를 JWT + 사용자 정보로 교환 (1회용, 즉시 삭제) |
+
+**Create 응답 예시**:
+
+```json
+{ "code": "u-KmtixZE0Ewi9JYOKKJJUB6Vk50P1x2if8cCUXdmuc" }
+```
+
+**Exchange 요청/응답 예시**:
+
+```json
+// Request
+{ "code": "u-KmtixZE0Ewi9JYOKKJJUB6Vk50P1x2if8cCUXdmuc" }
+
+// Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "expires_at": "2026-04-14T09:00:00Z",
+  "user": { "id": 1, "email": "user@example.com", "role": "user", ... }
+}
+```
+
+**보안 특성**: 코드는 `secrets.token_urlsafe(32)`로 생성되며, 사용 즉시 Redis에서 삭제됩니다. 30초 내 미사용 시 자동 만료됩니다. 포털과 앱이 동일한 Redis 인스턴스와 `SECRET_KEY`를 공유해야 합니다.
+
+자세한 동작 원리는 [SSO Relay 문서](/docs/apps/v-platform-portal/admin-guide/SSO_RELAY)를 참조하세요.
+
+---
+
 ### Microsoft OAuth2 (`/api/auth/microsoft`)
 
 Teams 위임 인증(Delegated Auth)을 위한 Microsoft OAuth2 연동입니다. SSO 로그인과는 별개로, Teams API 호출 권한 위임에 사용됩니다.

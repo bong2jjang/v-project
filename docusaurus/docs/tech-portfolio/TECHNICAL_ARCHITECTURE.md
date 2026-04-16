@@ -174,22 +174,26 @@ SSO 관련 모듈:
 - `platform/backend/v_platform/sso/generic_oidc.py` -- 범용 OIDC
 - `platform/backend/v_platform/sso/registry.py` -- Provider 등록/조회
 
-### 3.3 Token Relay SSO (Portal --> App)
+### 3.3 SSO Relay (Portal --> App, 1회용 코드)
 
-v-platform-portal에서 앱 런처 클릭 시, 포털의 JWT를 앱에 릴레이하여 재인증 없이 진입한다.
+v-platform-portal에서 앱 카드 클릭 시, 1회용 코드를 발급하고 앱이 이를 JWT로 교환하여 재인증 없이 진입한다. URL에 JWT가 노출되지 않는다.
 
 ```
 User --(포털 로그인)--> Portal:8080
          |
-         | JWT 발급 (v-platform-portal 서명)
+         | JWT 발급
          v
-User --(앱 카드 클릭)--> /relay?target=bridge&token={jwt}
+User --(앱 카드 클릭)--> POST /api/auth/sso-relay/create
+         |                  → 1회용 코드 생성 (Redis, 30초 TTL)
+         v
+새 탭: Bridge:5173?sso_code={1회용코드}
          |
+         | POST /api/auth/sso-relay/exchange {code}
          v
-Bridge:8000 --(JWT 검증, 공통 SECRET_KEY)--> 세션 생성 --> /
+Bridge:8000 --(Redis 코드 조회/삭제 → 새 JWT 발급)--> 인증 완료
 ```
 
-핵심 전제: 모든 앱이 동일한 `SECRET_KEY` 환경변수를 공유한다. 관련 서비스: `apps/v-platform-portal/backend/app/services/app_registry.py`.
+핵심 전제: 모든 앱이 동일한 `SECRET_KEY`와 Redis 인스턴스를 공유한다. 관련 서비스: `platform/backend/v_platform/api/auth.py`.
 
 ### 3.4 RBAC (역할 기반 접근 제어)
 

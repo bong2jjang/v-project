@@ -72,7 +72,7 @@ services:
     build:
       context: ./apps/v-channel-bridge/backend
       dockerfile: Dockerfile
-    container_name: v-channel-bridge-backend
+    container_name: v-project-bridge-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -143,7 +143,7 @@ services:
     build:
       context: .
       dockerfile: apps/v-channel-bridge/frontend/Dockerfile.dev
-    container_name: v-channel-bridge-frontend
+    container_name: v-project-bridge-frontend
     restart: unless-stopped
     ports:
       - "5173:5173"
@@ -220,14 +220,16 @@ services:
     build:
       context: .
       dockerfile: apps/v-platform-portal/backend/Dockerfile
-    container_name: v-platform-portal-backend
+    container_name: v-project-portal-backend
     ports:
       - "8080:8000"
     volumes:
       - ./apps/v-platform-portal/backend:/app
       - ./platform/backend:/platform/backend
+      - backend_data:/app/data
     environment:
       - PYTHONPATH=/app:/platform/backend
+      - DATABASE_DIR=/app/data
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
@@ -243,7 +245,7 @@ services:
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
-      - PORTAL_APPS=v-channel-bridge|Channel Bridge|Slack ↔ Teams 메시지 브리지|MessageSquare|http://${PUBLIC_HOST:-127.0.0.1}:5173|http://v-channel-bridge-backend:8000,v-platform-template|Platform Template|플랫폼 템플릿 앱|LayoutDashboard|http://${PUBLIC_HOST:-127.0.0.1}:5174|http://v-platform-template-backend:8000
+      - PORTAL_APPS=v-channel-bridge|Channel Bridge|Slack ↔ Teams 메시지 브리지|MessageSquare|http://${PUBLIC_HOST:-127.0.0.1}:5173|http://v-project-bridge-backend:8000,v-platform-template|Platform Template|플랫폼 템플릿 앱|LayoutDashboard|http://${PUBLIC_HOST:-127.0.0.1}:5174|http://v-project-template-backend:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -258,7 +260,7 @@ services:
     build:
       context: .
       dockerfile: apps/v-platform-portal/frontend/Dockerfile.dev
-    container_name: v-platform-portal-frontend
+    container_name: v-project-portal-frontend
     ports:
       - "5180:5173"
     volumes:
@@ -294,14 +296,16 @@ services:
     build:
       context: .
       dockerfile: apps/v-platform-template/backend/Dockerfile
-    container_name: v-platform-template-backend
+    container_name: v-project-template-backend
     ports:
       - "8002:8000"
     volumes:
       - ./apps/v-platform-template/backend:/app
       - ./platform/backend:/platform/backend
+      - backend_data:/app/data
     environment:
       - PYTHONPATH=/app:/platform/backend
+      - DATABASE_DIR=/app/data
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
@@ -332,7 +336,7 @@ services:
     build:
       context: .
       dockerfile: apps/v-platform-template/frontend/Dockerfile.dev
-    container_name: v-platform-template-frontend
+    container_name: v-project-template-frontend
     ports:
       - "5174:5173"
     volumes:
