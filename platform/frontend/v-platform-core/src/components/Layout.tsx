@@ -203,9 +203,17 @@ function LayoutContent({ children }: LayoutContentProps) {
                     {/* User Info */}
                     <div className="px-4 py-3 border-b border-line">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-content-inverse font-medium text-body-base flex-shrink-0">
-                          {user.username.charAt(0).toUpperCase()}
-                        </div>
+                        {user.avatar_url ? (
+                          <img
+                            src={user.avatar_url}
+                            alt={user.username}
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-content-inverse font-medium text-body-base flex-shrink-0">
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-body-sm font-medium text-content-primary truncate">
                             {user.username}
