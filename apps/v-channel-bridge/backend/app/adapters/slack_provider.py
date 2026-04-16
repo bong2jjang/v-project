@@ -30,6 +30,7 @@ from app.schemas.common_message import (
 )
 from app.utils.message_formatter import (
     convert_teams_to_slack_markdown,
+    convert_slack_mentions_to_text,
 )
 from app.utils.attachment_handler import attachment_handler
 
@@ -354,8 +355,8 @@ class SlackProvider(BasePlatformProvider):
         text = re.sub(r"<([^|>]+)\|([^>]+)>", r"\2", text)
         # <url> (라벨 없는 링크) → url
         text = re.sub(r"<(https?://[^>]+)>", r"\1", text)
-        # <@U123> 멘션 제거
-        text = re.sub(r"<@[A-Z0-9]+>", "", text)
+        # <@U123> 멘션 → @ID 텍스트로 변환 (제거하지 않고 보존)
+        text = convert_slack_mentions_to_text(text)
 
         return text.strip()
 
@@ -1116,6 +1117,12 @@ class SlackProvider(BasePlatformProvider):
         ts = raw_message.get("ts", "0")
         timestamp = datetime.fromtimestamp(float(ts), tz=timezone.utc)
 
+        # 멘션을 @이름 텍스트로 변환 (캐시된 사용자명 활용)
+        original_text = raw_message.get("text", "")
+        text = convert_slack_mentions_to_text(
+            original_text, user_map=self._user_name_cache
+        )
+
         # CommonMessage 생성
         return CommonMessage(
             message_id=ts,
@@ -1124,7 +1131,7 @@ class SlackProvider(BasePlatformProvider):
             platform=Platform.SLACK,
             user=user,
             channel=channel,
-            text=raw_message.get("text", ""),
+            text=text,
             attachments=attachments,
             reactions=reactions,
             thread_id=raw_message.get("thread_ts"),

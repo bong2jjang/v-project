@@ -8,6 +8,7 @@ Graph API를 사용하여 메시지 송수신을 처리합니다.
 """
 
 import asyncio
+import re
 import structlog
 from typing import AsyncIterator, List, Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
@@ -1545,6 +1546,10 @@ class TeamsProvider(BasePlatformProvider):
         reply_to_id = raw_message.get("replyToId")
         thread_id = reply_to_id if reply_to_id else None
 
+        # <at>DisplayName</at> 멘션 태그를 @DisplayName 평문으로 정규화
+        text = raw_message.get("text", "")
+        text = re.sub(r"<at>(.*?)</at>", r"@\1", text)
+
         return CommonMessage(
             message_id=raw_message.get("id", "unknown"),
             timestamp=timestamp,
@@ -1552,7 +1557,7 @@ class TeamsProvider(BasePlatformProvider):
             platform=Platform.TEAMS,
             user=user,
             channel=channel,
-            text=raw_message.get("text", ""),
+            text=text,
             attachments=attachments,
             raw_message=raw_message,
             thread_id=thread_id,
