@@ -12,6 +12,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { useTour } from "../hooks/useTour";
 import { useAuthStore } from "../store/auth";
+import { useSystemSettingsStore } from "../store/systemSettings";
 import {
   Rocket,
   BookOpen,
@@ -36,6 +37,20 @@ const Help = () => {
   const { startMainTour, startPageTour, resetAllTours } = useTour();
   const navigate = useNavigate();
   const isAdmin = useAuthStore().isAdmin();
+  const { settings } = useSystemSettingsStore();
+
+  const handleDocsClick = () => {
+    if (settings?.manual_url) {
+      try {
+        const url = new URL(settings.manual_url);
+        if (url.protocol === "http:" || url.protocol === "https:") {
+          window.open(settings.manual_url, "_blank", "noopener,noreferrer");
+        }
+      } catch {
+        // invalid URL
+      }
+    }
+  };
 
   const navigateAndMainTour = useCallback(() => {
     navigate("/");
@@ -309,30 +324,31 @@ const Help = () => {
         </Card>
 
         {/* 문서 링크 */}
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-heading-sm text-content-primary mb-1">
-                  상세 문서
-                </h3>
-                <p className="text-body-sm text-content-secondary">
-                  관리자 가이드, API 문서, 아키텍처 등 자세한 기술 문서를 확인할
-                  수 있습니다.
-                </p>
+        {settings?.manual_enabled && settings?.manual_url && (
+          <Card>
+            <CardBody>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-heading-sm text-content-primary mb-1">
+                    상세 문서
+                  </h3>
+                  <p className="text-body-sm text-content-secondary">
+                    관리자 가이드, API 문서, 아키텍처 등 자세한 기술 문서를 확인할
+                    수 있습니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDocsClick}
+                  className="flex items-center gap-1.5 text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 text-body-sm font-medium transition-colors"
+                >
+                  문서 사이트 열기
+                  <ExternalLink className="w-4 h-4" />
+                </button>
               </div>
-              <a
-                href="/docs"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 text-body-sm font-medium transition-colors"
-              >
-                문서 사이트 열기
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        )}
       </div>
     </>
   );

@@ -1,16 +1,8 @@
 /**
- * useTour — Platform default (no-op)
+ * useTour — TourContext 소비 훅
  *
- * Apps can override by providing their own useTour implementation
- * via the app's hooks directory. The platform components (HelpButton,
- * UserMenu, KeyboardShortcuts) call this hook, which is a no-op
- * unless the app provides a real tour implementation.
+ * 앱의 TourProvider가 TourContextProvider로 실제 구현을 주입하면
+ * 플랫폼 컴포넌트(Help, HelpButton, Layout, UserMenu)가 동작합니다.
+ * 주입되지 않으면 no-op 기본값이 사용됩니다.
  */
-export function useTour() {
-  return {
-    startMainTour: () => {},
-    startPageTour: (_page: string) => {},
-    resetAllTours: () => {},
-    isRunning: false,
-  };
-}
+export { useTourContext as useTour } from "../contexts/TourContext";

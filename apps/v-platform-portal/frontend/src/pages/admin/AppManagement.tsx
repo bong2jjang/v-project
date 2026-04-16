@@ -48,6 +48,8 @@ import {
   updateApp,
   deleteApp,
 } from "../../lib/api/portal";
+import { createSsoRelay } from "@v-platform/core/api/auth";
+import { useAuthStore } from "../../store/auth";
 
 // ── Lucide 아이콘 맵 ──────────────────────────────────────────────
 
@@ -101,6 +103,9 @@ export default function AppManagement() {
   const [apps, setApps] = useState<PortalApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [launchingAppId, setLaunchingAppId] = useState<string | null>(null);
+
+  const { token } = useAuthStore();
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -111,6 +116,27 @@ export default function AppManagement() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<PortalApp | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // SSO Relay로 앱 열기 (Portal.tsx와 동일한 패턴)
+  const handleLaunchApp = async (app: PortalApp) => {
+    if (!token) {
+      window.open(app.frontend_url, "_blank");
+      return;
+    }
+    setLaunchingAppId(app.app_id);
+    try {
+      const { code } = await createSsoRelay();
+      window.open(
+        `${app.frontend_url}?sso_code=${encodeURIComponent(code)}`,
+        "_blank",
+      );
+    } catch {
+      // Relay 실패 시 토큰 없이 열기 (앱 자체 로그인으로 폴백)
+      window.open(app.frontend_url, "_blank");
+    } finally {
+      setLaunchingAppId(null);
+    }
+  };
 
   const loadApps = useCallback(async () => {
     try {
@@ -323,15 +349,15 @@ export default function AppManagement() {
                       삭제
                     </Button>
                     <div className="flex-1" />
-                    <a
-                      href={app.frontend_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-button text-content-tertiary hover:text-brand-600 transition-colors"
-                      title="앱 열기"
+                    <button
+                      type="button"
+                      onClick={() => handleLaunchApp(app)}
+                      disabled={launchingAppId === app.app_id}
+                      className="p-1.5 rounded-button text-content-tertiary hover:text-brand-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="앱 열기 (SSO)"
                     >
                       <ExternalLink className="w-4 h-4" />
-                    </a>
+                    </button>
                   </div>
                 </CardBody>
               </Card>

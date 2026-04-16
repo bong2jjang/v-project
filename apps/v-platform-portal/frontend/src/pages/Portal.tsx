@@ -13,6 +13,7 @@ import {
   ExternalLink, RefreshCw, Map, LayoutDashboard, Server,
   MessageSquare, Ticket, Settings, ChevronRight,
 } from "lucide-react";
+import { useAuthStore } from "../store/auth";
 import { ContentHeader } from "../components/layout/ContentHeader";
 import { Card, CardHeader, CardTitle, CardBody } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
@@ -21,6 +22,7 @@ import { Skeleton, SkeletonCard } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import type { PortalApp, AppHealth, SitemapEntry } from "../lib/api/portal";
 import { getApps, getAllHealth, getSitemap } from "../lib/api/portal";
+import { createSsoRelay } from "@v-platform/core/api/auth";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   MessageSquare: <MessageSquare className="w-6 h-6" />,
@@ -49,15 +51,31 @@ function AppCard({
   health?: AppHealth;
   token: string | null;
 }) {
-  const handleClick = () => {
-    const url = token
-      ? `${app.frontend_url}?auth_token=${encodeURIComponent(token)}`
-      : app.frontend_url;
-    window.open(url, "_blank");
+  const [launching, setLaunching] = useState(false);
+
+  const handleClick = async () => {
+    if (!token) {
+      window.open(app.frontend_url, "_blank");
+      return;
+    }
+
+    setLaunching(true);
+    try {
+      const { code } = await createSsoRelay();
+      window.open(
+        `${app.frontend_url}?sso_code=${encodeURIComponent(code)}`,
+        "_blank",
+      );
+    } catch {
+      // Relay 실패 시 토큰 없이 열기 (앱 자체 로그인으로 폴백)
+      window.open(app.frontend_url, "_blank");
+    } finally {
+      setLaunching(false);
+    }
   };
 
   return (
-    <Card className="hover:border-brand-300 transition-all cursor-pointer group" onClick={handleClick}>
+    <Card className={`hover:border-brand-300 transition-all cursor-pointer group ${launching ? "opacity-70 pointer-events-none" : ""}`} onClick={handleClick}>
       <CardBody>
         <div className="flex items-start justify-between mb-4">
           <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 group-hover:bg-brand-100 transition-colors">
@@ -117,7 +135,7 @@ export default function Portal() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const token = localStorage.getItem("access_token");
+  const { token } = useAuthStore();
 
   const loadData = useCallback(async () => {
     try {
