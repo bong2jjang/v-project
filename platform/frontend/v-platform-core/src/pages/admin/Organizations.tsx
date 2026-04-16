@@ -1028,12 +1028,16 @@ export default function Organizations() {
                       variant="secondary"
                       size="sm"
                       onClick={() => toggleDepartments(company.id)}
+                      icon={
+                        expandedCompanyId === company.id ? (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        )
+                      }
+                      hideTextOnMobile
+                      title="부서"
                     >
-                      {expandedCompanyId === company.id ? (
-                        <ChevronDown className="w-3.5 h-3.5 mr-1" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5 mr-1" />
-                      )}
                       부서
                     </Button>
                     <Button
@@ -1200,8 +1204,10 @@ export default function Organizations() {
                             size="sm"
                             onClick={() => startInlineAdd("root")}
                             disabled={!canEdit}
+                            icon={<Plus className="w-3.5 h-3.5" />}
+                            hideTextOnMobile
+                            title="부서 추가"
                           >
-                            <Plus className="w-3.5 h-3.5 mr-1" />
                             부서 추가
                           </Button>
                         )}

@@ -8,9 +8,17 @@
  * - 아래쪽: Footer
  */
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Settings, User, KeyRound, Sparkles, LogOut } from "lucide-react";
+import {
+  Settings,
+  User,
+  KeyRound,
+  Sparkles,
+  LogOut,
+  ArrowDown,
+  RefreshCw,
+} from "lucide-react";
 import { SidebarProvider, useSidebar } from "../hooks/useSidebar";
 import { Sidebar } from "./layout/Sidebar";
 import { TopBar } from "./layout/TopBar";
@@ -32,6 +40,7 @@ import { getRoleDisplayName } from "../api/types";
 import { NotificationBell } from "./notifications/NotificationBell";
 import { ToastContainer } from "./notifications/ToastContainer";
 import { AnnouncementPopup } from "./notifications/AnnouncementPopup";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
 
 interface LayoutContentProps {
   children: ReactNode;
@@ -44,6 +53,9 @@ function LayoutContent({ children }: LayoutContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { startMainTour } = useTour();
+  const mainRef = useRef<HTMLElement>(null);
+  const { pullDistance, isPulling, isRefreshing, isPWA, threshold } =
+    usePullToRefresh(mainRef);
 
   // 전역 키보드 단축키
   useKeyboardShortcuts();
@@ -269,7 +281,35 @@ function LayoutContent({ children }: LayoutContentProps) {
         )}
 
         {/* Main Content - 스크롤 가능 */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto"
+          style={isPWA ? { overscrollBehaviorY: "none" } : undefined}
+        >
+          {/* PWA Pull-to-Refresh Indicator */}
+          {isPWA && pullDistance > 0 && (
+            <div
+              className="flex items-center justify-center pointer-events-none"
+              style={{
+                height: pullDistance,
+                transition: isPulling ? "none" : "height 0.3s ease-out",
+              }}
+            >
+              {isRefreshing ? (
+                <RefreshCw className="w-5 h-5 text-brand-600 animate-spin" />
+              ) : (
+                <ArrowDown
+                  className="w-5 h-5 text-content-tertiary transition-transform duration-200"
+                  style={{
+                    transform:
+                      pullDistance >= threshold ? "rotate(180deg)" : "none",
+                  }}
+                />
+              )}
+            </div>
+          )}
+          {children}
+        </main>
       </div>
 
       {/* Footer - 전체 넓이, 항상 화면 하단 고정 */}

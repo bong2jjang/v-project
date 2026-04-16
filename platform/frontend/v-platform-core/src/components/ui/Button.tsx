@@ -24,6 +24,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   loading?: boolean;
   icon?: ReactNode;
+  /** 모바일(< sm)에서 텍스트를 숨기고 icon만 표시. icon prop과 함께 사용. */
+  hideTextOnMobile?: boolean;
   children: ReactNode;
 }
 
@@ -72,6 +74,7 @@ export function Button({
   size = "md",
   loading = false,
   icon,
+  hideTextOnMobile = false,
   className = "",
   disabled,
   children,
@@ -112,7 +115,11 @@ export function Button({
       ) : (
         <>
           {icon && <span className={`flex-shrink-0 ${iconClass}`}>{icon}</span>}
-          {children}
+          {hideTextOnMobile ? (
+            <span className="hidden sm:inline">{children}</span>
+          ) : (
+            children
+          )}
         </>
       )}
     </button>

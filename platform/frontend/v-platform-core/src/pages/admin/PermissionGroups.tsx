@@ -651,20 +651,26 @@ export default function PermissionGroups() {
                           variant="secondary"
                           size="sm"
                           onClick={() => toggleMembers(group.id)}
+                          icon={<Users className="w-3.5 h-3.5" />}
+                          hideTextOnMobile
+                          title="소속 사용자"
                         >
-                          <Users className="w-3.5 h-3.5 mr-1" />
                           소속 사용자
                         </Button>
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => toggleGrantEditor(group.id)}
+                          icon={
+                            expandedGroupId === group.id ? (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            )
+                          }
+                          hideTextOnMobile
+                          title="권한 설정"
                         >
-                          {expandedGroupId === group.id ? (
-                            <ChevronDown className="w-3.5 h-3.5 mr-1" />
-                          ) : (
-                            <ChevronRight className="w-3.5 h-3.5 mr-1" />
-                          )}
                           권한 설정
                         </Button>
                         {!group.is_default && (

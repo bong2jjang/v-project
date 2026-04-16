@@ -1028,6 +1028,8 @@ export default function MenuManagement() {
                     icon={<RotateCcw className="w-3.5 h-3.5" />}
                     onClick={() => handleResetChanges(activeTab)}
                     disabled={!canEdit || applyingSection === activeTab}
+                    hideTextOnMobile
+                    title="되돌리기"
                   >
                     되돌리기
                   </Button>
@@ -1038,6 +1040,8 @@ export default function MenuManagement() {
                     onClick={() => handleApplyChanges(activeTab)}
                     loading={applyingSection === activeTab}
                     disabled={!canEdit}
+                    hideTextOnMobile
+                    title="변경 반영"
                   >
                     변경 반영
                   </Button>
@@ -1051,6 +1055,8 @@ export default function MenuManagement() {
                   size="sm"
                   icon={<Download className="w-3.5 h-3.5" />}
                   onClick={() => handleExportJson(activeTab)}
+                  hideTextOnMobile
+                  title="JSON 내보내기"
                 >
                   JSON 내보내기
                 </Button>
@@ -1061,6 +1067,8 @@ export default function MenuManagement() {
                 icon={<Upload className="w-3.5 h-3.5" />}
                 onClick={openImportJson}
                 disabled={!canEdit}
+                hideTextOnMobile
+                title="JSON 가져오기"
               >
                 JSON 가져오기
               </Button>
@@ -1075,6 +1083,8 @@ export default function MenuManagement() {
                   setModalOpen(true);
                 }}
                 disabled={!canEdit}
+                hideTextOnMobile
+                title="메뉴 그룹 추가"
               >
                 메뉴 그룹 추가
               </Button>
@@ -1088,6 +1098,8 @@ export default function MenuManagement() {
                   setModalOpen(true);
                 }}
                 disabled={!canEdit}
+                hideTextOnMobile
+                title="커스텀 메뉴 추가"
               >
                 커스텀 메뉴 추가
               </Button>
@@ -1279,6 +1291,8 @@ export default function MenuManagement() {
                         )
                       }
                       onClick={handleCopyJson}
+                      hideTextOnMobile
+                      title="클립보드 복사"
                     >
                       {jsonCopied ? "복사됨" : "클립보드 복사"}
                     </Button>
@@ -1287,6 +1301,8 @@ export default function MenuManagement() {
                       size="sm"
                       icon={<Download className="w-3.5 h-3.5" />}
                       onClick={handleDownloadJson}
+                      hideTextOnMobile
+                      title="파일 다운로드"
                     >
                       파일 다운로드
                     </Button>
