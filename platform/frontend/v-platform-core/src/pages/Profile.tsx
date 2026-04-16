@@ -7,13 +7,13 @@
  * - 세션 관리
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ContentHeader } from "../components/Layout";
 import { useAuthStore } from "../stores/auth";
 import { usePermissionStore } from "../stores/permission";
 import { useSystemSettingsStore } from "../stores/systemSettings";
 import { resolveStartPage } from "../lib/resolveStartPage";
-import { getMe, updateMe } from "../api/users";
+import { getMe, updateMe, uploadAvatar, deleteAvatar } from "../api/users";
 import { useNotificationStore } from "../stores/notification";
 import { SessionDeviceList } from "../components/profile/SessionDeviceList";
 import {
@@ -25,6 +25,7 @@ import {
 import { Card, CardBody } from "../components/ui/Card";
 import type { User } from "../api/types";
 import { getRoleDisplayName } from "../api/types";
+import { Camera, Trash2, Loader2 } from "lucide-react";
 
 export default function Profile() {
   const { setUser } = useAuthStore();
@@ -39,6 +40,10 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // 시스템 기본 시작 페이지 라벨 계산
   const systemDefaultLabel = useMemo(() => {
@@ -152,6 +157,148 @@ export default function Profile() {
       setUsername(profile.username);
     }
     setIsEditing(false);
+  };
+
+  // 아바타 파일 선택 핸들러
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 타입 검증
+    const allowed = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      addNotification({
+        id: `avatar-type-error-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        severity: "error",
+        category: "user",
+        title: "파일 형식 오류",
+        message: "PNG, JPG, GIF, WebP 형식만 지원합니다.",
+        source: "profile_page",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+      return;
+    }
+
+    // 크기 검증 (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      addNotification({
+        id: `avatar-size-error-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        severity: "error",
+        category: "user",
+        title: "파일 크기 초과",
+        message: "아바타 이미지는 2MB 이하만 지원합니다.",
+        source: "profile_page",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+      return;
+    }
+
+    // 미리보기 생성
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    setAvatarFile(file);
+  };
+
+  // 아바타 업로드 (저장)
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return;
+
+    try {
+      setIsAvatarUploading(true);
+      const updatedUser = await uploadAvatar(avatarFile);
+      setProfile(updatedUser);
+      setUser(updatedUser);
+      setAvatarPreview(null);
+      setAvatarFile(null);
+
+      addNotification({
+        id: `avatar-upload-success-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        severity: "success",
+        category: "user",
+        title: "아바타 변경 완료",
+        message: "프로필 아바타가 성공적으로 변경되었습니다.",
+        source: "profile_page",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      addNotification({
+        id: `avatar-upload-error-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        severity: "error",
+        category: "user",
+        title: "아바타 업로드 실패",
+        message: "아바타 이미지 업로드에 실패했습니다.",
+        source: "profile_page",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+    } finally {
+      setIsAvatarUploading(false);
+    }
+  };
+
+  // 아바타 삭제
+  const handleAvatarDelete = async () => {
+    try {
+      setIsAvatarUploading(true);
+      const updatedUser = await deleteAvatar();
+      setProfile(updatedUser);
+      setUser(updatedUser);
+      setAvatarPreview(null);
+      setAvatarFile(null);
+
+      addNotification({
+        id: `avatar-delete-success-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        severity: "success",
+        category: "user",
+        title: "아바타 삭제 완료",
+        message: "프로필 아바타가 기본 이미지로 변경되었습니다.",
+        source: "profile_page",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+    } catch (error) {
+      console.error("Failed to delete avatar:", error);
+      addNotification({
+        id: `avatar-delete-error-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        severity: "error",
+        category: "user",
+        title: "아바타 삭제 실패",
+        message: "아바타 삭제에 실패했습니다.",
+        source: "profile_page",
+        dismissible: true,
+        persistent: false,
+        read: false,
+      });
+    } finally {
+      setIsAvatarUploading(false);
+    }
+  };
+
+  // 아바타 미리보기 취소
+  const handleAvatarCancel = () => {
+    setAvatarPreview(null);
+    setAvatarFile(null);
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
   };
 
   // 시작 페이지 저장 (별도 탭)
@@ -301,10 +448,50 @@ export default function Profile() {
 
                   {/* 아바타 */}
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-brand-600 text-content-inverse font-medium text-xl">
-                      {profile.username.charAt(0).toUpperCase()}
+                    <div className="relative group">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/gif,image/webp"
+                        className="hidden"
+                        onChange={handleAvatarSelect}
+                      />
+                      {/* 아바타 이미지 또는 이니셜 */}
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={isAvatarUploading}
+                        className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden bg-brand-600 text-content-inverse font-medium text-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                      >
+                        {avatarPreview ? (
+                          <img
+                            src={avatarPreview}
+                            alt="아바타 미리보기"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : profile.avatar_url ? (
+                          <img
+                            src={profile.avatar_url}
+                            alt={profile.username}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          profile.username.charAt(0).toUpperCase()
+                        )}
+                        {/* 호버 오버레이 */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                          {isAvatarUploading ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : (
+                            <Camera className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                      </button>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-body-base font-medium text-content-primary">
                         {profile.username}
                       </p>
@@ -314,6 +501,47 @@ export default function Profile() {
                           "ko-KR",
                         )}
                       </p>
+                      {/* 아바타 액션 버튼 */}
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {avatarPreview ? (
+                          <>
+                            <button
+                              onClick={handleAvatarUpload}
+                              disabled={isAvatarUploading}
+                              className="btn btn-primary btn-sm"
+                            >
+                              {isAvatarUploading ? "업로드 중..." : "저장"}
+                            </button>
+                            <button
+                              onClick={handleAvatarCancel}
+                              disabled={isAvatarUploading}
+                              className="btn btn-secondary btn-sm"
+                            >
+                              취소
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => avatarInputRef.current?.click()}
+                              disabled={isAvatarUploading}
+                              className="text-caption text-brand-600 hover:text-brand-700 font-medium"
+                            >
+                              변경
+                            </button>
+                            {profile.avatar_url && (
+                              <button
+                                onClick={handleAvatarDelete}
+                                disabled={isAvatarUploading}
+                                className="text-caption text-status-error hover:text-red-700 font-medium flex items-center gap-0.5"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                삭제
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 

@@ -19,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean; // 초기 로드 완료 여부
+  ssoRelayPending: boolean; // SSO Relay 코드 교환 진행 중
 
   // Actions
   setUser: (user: User) => void;
@@ -48,6 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   isInitialized: false,
+  ssoRelayPending: false,
 
   /**
    * 사용자 정보 업데이트
@@ -212,19 +214,56 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    * 로컬 스토리지에서 사용자 정보 로드
    */
   loadUserFromStorage: () => {
+    // SSO Relay 진행 중이면 중복 실행 방지 (React StrictMode 이중 마운트)
+    if (get().ssoRelayPending) {
+      authLogger.logAuthState("SSO relay already pending, skipping duplicate call");
+      return;
+    }
+
     authLogger.logAuthState("Loading user from storage");
 
-    // SSO Token Relay: URL에서 auth_token 파라미터 수신 (포탈에서 전달)
+    // SSO Relay: URL에서 sso_code 파라미터 수신 (포탈에서 전달)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const relayToken = params.get("auth_token");
-      if (relayToken) {
-        authLogger.logAuthState("Token relay received from portal");
-        authApi.saveToken(relayToken);
-        // URL에서 토큰 파라미터 제거 (보안)
+      const ssoCode = params.get("sso_code");
+      if (ssoCode) {
+        authLogger.logAuthState("SSO relay code received from portal");
+        // URL에서 코드 파라미터 즉시 제거 (보안)
         const url = new URL(window.location.href);
-        url.searchParams.delete("auth_token");
+        url.searchParams.delete("sso_code");
         window.history.replaceState({}, "", url.toString());
+
+        // 1회용 코드를 JWT + 사용자 정보로 교환
+        set({ ssoRelayPending: true });
+        authApi
+          .exchangeSsoCode(ssoCode)
+          .then((response) => {
+            authApi.saveToken(response.access_token, response.expires_at);
+            authApi.saveUser(response.user);
+
+            const expiresAt = new Date(response.expires_at);
+
+            set({
+              user: response.user,
+              token: response.access_token,
+              tokenExpiresAt: expiresAt,
+              isAuthenticated: true,
+              isInitialized: true,
+              ssoRelayPending: false,
+            });
+
+            authLogger.logAuthState("SSO relay: user authenticated", {
+              user: response.user.email,
+              expiresAt: expiresAt.toISOString(),
+            });
+
+            get().scheduleTokenRefresh(expiresAt);
+          })
+          .catch((error) => {
+            authLogger.logError("SSO relay: code exchange failed", error);
+            set({ isInitialized: true, ssoRelayPending: false });
+          });
+        return; // 비동기 처리 중이므로 여기서 반환
       }
     }
 
@@ -273,6 +312,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           authLogger.logTokenEvent("Scheduling auto-refresh");
           get().scheduleTokenRefresh(expiresAt);
         }
+
+        // 백그라운드로 최신 유저 정보 동기화 (아바타 등 변경사항 반영)
+        authApi.getCurrentUser().then((freshUser) => {
+          authApi.saveUser(freshUser);
+          set({ user: freshUser });
+          authLogger.logAuthState("User data synced from server");
+        }).catch(() => {
+          // 네트워크 에러 등은 무시 (이미 localStorage 데이터로 동작 중)
+        });
       }
     } else {
       authLogger.logAuthState("No user found in storage");

@@ -32,9 +32,7 @@ def migrate(engine):
                 ).fetchone()
 
             if existing:
-                logger.info(
-                    f"system_settings row exists (app_id={app_id}), skipping"
-                )
+                logger.info(f"system_settings row exists (app_id={app_id}), skipping")
                 continue
 
             conn.execute(
@@ -54,9 +52,7 @@ def migrate(engine):
                     "app_description": app_description,
                 },
             )
-            logger.info(
-                f"Seeded system_settings (app_id={app_id}, title={app_title})"
-            )
+            logger.info(f"Seeded system_settings (app_id={app_id}, title={app_title})")
 
         conn.commit()
         logger.info("Migration p026 completed: system_settings branding seed")

@@ -62,3 +62,21 @@ async def get_uploaded_image(filename: str):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
 
     return FileResponse(filepath)
+
+
+AVATAR_DIR = os.path.join(
+    os.environ.get("DATABASE_DIR", "/app/data"), "uploads", "avatars"
+)
+
+
+@router.get("/avatars/{filename}")
+async def get_avatar_image(filename: str):
+    """아바타 이미지 서빙 (인증 불필요)"""
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="잘못된 파일명입니다.")
+
+    filepath = os.path.join(AVATAR_DIR, filename)
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+
+    return FileResponse(filepath)

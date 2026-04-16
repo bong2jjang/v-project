@@ -90,6 +90,7 @@ class UserResponse(BaseModel):
     last_login: Optional[datetime] = None
     auth_method: Optional[str] = "local"
     sso_provider: Optional[str] = None
+    avatar_url: Optional[str] = None
     start_page: str = ""
     theme: str = "system"
     color_preset: str = "blue"

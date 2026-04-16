@@ -4,9 +4,19 @@ User Management API
 사용자 관리 API 엔드포인트 (관리자 및 일반 사용자)
 """
 
+import os
+import uuid
 from datetime import datetime, timezone
 from math import ceil
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 from typing import Optional
@@ -341,6 +351,147 @@ async def change_password(
     )
 
     return {"message": "Password changed successfully"}
+
+
+# ── Avatar Endpoints ──────────────────────────────────────────────
+
+AVATAR_DIR = os.path.join(
+    os.environ.get("DATABASE_DIR", "/app/data"), "uploads", "avatars"
+)
+AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2 MB
+AVATAR_ALLOWED_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+AVATAR_MIME_EXT: dict[str, str] = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+
+
+@router.put("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    request: Request,
+    file: UploadFile,
+    db: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    아바타 이미지 업로드
+
+    현재 사용자의 프로필 아바타를 변경합니다.
+    지원 형식: PNG, JPEG, GIF, WebP (최대 2MB)
+    """
+    if file.content_type not in AVATAR_ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"허용되지 않는 파일 형식입니다: {file.content_type}",
+        )
+
+    data = await file.read()
+    if len(data) > AVATAR_MAX_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="파일 크기가 2MB를 초과합니다.",
+        )
+
+    os.makedirs(AVATAR_DIR, exist_ok=True)
+
+    # 새 파일 저장
+    ext = AVATAR_MIME_EXT.get(file.content_type, ".png")
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(AVATAR_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(data)
+
+    # DB 업데이트
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    old_avatar = user.avatar_url
+    user.avatar_url = f"/api/uploads/avatars/{filename}"
+    user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+
+    # 이전 아바타 파일 삭제
+    if old_avatar:
+        old_filename = old_avatar.rsplit("/", 1)[-1]
+        old_path = os.path.join(AVATAR_DIR, old_filename)
+        if os.path.isfile(old_path):
+            os.remove(old_path)
+
+    # 감사 로그
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    log_user_update(
+        db=db,
+        user=user,
+        updated_by=current_user,
+        changes={"avatar_url": {"old": old_avatar, "new": user.avatar_url}},
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
+    )
+
+    return user
+
+
+@router.delete("/me/avatar", response_model=UserResponse)
+async def delete_avatar(
+    request: Request,
+    db: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    아바타 이미지 삭제
+
+    현재 사용자의 프로필 아바타를 기본 이니셜로 되돌립니다.
+    """
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    old_avatar = user.avatar_url
+    if not old_avatar:
+        return user
+
+    # 파일 삭제
+    old_filename = old_avatar.rsplit("/", 1)[-1]
+    old_path = os.path.join(AVATAR_DIR, old_filename)
+    if os.path.isfile(old_path):
+        os.remove(old_path)
+
+    user.avatar_url = None
+    user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+
+    # 감사 로그
+    app_id = (
+        getattr(request.app.state, "app_id", None)
+        if hasattr(request.app, "state")
+        else None
+    )
+    log_user_update(
+        db=db,
+        user=user,
+        updated_by=current_user,
+        changes={"avatar_url": {"old": old_avatar, "new": None}},
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        app_id=app_id,
+    )
+
+    return user
 
 
 @router.get("/{user_id}", response_model=UserResponse)

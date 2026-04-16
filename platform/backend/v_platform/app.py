@@ -136,6 +136,7 @@ class PlatformApp:
         """Tag menu_items with this app's app_id based on app_menu_keys"""
         from v_platform.core.database import engine
         from sqlalchemy import text
+
         keys = self.app_menu_keys
         with engine.connect() as conn:
             placeholders = ", ".join(f":k{i}" for i in range(len(keys)))

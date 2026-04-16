@@ -136,7 +136,9 @@ function createApiClient(): AxiosInstance {
           const isAuthEndpoint =
             config.url?.includes("/auth/login") ||
             config.url?.includes("/auth/register") ||
-            config.url?.includes("/auth/refresh");
+            config.url?.includes("/auth/refresh") ||
+            config.url?.includes("/auth/sso-relay/") ||
+            config.url?.includes("/auth/sso/");
 
           if (!isAuthEndpoint) {
             return Promise.reject(new Error("Token expired"));
@@ -157,6 +159,7 @@ function createApiClient(): AxiosInstance {
         config.url?.includes("/auth/login") ||
         config.url?.includes("/auth/register") ||
         config.url?.includes("/auth/refresh") ||
+        config.url?.includes("/auth/sso-relay/") ||
         config.url?.includes("/auth/forgot-password") ||
         config.url?.includes("/auth/reset-password");
 
@@ -237,7 +240,9 @@ function createApiClient(): AxiosInstance {
         const isAuthEndpoint =
           requestUrl.includes("/auth/login") ||
           requestUrl.includes("/auth/register") ||
-          requestUrl.includes("/auth/refresh");
+          requestUrl.includes("/auth/refresh") ||
+          requestUrl.includes("/auth/sso-relay/") ||
+          requestUrl.includes("/auth/sso/");
 
         // 이미 리다이렉트 중이거나 로그인 페이지이거나 인증 엔드포인트면 스킵
         if (

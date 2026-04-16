@@ -63,6 +63,9 @@ class User(Base):
     sso_provider_id = Column(String(255), nullable=True)  # Provider 측 고유 ID
     auth_method = Column(String(20), default="local")  # "local" | "sso" | "hybrid"
 
+    # 프로필
+    avatar_url = Column(String(500), nullable=True)  # 아바타 이미지 URL
+
     # 사용자 설정 (빈 문자열 = 시스템 기본값 사용)
     start_page = Column(String(255), default="", nullable=False, server_default="")
     theme = Column(
@@ -122,6 +125,7 @@ class User(Base):
             "last_login": self.last_login.isoformat() if self.last_login else None,
             "auth_method": self.auth_method or "local",
             "sso_provider": self.sso_provider,
+            "avatar_url": self.avatar_url,
             "start_page": self.start_page if self.start_page is not None else "",
             "theme": self.theme or "system",
             "color_preset": self.color_preset or "blue",

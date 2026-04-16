@@ -253,6 +253,28 @@ export function generateDeviceName(): string {
 }
 
 // ============================================================
+// SSO Relay API (1회용 코드 기반 토큰 교환)
+// ============================================================
+
+/**
+ * SSO Relay 코드 생성 (포탈에서 호출)
+ *
+ * 인증된 사용자에 대해 1회용 SSO 코드를 생성합니다.
+ */
+export async function createSsoRelay(): Promise<{ code: string }> {
+  return post<{ code: string }>("/api/auth/sso-relay/create", {});
+}
+
+/**
+ * SSO Relay 코드 교환 (앱에서 호출)
+ *
+ * 1회용 SSO 코드를 JWT + 사용자 정보로 교환합니다.
+ */
+export async function exchangeSsoCode(code: string): Promise<Token> {
+  return post<Token>("/api/auth/sso-relay/exchange", { code });
+}
+
+// ============================================================
 // 비밀번호 재설정 API
 // ============================================================
 

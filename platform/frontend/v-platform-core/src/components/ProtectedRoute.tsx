@@ -32,7 +32,8 @@ export function ProtectedRoute({
   permissionKey,
   requiredRole,
 }: ProtectedRouteProps) {
-  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const { user, isAuthenticated, isInitialized, ssoRelayPending } =
+    useAuthStore();
   const { menus, isLoaded, canAccess } = usePermissionStore();
   const { settings } = useSystemSettingsStore();
   const location = useLocation();
@@ -41,7 +42,12 @@ export function ProtectedRoute({
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-base">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+          <p className="text-sm text-content-secondary">
+            {ssoRelayPending ? "SSO 인증 확인 중..." : "로딩 중..."}
+          </p>
+        </div>
       </div>
     );
   }

@@ -310,6 +310,7 @@ export interface User {
   last_login: string | null;
   auth_method?: string;
   sso_provider?: string | null;
+  avatar_url?: string | null;
   start_page?: string;
   theme?: string;
   color_preset?: string;

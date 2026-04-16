@@ -92,9 +92,7 @@ async def update_system_settings(
         if not settings:
             # 전역 레코드를 템플릿 삼아 앱별 레코드 생성 (상속)
             global_settings = (
-                db.query(SystemSettings)
-                .filter(SystemSettings.app_id.is_(None))
-                .first()
+                db.query(SystemSettings).filter(SystemSettings.app_id.is_(None)).first()
             )
             settings = SystemSettings(
                 app_id=app_id,

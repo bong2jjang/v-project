@@ -114,6 +114,26 @@ export async function changePassword(
   return put<{ message: string }>("/api/users/me/password", data);
 }
 
+/**
+ * 아바타 업로드
+ */
+export async function uploadAvatar(file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { apiClient } = await import("./client");
+  const response = await apiClient.put<User>("/api/users/me/avatar", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+
+/**
+ * 아바타 삭제
+ */
+export async function deleteAvatar(): Promise<User> {
+  return del<User>("/api/users/me/avatar");
+}
+
 /** 사용자 그룹 설정 */
 export async function setUserGroups(
   userId: number,

@@ -5,9 +5,11 @@ Authentication API
 """
 
 import os
+import secrets
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, Cookie
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 from slowapi import Limiter
@@ -33,6 +35,7 @@ from v_platform.utils.auth import (
 )
 from v_platform.services.token_service import TokenService
 from v_platform.services.password_reset_service import PasswordResetService
+from v_platform.services.cache_service import cache_service
 from v_platform.utils.audit_logger import log_user_login, log_user_register
 from v_platform.middleware.csrf import generate_csrf_token
 
@@ -549,3 +552,102 @@ async def confirm_password_reset(
         )
 
     return MessageResponse(message=message)
+
+
+# ========================================
+# SSO Relay (1회용 코드 기반 토큰 교환)
+# ========================================
+
+
+class SsoRelayCreateResponse(BaseModel):
+    code: str
+
+
+class SsoRelayExchangeRequest(BaseModel):
+    code: str
+
+
+class SsoRelayExchangeResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_at: datetime
+    user: UserResponse
+
+
+SSO_RELAY_TTL = 30  # 30초 유효
+SSO_RELAY_PREFIX = "sso:relay:"
+
+
+@router.post("/sso-relay/create", response_model=SsoRelayCreateResponse)
+async def create_sso_relay(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    SSO Relay 코드 생성
+
+    인증된 사용자에 대해 1회용 SSO 코드를 생성합니다.
+    코드는 Redis에 30초간 저장되며, exchange 엔드포인트에서 JWT로 교환됩니다.
+    """
+    if not cache_service.is_available():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache service unavailable",
+        )
+
+    code = secrets.token_urlsafe(32)
+    relay_data = {
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "role": current_user.role.value
+        if isinstance(current_user.role, UserRole)
+        else current_user.role,
+    }
+
+    cache_service.set(f"{SSO_RELAY_PREFIX}{code}", relay_data, ttl=SSO_RELAY_TTL)
+
+    return SsoRelayCreateResponse(code=code)
+
+
+@router.post("/sso-relay/exchange", response_model=SsoRelayExchangeResponse)
+async def exchange_sso_relay(
+    body: SsoRelayExchangeRequest,
+    db: Session = Depends(get_db_session),
+):
+    """
+    SSO Relay 코드 교환
+
+    1회용 SSO 코드를 JWT Access Token + 사용자 정보로 교환합니다.
+    코드는 사용 즉시 삭제됩니다 (1회용).
+    """
+    relay_key = f"{SSO_RELAY_PREFIX}{body.code}"
+    relay_data = cache_service.get(relay_key)
+
+    if not relay_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired SSO code",
+        )
+
+    # 즉시 삭제 (1회용)
+    cache_service.delete(relay_key)
+
+    # 사용자 조회
+    user = db.query(User).filter(User.id == relay_data["user_id"]).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+
+    # 새 Access Token 발급
+    access_token, expires_at = TokenService.create_access_token(
+        user_id=user.id,
+        email=user.email,
+        role=user.role.value if isinstance(user.role, UserRole) else user.role,
+    )
+
+    return SsoRelayExchangeResponse(
+        access_token=access_token,
+        expires_at=expires_at,
+        user=UserResponse.model_validate(user),
+    )

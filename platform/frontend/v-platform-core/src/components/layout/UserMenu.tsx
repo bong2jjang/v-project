@@ -16,10 +16,16 @@ import { useTour } from "../../hooks/useTour";
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { startMainTour } = useTour();
+
+  // avatar_url이 바뀌면 에러 상태 초기화
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user?.avatar_url]);
 
   // 외부 클릭 감지
   useEffect(() => {
@@ -57,23 +63,46 @@ export function UserMenu() {
         className="w-full flex items-center justify-center p-1.5 rounded-button text-content-tertiary hover:bg-surface-raised hover:text-content-primary transition-colors"
         title={`${user.username} (${getRoleDisplayName(user.role)})`}
       >
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-content-inverse font-medium text-xs">
-          {user.username.charAt(0).toUpperCase()}
-        </div>
+        {user.avatar_url && !avatarError ? (
+          <img
+            src={user.avatar_url}
+            alt={user.username}
+            className="w-6 h-6 rounded-full object-cover"
+            onError={() => setAvatarError(true)}
+          />
+        ) : (
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-content-inverse font-medium text-xs">
+            {user.username.charAt(0).toUpperCase()}
+          </div>
+        )}
       </button>
 
       {/* Dropdown Menu - Sidebar 오른쪽으로 펼쳐짐 */}
       {isOpen && (
         <div className="absolute left-full bottom-0 ml-2 w-56 bg-surface-card border border-line rounded-card shadow-dropdown z-dropdown">
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-line">
-            <p className="text-body-base font-medium text-content-primary">
-              {user.username}
-            </p>
-            <p className="text-caption text-content-secondary">{user.email}</p>
-            <p className="text-caption text-content-tertiary mt-1">
-              {getRoleDisplayName(user.role)} 권한
-            </p>
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-line">
+            {user.avatar_url && !avatarError ? (
+              <img
+                src={user.avatar_url}
+                alt={user.username}
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-content-inverse font-semibold text-sm flex-shrink-0">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-body-base font-medium text-content-primary truncate">
+                {user.username}
+              </p>
+              <p className="text-caption text-content-secondary truncate">{user.email}</p>
+              <p className="text-caption text-content-tertiary mt-0.5">
+                {getRoleDisplayName(user.role)} 권한
+              </p>
+            </div>
           </div>
 
           {/* Menu Items */}
