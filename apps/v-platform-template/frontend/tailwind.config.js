@@ -130,7 +130,7 @@ export default {
 
       /* ── 레이아웃 ── */
       maxWidth: {
-        'content': '80rem',
+        'content': 'var(--content-max-width, 80rem)',
       },
 
       /* ── z-index ── */

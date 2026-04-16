@@ -24,9 +24,11 @@ import { usePlatformConfig } from "../providers/PlatformProvider";
 /** 앱별 localStorage 키 생성 (동일 브라우저에서 앱별 테마 분리) */
 function themeKey(appName?: string) { return appName ? `${appName}:theme` : "theme"; }
 function presetKey(appName?: string) { return appName ? `${appName}:colorPreset` : "colorPreset"; }
+function contentWidthKey(appName?: string) { return appName ? `${appName}:contentWidth` : "contentWidth"; }
 
 type Theme = "light" | "dark" | "system";
 export type ColorPreset = "blue" | "indigo" | "rose";
+export type ContentWidth = "default" | "wide";
 
 export const COLOR_PRESETS: {
   id: ColorPreset;
@@ -45,6 +47,8 @@ interface ThemeContextValue {
   toggle: () => void;
   colorPreset: ColorPreset;
   setColorPreset: (preset: ColorPreset) => void;
+  contentWidth: ContentWidth;
+  setContentWidth: (width: ContentWidth) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -68,6 +72,20 @@ function getEffectiveTheme(theme: Theme): "light" | "dark" {
 
 function applyTheme(effective: "light" | "dark") {
   document.documentElement.classList.toggle("dark", effective === "dark");
+}
+
+function isValidContentWidth(v: string | null | undefined): v is ContentWidth {
+  return v === "default" || v === "wide";
+}
+
+function applyContentWidth(width: ContentWidth) {
+  document.documentElement.classList.toggle("layout-wide", width === "wide");
+}
+
+function resolveInitialContentWidth(appName?: string): ContentWidth {
+  const stored = localStorage.getItem(contentWidthKey(appName));
+  if (isValidContentWidth(stored)) return stored;
+  return "default";
 }
 
 function applyColorPreset(preset: ColorPreset) {
@@ -110,6 +128,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     resolveInitialPreset(user?.color_preset, appName),
   );
 
+  const [contentWidth, setContentWidthState] = useState<ContentWidth>(() =>
+    resolveInitialContentWidth(appName),
+  );
+
   const [isDark, setIsDark] = useState(
     () => getEffectiveTheme(theme) === "dark",
   );
@@ -141,6 +163,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [appName],
   );
 
+  const setContentWidth = useCallback(
+    (width: ContentWidth) => {
+      setContentWidthState(width);
+      localStorage.setItem(contentWidthKey(appName), width);
+      applyContentWidth(width);
+    },
+    [appName],
+  );
+
   // 로그인 시 앱별 localStorage에서 테마 적용 (DB 사용 안 함)
   useEffect(() => {
     if (isAuthenticated) {
@@ -154,6 +185,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
       setColorPresetState(currentPreset);
       applyColorPreset(currentPreset);
+
+      const currentWidth = resolveInitialContentWidth(appName);
+      setContentWidthState(currentWidth);
+      applyContentWidth(currentWidth);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, appName]);
@@ -176,7 +211,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(effective);
     setIsDark(effective === "dark");
     applyColorPreset(colorPreset);
-  }, [theme, colorPreset]);
+    applyContentWidth(contentWidth);
+  }, [theme, colorPreset, contentWidth]);
 
   const value: ThemeContextValue = {
     theme,
@@ -185,6 +221,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     toggle,
     colorPreset,
     setColorPreset,
+    contentWidth,
+    setContentWidth,
   };
 
   return createElement(ThemeContext.Provider, { value }, children);

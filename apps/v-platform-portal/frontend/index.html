@@ -19,6 +19,10 @@
         if (p && p !== 'blue') {
           document.documentElement.classList.add('theme-' + p);
         }
+        var w = localStorage.getItem(app + ':contentWidth') || localStorage.getItem('contentWidth');
+        if (w === 'wide') {
+          document.documentElement.classList.add('layout-wide');
+        }
       })();
     </script>
   </head>

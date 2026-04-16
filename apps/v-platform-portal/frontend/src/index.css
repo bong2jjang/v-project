@@ -14,6 +14,9 @@
   :root {
     color-scheme: light;
 
+    /* Layout — 콘텐츠 최대 너비 */
+    --content-max-width: 80rem;
+
     /* Brand — VS Code Blue (깨끗한 블루 액센트) */
     --color-brand-50: #e6f2ff;
     --color-brand-100: #cce4ff;
@@ -140,6 +143,11 @@
     --shadow-card-elevated: 0 8px 24px rgb(0 0 0 / 0.55);
     --shadow-modal: 0 16px 48px -8px rgb(0 0 0 / 0.65);
     --shadow-nav: 0 1px 0 rgb(0 0 0 / 0.3);
+  }
+
+  /* ── 넓게보기 레이아웃 ── */
+  .layout-wide {
+    --content-max-width: 100%;
   }
 
   body {

@@ -8,7 +8,7 @@
  * - 아래쪽: Footer
  */
 
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Settings,
@@ -18,6 +18,8 @@ import {
   LogOut,
   ArrowDown,
   RefreshCw,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { SidebarProvider, useSidebar } from "../hooks/useSidebar";
 import { Sidebar } from "./layout/Sidebar";
@@ -41,6 +43,27 @@ import { NotificationBell } from "./notifications/NotificationBell";
 import { ToastContainer } from "./notifications/ToastContainer";
 import { AnnouncementPopup } from "./notifications/AnnouncementPopup";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { useTheme, type ContentWidth } from "../hooks/useTheme";
+
+/* ── 페이지별 임시 너비 오버라이드 컨텍스트 ── */
+interface PageWidthContextValue {
+  /** 현재 유효 너비 (페이지 오버라이드 > 전역 설정) */
+  effectiveWidth: ContentWidth;
+  /** 페이지별 오버라이드 토글 (넓게↔기본 전환) */
+  togglePageWidth: () => void;
+  /** 페이지 오버라이드가 활성화되어 있는지 */
+  hasOverride: boolean;
+}
+
+const PageWidthContext = createContext<PageWidthContextValue>({
+  effectiveWidth: "default",
+  togglePageWidth: () => {},
+  hasOverride: false,
+});
+
+export function usePageWidth() {
+  return useContext(PageWidthContext);
+}
 
 interface LayoutContentProps {
   children: ReactNode;
@@ -59,6 +82,24 @@ function LayoutContent({ children }: LayoutContentProps) {
 
   // 전역 키보드 단축키
   useKeyboardShortcuts();
+
+  // 페이지별 임시 너비 오버라이드
+  const { contentWidth } = useTheme();
+  const [pageWidthOverride, setPageWidthOverride] = useState<ContentWidth | null>(null);
+
+  const effectiveWidth = pageWidthOverride ?? contentWidth;
+
+  const togglePageWidth = useCallback(() => {
+    setPageWidthOverride((prev) => {
+      const current = prev ?? contentWidth;
+      return current === "default" ? "wide" : "default";
+    });
+  }, [contentWidth]);
+
+  // 라우트 변경 시 페이지 오버라이드 리셋
+  useEffect(() => {
+    setPageWidthOverride(null);
+  }, [location.pathname]);
 
   const handleMobileLogout = async () => {
     closeMobile();
@@ -291,9 +332,29 @@ function LayoutContent({ children }: LayoutContentProps) {
         {/* Main Content - 스크롤 가능 */}
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto"
-          style={isPWA ? { overscrollBehaviorY: "none" } : undefined}
+          className="flex-1 overflow-y-auto relative"
+          style={{
+            ...(isPWA ? { overscrollBehaviorY: "none" as const } : {}),
+            ...(pageWidthOverride ? { "--content-max-width": pageWidthOverride === "wide" ? "100%" : "80rem" } as React.CSSProperties : {}),
+          }}
         >
+          {/* 넓게보기 토글 — 메인 콘텐츠 우측 상단 */}
+          <button
+            type="button"
+            onClick={togglePageWidth}
+            className={`absolute top-2 right-3 z-10 p-1.5 rounded-button transition-colors ${
+              pageWidthOverride !== null
+                ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-50/10"
+                : "text-content-tertiary hover:text-content-secondary hover:bg-surface-raised"
+            }`}
+            title={effectiveWidth === "wide" ? "기본보기" : "넓게보기"}
+          >
+            {effectiveWidth === "wide" ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
           {/* PWA Pull-to-Refresh Indicator */}
           {isPWA && pullDistance > 0 && (
             <div
@@ -316,7 +377,9 @@ function LayoutContent({ children }: LayoutContentProps) {
               )}
             </div>
           )}
-          {children}
+          <PageWidthContext.Provider value={{ effectiveWidth, togglePageWidth, hasOverride: pageWidthOverride !== null }}>
+            {children}
+          </PageWidthContext.Provider>
         </main>
       </div>
 

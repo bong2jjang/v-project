@@ -5,11 +5,11 @@
  * - 다크모드에서는 ContentHeader에 브랜드 색상이 반영되지 않음을 프리뷰에 반영
  */
 
-import { useTheme, COLOR_PRESETS } from "../../hooks/useTheme";
+import { useTheme, COLOR_PRESETS, type ContentWidth } from "../../hooks/useTheme";
 import { InfoBox } from "../ui/InfoBox";
 
 export function ThemeSettings() {
-  const { theme, isDark, setTheme, colorPreset, setColorPreset } = useTheme();
+  const { theme, isDark, setTheme, colorPreset, setColorPreset, contentWidth, setContentWidth } = useTheme();
 
   return (
     <div className="space-y-8">
@@ -71,6 +71,32 @@ export function ThemeSettings() {
             sublabel="OS 설정에 맞춤"
             icon={<MonitorIcon />}
             preview={<SystemPreview accent="#0078d4" />}
+          />
+        </div>
+      </section>
+
+      {/* 콘텐츠 너비 */}
+      <section>
+        <h3 className="text-heading-md text-content-primary mb-1">
+          콘텐츠 너비
+        </h3>
+        <p className="text-body-base text-content-secondary mb-4">
+          페이지 콘텐츠의 최대 너비를 설정합니다
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <ContentWidthCard
+            active={contentWidth === "default"}
+            onClick={() => setContentWidth("default")}
+            label="기본 너비"
+            sublabel="읽기 편한 기본 폭"
+            preview={<DefaultWidthPreview />}
+          />
+          <ContentWidthCard
+            active={contentWidth === "wide"}
+            onClick={() => setContentWidth("wide")}
+            label="넓게보기"
+            sublabel="화면 전체 활용"
+            preview={<WideWidthPreview />}
           />
         </div>
       </section>
@@ -180,6 +206,60 @@ function ColorPresetCard({
         </span>
       </div>
     </button>
+  );
+}
+
+function ContentWidthCard({
+  active,
+  onClick,
+  label,
+  sublabel,
+  preview,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  sublabel: string;
+  preview: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-3 p-4 rounded-card border-2 transition-all duration-normal ${
+        active
+          ? "border-brand-600 bg-brand-600/5 shadow-card-hover"
+          : "border-line hover:border-line-heavy bg-surface-card hover:bg-surface-raised"
+      }`}
+    >
+      {preview}
+      <div className="text-center">
+        <span
+          className={`text-heading-sm block ${active ? "text-brand-600" : "text-content-primary"}`}
+        >
+          {label}
+        </span>
+        <span className="text-caption text-content-tertiary">{sublabel}</span>
+      </div>
+    </button>
+  );
+}
+
+function DefaultWidthPreview() {
+  return (
+    <div className="w-full h-16 rounded bg-surface-page border border-line p-1.5 flex flex-col gap-1">
+      <div className="h-2 rounded-sm bg-brand-600 dark:bg-surface-raised mx-12" />
+      <div className="flex-1 rounded-sm bg-surface-card border border-line mx-12" />
+    </div>
+  );
+}
+
+function WideWidthPreview() {
+  return (
+    <div className="w-full h-16 rounded bg-surface-page border border-line p-1.5 flex flex-col gap-1">
+      <div className="h-2 rounded-sm bg-brand-600 dark:bg-surface-raised mx-1" />
+      <div className="flex-1 rounded-sm bg-surface-card border border-line mx-1" />
+    </div>
   );
 }
 
