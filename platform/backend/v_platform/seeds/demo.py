@@ -1,15 +1,16 @@
-"""Demo seed — 개발/테스트용 샘플 데이터 (플랫폼 공통).
+"""Demo seed — 현재 운영 중인 DB 스냅샷을 재현하는 시드.
 
 base seed 위에 추가로:
-  - 조직 구조 (부서 계층)
-  - 추가 사용자 (org_admin, 일반 사용자)
-  - 커스텀 권한그룹 (플랫폼 공통 메뉴만 참조)
-  - 사용자-그룹 매핑
+  - 회사 브랜딩 (VMS / VMS-KR)
+  - 조직 구조 (부서 계층 12개)
+  - 추가 사용자 8명 (VMS 실사용자 4 + 데모 샘플 4)
+  - 커스텀 권한그룹 4개 (사용자정의그룹-1/2, 데모그룹-운영/뷰어)
+  - 권한그룹 grants, 사용자-그룹 매핑, 개별 사용자 권한 오버라이드
   - 메뉴 section 보정 (플랫폼 공통 메뉴만)
-  - 개별 사용자 권한 오버라이드
 
-Note: 앱 전용 메뉴(channels, messages 등)의 section/grant는
-각 앱의 마이그레이션(a*.py)에서 관리합니다.
+Note: 앱 전용 메뉴(channels, messages 등)의 메뉴 자체 등록은
+각 앱의 마이그레이션(a*.py)이 담당한다. 본 시드는 해당 메뉴에 대한
+grant/override만 설정한다.
 """
 
 import logging
@@ -20,11 +21,18 @@ from v_platform.utils.auth import get_password_hash
 
 logger = logging.getLogger(__name__)
 
-# 비밀번호 통일: 모든 데모 사용자 동일
+# 비밀번호 통일: 모든 데모 사용자 동일 (실사용자 포함 — 리셋 후 재로그인 기준)
 DEMO_PASSWORD = "Demo123!"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 데이터 정의
+# 회사 브랜딩
+# ─────────────────────────────────────────────────────────────────────────────
+
+COMPANY_NAME = "VMS"
+COMPANY_CODE = "VMS-KR"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 부서 (현재 DB 계층 스냅샷)
 # ─────────────────────────────────────────────────────────────────────────────
 
 DEPARTMENTS_TOP = [
@@ -41,28 +49,140 @@ DEPARTMENTS_TOP = [
 DEPARTMENTS_SUB = [
     # (name, parent_name, sort_order)
     ("제품사업그룹", "솔루션사업본부", 0),
-    ("운영1그룹", "솔루션사업본부", 10),
-    ("운영2그룹", "솔루션사업본부", 20),
+    ("운영1그룹", "솔루션사업본부", 0),
+    ("운영2그룹", "솔루션사업본부", 0),
     ("제품팀", "제품사업그룹", 0),
-    ("사업팀", "제품사업그룹", 10),
+    ("사업팀", "제품사업그룹", 0),
 ]
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 사용자 (VMS 실사용자 + 데모 샘플)
+# ─────────────────────────────────────────────────────────────────────────────
+
 DEMO_USERS = [
-    # (email, username, role, department_name, auth_method)
-    ("orgadmin@demo.local", "데모관리자", "ORG_ADMIN", "전략사업부", "local"),
-    ("user1@demo.local", "김테스트", "USER", "제품팀", "local"),
-    ("user2@demo.local", "이데모", "USER", "운영1그룹", "local"),
-    ("user3@demo.local", "박샘플", "USER", "경영지원실", "local"),
+    # (email, username, role, department_name, auth_method, color_preset)
+    # VMS 실사용자 (현재 운영 DB 기준)
+    ("bong78@vms-solutions.com", "viktor", "ORG_ADMIN", "제품사업그룹", "hybrid", "rose"),
+    ("yichunbong@hotmail.com", "이춘봉", "USER", "제품팀", "local", "blue"),
+    ("kbhee@vms-solutions.com", "김병희", "USER", "대표이사", "local", "blue"),
+    ("chunggh@vms-solutions.com", "정구환", "ORG_ADMIN", "솔루션사업본부", "local", "blue"),
+    # 데모 샘플 사용자
+    ("orgadmin@demo.local", "데모관리자", "ORG_ADMIN", "전략사업부", "local", "blue"),
+    ("user1@demo.local", "김테스트", "USER", "제품팀", "local", "blue"),
+    ("user2@demo.local", "이데모", "USER", "운영1그룹", "local", "blue"),
+    ("user3@demo.local", "박샘플", "USER", "경영지원실", "local", "blue"),
 ]
+
+# 리셋 시 demo seed가 재생성하는 사용자 이메일 (runner에서 참조)
+DEMO_USER_EMAILS = [u[0] for u in DEMO_USERS]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 커스텀 권한그룹
+# ─────────────────────────────────────────────────────────────────────────────
 
 CUSTOM_GROUPS = [
     # (name, description)
-    ("데모그룹-운영", "운영 부서 전용 — 플랫폼 공통 메뉴 write + 관리 일부 read"),
+    ("사용자정의그룹-1", "테스트 그룹 1"),
+    ("사용자정의그룹-2", "테스트 그룹 2"),
+    ("데모그룹-운영", "운영 부서 전용 — 기본 메뉴 write + 관리 메뉴 일부 read"),
     ("데모그룹-뷰어", "외부 조직용 — 대시보드 + 도움말 read only"),
 ]
 
-# 플랫폼 공통 메뉴 section 설정 (migration에서 누락되는 부분)
-# 앱 전용 메뉴(channels, messages 등)는 각 앱 마이그레이션에서 관리
+# 리셋 시 demo seed가 재생성하는 그룹 이름 prefix (runner에서 참조)
+CUSTOM_GROUP_NAMES = [g[0] for g in CUSTOM_GROUPS]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 그룹 grants (커스텀 그룹별 메뉴 권한)
+# ─────────────────────────────────────────────────────────────────────────────
+
+GROUP_GRANTS: dict[str, dict[str, str]] = {
+    # 사용자정의그룹-1: 기본(basic) 메뉴 read-only 세트
+    "사용자정의그룹-1": {
+        "channels": "read",
+        "dashboard": "read",
+        "help": "read",
+        "integrations": "read",
+        "messages": "read",
+        "settings": "read",
+        "statistics": "read",
+    },
+    # 사용자정의그룹-2: grant 없음 (UI 테스트용 빈 그룹)
+    "사용자정의그룹-2": {},
+    # 데모그룹-운영: 기본 메뉴 write + 관리 메뉴 일부 read
+    "데모그룹-운영": {
+        "channels": "write",
+        "dashboard": "write",
+        "help": "write",
+        "integrations": "write",
+        "messages": "write",
+        "settings": "write",
+        "statistics": "write",
+        "monitoring": "read",
+        "organizations": "read",
+        "users": "read",
+    },
+    # 데모그룹-뷰어: 최소 read
+    "데모그룹-뷰어": {
+        "dashboard": "read",
+        "help": "read",
+    },
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 사용자-그룹 매핑
+# ─────────────────────────────────────────────────────────────────────────────
+
+MEMBERSHIPS = [
+    # (user_email, group_name)
+    ("bong78@vms-solutions.com", "조직 관리자"),
+    ("bong78@vms-solutions.com", "사용자정의그룹-1"),
+    ("yichunbong@hotmail.com", "일반 사용자"),
+    ("kbhee@vms-solutions.com", "일반 사용자"),
+    ("kbhee@vms-solutions.com", "사용자정의그룹-1"),
+    ("chunggh@vms-solutions.com", "조직 관리자"),
+    ("orgadmin@demo.local", "조직 관리자"),
+    ("orgadmin@demo.local", "데모그룹-운영"),
+    ("user1@demo.local", "일반 사용자"),
+    ("user2@demo.local", "일반 사용자"),
+    ("user2@demo.local", "데모그룹-운영"),
+    ("user3@demo.local", "일반 사용자"),
+    ("user3@demo.local", "데모그룹-뷰어"),
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 개별 사용자 권한 오버라이드
+# ─────────────────────────────────────────────────────────────────────────────
+
+USER_PERMISSIONS = [
+    # (user_email, permission_key, access_level)
+    # bong78 — 14 플랫폼 키 전체 write (사실상 관리자 권한 그룹 외 개별 부여)
+    ("bong78@vms-solutions.com", "audit_logs", "write"),
+    ("bong78@vms-solutions.com", "channels", "write"),
+    ("bong78@vms-solutions.com", "dashboard", "write"),
+    ("bong78@vms-solutions.com", "help", "write"),
+    ("bong78@vms-solutions.com", "integrations", "write"),
+    ("bong78@vms-solutions.com", "menu_management", "write"),
+    ("bong78@vms-solutions.com", "messages", "write"),
+    ("bong78@vms-solutions.com", "monitoring", "write"),
+    ("bong78@vms-solutions.com", "organizations", "write"),
+    ("bong78@vms-solutions.com", "permission_groups", "write"),
+    ("bong78@vms-solutions.com", "permission_management", "write"),
+    ("bong78@vms-solutions.com", "settings", "write"),
+    ("bong78@vms-solutions.com", "statistics", "write"),
+    ("bong78@vms-solutions.com", "users", "write"),
+    # 기타 개별 오버라이드
+    ("yichunbong@hotmail.com", "settings", "write"),
+    ("kbhee@vms-solutions.com", "settings", "write"),
+    ("chunggh@vms-solutions.com", "organizations", "write"),
+    ("orgadmin@demo.local", "organizations", "write"),
+    ("orgadmin@demo.local", "users", "write"),
+    ("user1@demo.local", "settings", "write"),
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 메뉴 section 보정 (플랫폼 공통 메뉴만)
+# ─────────────────────────────────────────────────────────────────────────────
+
 MENU_SECTIONS = [
     ("dashboard", "basic"),
     ("settings", "basic"),
@@ -78,6 +198,7 @@ MENU_SECTIONS = [
 
 def seed_demo(conn):
     """데모 데이터 삽입 (idempotent)."""
+    _seed_company_branding(conn)
     _seed_departments(conn)
     _seed_users(conn)
     _seed_menu_sections(conn)
@@ -88,13 +209,32 @@ def seed_demo(conn):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 회사 브랜딩
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _seed_company_branding(conn):
+    """회사 이름/코드를 현재 운영 브랜딩(VMS / VMS-KR)으로 정렬."""
+    conn.execute(
+        text(
+            """
+            UPDATE companies
+            SET name = :name, code = :code, updated_at = NOW()
+            WHERE id = 1
+            """
+        ),
+        {"name": COMPANY_NAME, "code": COMPANY_CODE},
+    )
+    logger.info("Demo seed: company branding (%s / %s)", COMPANY_NAME, COMPANY_CODE)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 부서
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def _seed_departments(conn):
     """부서 계층 구조 생성."""
-    # 최상위 부서
     for name, sort_order in DEPARTMENTS_TOP:
         conn.execute(
             text(
@@ -109,7 +249,6 @@ def _seed_departments(conn):
             {"name": name, "sort_order": sort_order},
         )
 
-    # 하위 부서
     for name, parent_name, sort_order in DEPARTMENTS_SUB:
         conn.execute(
             text(
@@ -142,7 +281,7 @@ def _seed_users(conn):
     """데모 사용자 생성."""
     hashed = get_password_hash(DEMO_PASSWORD)
 
-    for email, username, role, dept_name, auth_method in DEMO_USERS:
+    for email, username, role, dept_name, auth_method, color_preset in DEMO_USERS:
         existing = conn.execute(
             text("SELECT id FROM users WHERE email = :email"),
             {"email": email},
@@ -159,7 +298,7 @@ def _seed_users(conn):
                                    created_at, updated_at)
                 SELECT :email, :username, :hashed_password, :role, TRUE,
                        1, d.id, :auth_method,
-                       '', 'system', 'blue',
+                       '', 'system', :color_preset,
                        NOW(), NOW()
                 FROM departments d
                 WHERE d.name = :dept_name AND d.company_id = 1
@@ -172,6 +311,7 @@ def _seed_users(conn):
                 "role": role,
                 "dept_name": dept_name,
                 "auth_method": auth_method,
+                "color_preset": color_preset,
             },
         )
 
@@ -233,35 +373,16 @@ def _seed_custom_groups(conn):
 
 def _seed_group_grants(conn):
     """커스텀 그룹에 메뉴 권한 매핑."""
-    # 데모그룹-운영: 플랫폼 공통 메뉴 write + 관리 일부 read
-    # 앱 전용 메뉴 권한은 각 앱 마이그레이션에서 추가
-    _grant_group(
-        conn,
-        "데모그룹-운영",
-        {
-            "dashboard": "write",
-            "settings": "write",
-            "help": "write",
-            "users": "read",
-            "organizations": "read",
-        },
-    )
+    for group_name, grants in GROUP_GRANTS.items():
+        if not grants:
+            continue
+        _grant_group(conn, group_name, grants)
 
-    # 데모그룹-뷰어: 최소 read
-    _grant_group(
-        conn,
-        "데모그룹-뷰어",
-        {
-            "dashboard": "read",
-            "help": "read",
-        },
-    )
-
-    logger.info("Demo seed: group grants")
+    logger.info("Demo seed: group grants (%d groups)", len(GROUP_GRANTS))
 
 
 def _grant_group(conn, group_name: str, grants: dict[str, str]):
-    """권한그룹에 메뉴 권한을 매핑."""
+    """권한그룹에 메뉴 권한을 매핑. 존재하지 않는 메뉴는 조용히 건너뜀."""
     for pkey, level in grants.items():
         conn.execute(
             text(
@@ -285,17 +406,7 @@ def _grant_group(conn, group_name: str, grants: dict[str, str]):
 
 def _seed_user_group_memberships(conn):
     """데모 사용자를 적절한 그룹에 배정."""
-    mappings = [
-        # (user_email, group_name)
-        ("orgadmin@demo.local", "조직 관리자"),
-        ("orgadmin@demo.local", "데모그룹-운영"),
-        ("user1@demo.local", "일반 사용자"),
-        ("user2@demo.local", "일반 사용자"),
-        ("user2@demo.local", "데모그룹-운영"),
-        ("user3@demo.local", "데모그룹-뷰어"),
-    ]
-
-    for email, group_name in mappings:
+    for email, group_name in MEMBERSHIPS:
         conn.execute(
             text(
                 """
@@ -309,7 +420,7 @@ def _seed_user_group_memberships(conn):
             {"email": email, "group_name": group_name},
         )
 
-    logger.info("Demo seed: %d user-group mappings", len(mappings))
+    logger.info("Demo seed: %d user-group mappings", len(MEMBERSHIPS))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -324,14 +435,7 @@ def _seed_user_permissions(conn):
     ).fetchone()
     admin_id = admin[0] if admin else None
 
-    overrides = [
-        # (user_email, permission_key, access_level)
-        ("orgadmin@demo.local", "users", "write"),
-        ("orgadmin@demo.local", "organizations", "write"),
-        ("user1@demo.local", "settings", "write"),
-    ]
-
-    for email, pkey, level in overrides:
+    for email, pkey, level in USER_PERMISSIONS:
         conn.execute(
             text(
                 """
@@ -347,4 +451,4 @@ def _seed_user_permissions(conn):
             {"email": email, "pkey": pkey, "level": level, "admin_id": admin_id},
         )
 
-    logger.info("Demo seed: %d user permission overrides", len(overrides))
+    logger.info("Demo seed: %d user permission overrides", len(USER_PERMISSIONS))

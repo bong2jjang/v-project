@@ -125,7 +125,7 @@ services:
       mailhog:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/health"]
       interval: 60s
       timeout: 10s
       retries: 3
@@ -221,12 +221,13 @@ services:
       context: .
       dockerfile: apps/v-platform-portal/backend/Dockerfile
     container_name: v-project-portal-backend
+    restart: unless-stopped
     ports:
       - "8080:8000"
     volumes:
       - ./apps/v-platform-portal/backend:/app
       - ./platform/backend:/platform/backend
-      - backend_data:/app/data
+      - portal_backend_data:/app/data
     environment:
       - PYTHONPATH=/app:/platform/backend
       - DATABASE_DIR=/app/data
@@ -237,6 +238,10 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-platform-portal}
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5180
       # SSO 콜백 루트 (MS OAuth redirect_uri 생성에 사용)
       - BACKEND_URL=${PORTAL_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8080}
@@ -251,6 +256,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     profiles:
       - portal
     networks:
@@ -261,6 +277,7 @@ services:
       context: .
       dockerfile: apps/v-platform-portal/frontend/Dockerfile.dev
     container_name: v-project-portal-frontend
+    restart: unless-stopped
     ports:
       - "5180:5173"
     volumes:
@@ -286,6 +303,11 @@ services:
         hard: 65536
     depends_on:
       - portal-backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     profiles:
       - portal
     networks:
@@ -297,12 +319,13 @@ services:
       context: .
       dockerfile: apps/v-platform-template/backend/Dockerfile
     container_name: v-project-template-backend
+    restart: unless-stopped
     ports:
       - "8002:8000"
     volumes:
       - ./apps/v-platform-template/backend:/app
       - ./platform/backend:/platform/backend
-      - backend_data:/app/data
+      - template_backend_data:/app/data
     environment:
       - PYTHONPATH=/app:/platform/backend
       - DATABASE_DIR=/app/data
@@ -313,7 +336,10 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-platform-template}
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5174
       # SSO 콜백 루트 (MS OAuth redirect_uri 생성에 사용)
       - BACKEND_URL=${TEMPLATE_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8002}
@@ -327,6 +353,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     profiles:
       - template
     networks:
@@ -337,6 +374,7 @@ services:
       context: .
       dockerfile: apps/v-platform-template/frontend/Dockerfile.dev
     container_name: v-project-template-frontend
+    restart: unless-stopped
     ports:
       - "5174:5173"
     volumes:
@@ -362,6 +400,11 @@ services:
         hard: 65536
     depends_on:
       - template-backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     profiles:
       - template
     networks:
@@ -375,6 +418,10 @@ networks:
 # 볼륨 정의
 volumes:
   backend_data:
+    driver: local
+  portal_backend_data:
+    driver: local
+  template_backend_data:
     driver: local
   postgres_data:
     driver: local

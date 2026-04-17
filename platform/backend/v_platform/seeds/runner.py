@@ -50,22 +50,28 @@ def run_seeds(level: str = "base", reset: bool = False) -> bool:
 
 
 def _reset_demo_data(conn):
-    """demo 레벨 데이터만 삭제 (base 데이터는 유지)."""
+    """demo 레벨 데이터만 삭제 (base 데이터는 유지).
+
+    demo seed가 생성하는 대상만 정확히 지워야 admin@example.com 같은 base 데이터가 보존된다.
+    """
+    from v_platform.seeds.demo import CUSTOM_GROUP_NAMES, DEMO_USER_EMAILS
+
     logger.info("Resetting demo data...")
 
-    # demo 사용자 삭제 (email이 @test.com 또는 demo 태그)
+    # demo seed가 생성한 사용자 삭제
+    # (base의 admin@example.com은 이 목록에 없으므로 안전)
     conn.execute(
-        text(
-            "DELETE FROM users WHERE email LIKE '%@test.com' OR email LIKE '%@demo.local'"
-        )
+        text("DELETE FROM users WHERE email = ANY(:emails)"),
+        {"emails": DEMO_USER_EMAILS},
     )
 
-    # demo 부서 삭제 (is_seed_demo 마커 — 회사에 속한 부서 중 시드가 아닌 것)
-    # 커스텀 권한그룹 삭제 (is_default=FALSE이면서 migration이 아닌 것)
+    # 커스텀 권한그룹 삭제 (is_default=FALSE이면서 demo seed가 만든 이름)
     conn.execute(
         text(
-            "DELETE FROM permission_groups WHERE is_default = FALSE AND name LIKE '데모%'"
-        )
+            "DELETE FROM permission_groups "
+            "WHERE is_default = FALSE AND name = ANY(:names)"
+        ),
+        {"names": CUSTOM_GROUP_NAMES},
     )
 
     logger.info("Demo data cleaned")
