@@ -12,6 +12,11 @@ import { authLogger } from "../lib/utils/authLogger";
 // 자동 갱신 타이머 참조 (전역)
 let refreshTimerId: ReturnType<typeof setTimeout> | null = null;
 
+// 토큰 갱신 진행 중 Promise (race condition 방지 — 모든 refresh 경로가 공유)
+// scheduleTokenRefresh 타이머, TokenExpiryManager auto-extend, axios interceptor 401 핸들러가
+// 동시 호출되어도 백엔드 /api/auth/refresh는 한 번만 발사됨
+let refreshInFlightPromise: Promise<void> | null = null;
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -177,37 +182,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   /**
    * 토큰 갱신
+   *
+   * 동시 호출되면 진행 중인 Promise를 재사용 (race condition 방지).
+   * 실패 시 로그아웃은 호출자가 결정 (axios interceptor는 재시도 카운터를 가짐).
    */
   refreshToken: async () => {
+    // 이미 진행 중이면 해당 Promise 재사용
+    if (refreshInFlightPromise) {
+      authLogger.logTokenEvent(
+        "refreshToken() - reusing in-flight promise (dedup)",
+      );
+      return refreshInFlightPromise;
+    }
+
     authLogger.logTokenEvent("refreshToken() called from store");
 
-    try {
-      const response = await authApi.refreshToken();
+    refreshInFlightPromise = (async () => {
+      try {
+        const response = await authApi.refreshToken();
 
-      authApi.saveToken(response.access_token, response.expires_at);
-      authApi.saveUser(response.user);
+        authApi.saveToken(response.access_token, response.expires_at);
+        authApi.saveUser(response.user);
 
-      const expiresAt = new Date(response.expires_at);
+        const expiresAt = new Date(response.expires_at);
 
-      set({
-        user: response.user,
-        token: response.access_token,
-        tokenExpiresAt: expiresAt,
-        isAuthenticated: true,
-      });
+        set({
+          user: response.user,
+          token: response.access_token,
+          tokenExpiresAt: expiresAt,
+          isAuthenticated: true,
+        });
 
-      authLogger.logTokenEvent("Store token refreshed successfully", {
-        expiresAt: expiresAt.toISOString(),
-      });
+        authLogger.logTokenEvent("Store token refreshed successfully", {
+          expiresAt: expiresAt.toISOString(),
+        });
 
-      // 자동 토큰 갱신 다시 예약
-      get().scheduleTokenRefresh(expiresAt);
-    } catch (error) {
-      authLogger.logError("Store token refresh failed", error);
-      // 갱신 실패 시 로그아웃
-      await get().logout();
-      throw error;
-    }
+        // 자동 토큰 갱신 다시 예약
+        get().scheduleTokenRefresh(expiresAt);
+      } catch (error) {
+        authLogger.logError("Store token refresh failed", error);
+        throw error;
+      } finally {
+        refreshInFlightPromise = null;
+      }
+    })();
+
+    return refreshInFlightPromise;
   },
 
   /**
@@ -216,7 +236,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadUserFromStorage: () => {
     // SSO Relay 진행 중이면 중복 실행 방지 (React StrictMode 이중 마운트)
     if (get().ssoRelayPending) {
-      authLogger.logAuthState("SSO relay already pending, skipping duplicate call");
+      authLogger.logAuthState(
+        "SSO relay already pending, skipping duplicate call",
+      );
       return;
     }
 
@@ -314,13 +336,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
 
         // 백그라운드로 최신 유저 정보 동기화 (아바타 등 변경사항 반영)
-        authApi.getCurrentUser().then((freshUser) => {
-          authApi.saveUser(freshUser);
-          set({ user: freshUser });
-          authLogger.logAuthState("User data synced from server");
-        }).catch(() => {
-          // 네트워크 에러 등은 무시 (이미 localStorage 데이터로 동작 중)
-        });
+        authApi
+          .getCurrentUser()
+          .then((freshUser) => {
+            authApi.saveUser(freshUser);
+            set({ user: freshUser });
+            authLogger.logAuthState("User data synced from server");
+          })
+          .catch(() => {
+            // 네트워크 에러 등은 무시 (이미 localStorage 데이터로 동작 중)
+          });
       }
     } else {
       authLogger.logAuthState("No user found in storage");

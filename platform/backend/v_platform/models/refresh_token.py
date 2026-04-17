@@ -39,6 +39,8 @@ class RefreshToken(Base):
     # 만료 및 상태
     expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     is_revoked = Column(Boolean, default=False, nullable=False, index=True)
+    # Rotation grace period 판정용 — is_revoked=True로 전환된 시각
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
 
     # 타임스탬프
     created_at = Column(

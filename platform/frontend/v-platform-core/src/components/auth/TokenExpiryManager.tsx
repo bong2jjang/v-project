@@ -31,8 +31,11 @@ export function TokenExpiryManager({ config }: TokenExpiryManagerProps) {
 
   // 시스템 알림 상태 조회 — 세션 카테고리가 앱에서 비활성이면 알림 억제
   // 주기적으로 재확인하여 관리자가 비활성화한 경우 반영
+  // 가드: 로그인 페이지/비인증 상태에서는 호출하지 않음 (401 폭포 방지)
   useEffect(() => {
     const checkStatus = () => {
+      if (window.location.pathname.includes("/login")) return;
+      if (!localStorage.getItem("token")) return;
       getSystemNotificationStatus()
         .then((statuses) => {
           const sessionStatus = statuses.find((s) => s.category === "session");

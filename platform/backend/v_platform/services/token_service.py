@@ -25,6 +25,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 REFRESH_TOKEN_REMEMBER_DAYS = 30
 
+# Token rotation grace period — 방금 rotate된 토큰의 재사용을 공격으로 간주하지 않음
+# 멀티탭 동시 refresh, 네트워크 재시도 등 race condition 허용
+TOKEN_ROTATION_GRACE_SECONDS = 10
+
 
 class TokenService:
     """Token 관리 서비스"""
@@ -156,7 +160,19 @@ class TokenService:
 
         # 무효화 여부 확인
         if db_token.is_revoked:
-            # 재사용 공격 감지! 사용자의 모든 토큰 무효화
+            # Grace period 판정: 방금 rotate된 토큰이면 race condition으로 간주
+            # (멀티탭 동시 refresh, 네트워크 재시도 등)
+            revoked_at = db_token.revoked_at
+            if revoked_at is not None:
+                if revoked_at.tzinfo is None:
+                    revoked_at = revoked_at.replace(tzinfo=timezone.utc)
+                elapsed = (datetime.now(timezone.utc) - revoked_at).total_seconds()
+                if elapsed < TOKEN_ROTATION_GRACE_SECONDS:
+                    # 최근 rotate — 공격 아님, 전체 revoke 건너뜀
+                    # 클라이언트는 이미 발급된 새 토큰을 사용해야 함
+                    raise ValueError("Token recently rotated - use the new token")
+            # revoked_at이 NULL(오래된 데이터) 또는 grace period 경과 —
+            # 진짜 재사용 공격으로 간주, 모든 토큰 무효화
             TokenService.revoke_all_tokens(db, db_token.user_id)
             raise ValueError("Token reuse detected - all tokens revoked")
 
@@ -203,6 +219,7 @@ class TokenService:
 
         # 3. 기존 토큰 무효화 (Token Rotation)
         db_token.is_revoked = True
+        db_token.revoked_at = datetime.now(timezone.utc)
         db.commit()
 
         # 4. 새 Access Token 생성
@@ -240,6 +257,7 @@ class TokenService:
         db_token = db.query(RefreshToken).filter_by(token_hash=token_hash).first()
         if db_token:
             db_token.is_revoked = True
+            db_token.revoked_at = datetime.now(timezone.utc)
             db.commit()
 
     @staticmethod
@@ -257,7 +275,12 @@ class TokenService:
         count = (
             db.query(RefreshToken)
             .filter_by(user_id=user_id, is_revoked=False)
-            .update({"is_revoked": True})
+            .update(
+                {
+                    "is_revoked": True,
+                    "revoked_at": datetime.now(timezone.utc),
+                }
+            )
         )
 
         db.commit()
@@ -338,6 +361,7 @@ class TokenService:
             return False
 
         token.is_revoked = True
+        token.revoked_at = datetime.now(timezone.utc)
         db.commit()
         return True
 

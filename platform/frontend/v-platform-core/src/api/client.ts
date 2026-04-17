@@ -17,10 +17,7 @@ import { authLogger } from "../lib/utils/authLogger";
 // Docker 환경: Vite proxy가 /api → backend로 전달하므로 빈 문자열 사용
 // 로컬 환경: VITE_API_URL로 명시 지정
 const _envUrl = import.meta.env.VITE_API_URL;
-const API_BASE_URL =
-  _envUrl && _envUrl.length > 0
-    ? _envUrl
-    : ""; // 빈 문자열 = 같은 origin (Vite proxy 사용)
+const API_BASE_URL = _envUrl && _envUrl.length > 0 ? _envUrl : ""; // 빈 문자열 = 같은 origin (Vite proxy 사용)
 
 // 401 리다이렉트 플래그 (중복 리다이렉트 방지)
 let isRedirecting = false;
@@ -268,24 +265,17 @@ function createApiClient(): AxiosInstance {
 
           refreshPromise = (async () => {
             try {
-              // 토큰 갱신
-              authLogger.logTokenEvent("Calling /api/auth/refresh");
-              const response = await apiClient.post<{
-                access_token: string;
-                expires_at: string;
-                user: unknown;
-              }>("/api/auth/refresh", {});
-
-              // 새 토큰 및 사용자 정보 저장
-              const { access_token, expires_at, user } = response.data;
-              localStorage.setItem("token", access_token);
-              localStorage.setItem("token_expires_at", expires_at);
-              localStorage.setItem("user", JSON.stringify(user));
+              // 토큰 갱신 — auth store에 위임 (모든 refresh 경로가 하나의 in-flight Promise 공유)
+              // scheduleTokenRefresh 타이머, TokenExpiryManager auto-extend, 여기 interceptor가
+              // 동시 호출되어도 백엔드 /api/auth/refresh는 한 번만 호출됨 → refresh token 재사용 방지
+              authLogger.logTokenEvent(
+                "Delegating refresh to auth store (shared dedup)",
+              );
+              const { useAuthStore } = await import("../stores/auth");
+              await useAuthStore.getState().refreshToken();
 
               authLogger.logTokenEvent("Token refreshed successfully", {
-                expiresAt: expires_at,
                 hasCsrfCookie: !!getCsrfToken(),
-                userSaved: !!user,
               });
 
               // Refresh 성공 시 실패 카운터 리셋
