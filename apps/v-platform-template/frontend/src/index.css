@@ -256,7 +256,7 @@
   }
 
   .page-container {
-    @apply max-w-content mx-auto px-4 sm:px-6 lg:px-8 pt-section-gap pb-page-y;
+    @apply max-w-content mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-5 sm:pt-section-gap sm:pb-page-y;
   }
 
   .card-base {

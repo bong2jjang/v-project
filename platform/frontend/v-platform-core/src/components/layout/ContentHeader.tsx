@@ -22,8 +22,8 @@ export function ContentHeader({
   globalScope,
 }: ContentHeaderProps) {
   return (
-    <div className="max-w-content mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-      <div className="bg-brand-600 dark:bg-surface-card rounded-card border border-brand-700 dark:border-line shadow-card px-6 py-5">
+    <div className="max-w-content mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <div className="bg-brand-600 dark:bg-surface-card rounded-card border border-brand-700 dark:border-line shadow-card px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">

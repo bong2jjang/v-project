@@ -248,8 +248,8 @@ function ContentWidthCard({
 function DefaultWidthPreview() {
   return (
     <div className="w-full h-16 rounded bg-surface-page border border-line p-1.5 flex flex-col gap-1">
-      <div className="h-2 rounded-sm bg-brand-600 dark:bg-surface-raised mx-12" />
-      <div className="flex-1 rounded-sm bg-surface-card border border-line mx-12" />
+      <div className="h-2 rounded-sm bg-brand-600 dark:bg-surface-raised mx-4 sm:mx-8 md:mx-12" />
+      <div className="flex-1 rounded-sm bg-surface-card border border-line mx-4 sm:mx-8 md:mx-12" />
     </div>
   );
 }
