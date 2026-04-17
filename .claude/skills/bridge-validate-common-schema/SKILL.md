@@ -1,6 +1,6 @@
 ---
-name: validate-common-schema
-description: CommonMessage 스키마 변환 검증 - Pydantic 모델 유효성, 변환 로직 정확성 확인
+name: bridge-validate-common-schema
+description: CommonMessage 스키마 변환 검증 - Pydantic 모델 유효성, 변환 로직 정확성 확인 (v-channel-bridge 앱 전용)
 ---
 
 # CommonMessage 스키마 검증 스킬

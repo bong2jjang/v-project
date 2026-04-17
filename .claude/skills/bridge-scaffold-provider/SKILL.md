@@ -1,6 +1,6 @@
 ---
-name: scaffold-provider
-description: Provider 스캐폴딩 - 기본 구조, 템플릿 코드, 테스트 파일 자동 생성
+name: bridge-scaffold-provider
+description: Provider 스캐폴딩 - 기본 구조, 템플릿 코드, 테스트 파일 자동 생성 (v-channel-bridge 앱 전용)
 ---
 
 # Provider 스캐폴딩 스킬

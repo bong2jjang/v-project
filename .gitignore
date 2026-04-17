@@ -86,3 +86,8 @@ dist-ssr/
 /frontend/test-results/
 /frontend/playwright-report/
 /frontend/playwright/.cache/
+
+# Claude Code 런타임/로컬 상태 (세션별 락·개인 설정)
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+.claude/docs-sync-marker

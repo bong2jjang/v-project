@@ -1,6 +1,6 @@
 ---
-name: add-route-rule
-description: Redis 라우팅 룰 추가 - 양방향 룰 자동 생성, 형식 검증, 동적 업데이트
+name: bridge-add-route-rule
+description: Redis 라우팅 룰 추가 - 양방향 룰 자동 생성, 형식 검증, 동적 업데이트 (v-channel-bridge 앱 전용)
 ---
 
 # 라우팅 룰 추가 스킬
