@@ -210,6 +210,8 @@ function LayoutContent({ children }: LayoutContentProps) {
                         badge="Admin"
                         badgeVariant="warning"
                         expanded={true}
+                        collapsible
+                        defaultCollapsed
                       >
                         {mobileAdminItems
                           .filter(
@@ -342,7 +344,7 @@ function LayoutContent({ children }: LayoutContentProps) {
           <button
             type="button"
             onClick={togglePageWidth}
-            className={`absolute top-2 right-3 z-10 p-1.5 rounded-button transition-colors ${
+            className={`hidden md:block absolute top-2 right-3 z-10 p-1.5 rounded-button transition-colors ${
               pageWidthOverride !== null
                 ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-50/10"
                 : "text-content-tertiary hover:text-content-secondary hover:bg-surface-raised"

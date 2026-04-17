@@ -1147,33 +1147,35 @@ export default function MenuManagement() {
                   )}
                 </div>
               ) : (
-                <div className="divide-y divide-line">
-                  {buildMenuTree(grouped[section]).map((node, idx) => (
-                    <div key={node.menu.id}>
-                      {/* 최상위 항목 또는 그룹 헤더 */}
-                      {renderMenuRow(
-                        node.menu,
-                        idx,
-                        section,
-                        false,
-                        node.menu.menu_type === "menu_group",
-                      )}
-                      {/* 그룹 하위 메뉴 */}
-                      {node.menu.menu_type === "menu_group" &&
-                        expandedGroups.has(node.menu.permission_key) &&
-                        node.children.map((child, childIdx) =>
-                          renderMenuRow(
-                            child,
-                            idx,
-                            section,
-                            true,
-                            false,
-                            childIdx,
-                            node.menu.permission_key,
-                          ),
+                <div className="overflow-x-auto">
+                  <div className="divide-y divide-line min-w-[720px]">
+                    {buildMenuTree(grouped[section]).map((node, idx) => (
+                      <div key={node.menu.id}>
+                        {/* 최상위 항목 또는 그룹 헤더 */}
+                        {renderMenuRow(
+                          node.menu,
+                          idx,
+                          section,
+                          false,
+                          node.menu.menu_type === "menu_group",
                         )}
-                    </div>
-                  ))}
+                        {/* 그룹 하위 메뉴 */}
+                        {node.menu.menu_type === "menu_group" &&
+                          expandedGroups.has(node.menu.permission_key) &&
+                          node.children.map((child, childIdx) =>
+                            renderMenuRow(
+                              child,
+                              idx,
+                              section,
+                              true,
+                              false,
+                              childIdx,
+                              node.menu.permission_key,
+                            ),
+                          )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </TabsContent>
