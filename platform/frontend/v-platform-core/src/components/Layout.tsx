@@ -20,6 +20,8 @@ import {
   RefreshCw,
   Maximize2,
   Minimize2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { SidebarProvider, useSidebar } from "../hooks/useSidebar";
 import { Sidebar } from "./layout/Sidebar";
@@ -86,6 +88,9 @@ function LayoutContent({ children }: LayoutContentProps) {
   // 페이지별 임시 너비 오버라이드
   const { contentWidth } = useTheme();
   const [pageWidthOverride, setPageWidthOverride] = useState<ContentWidth | null>(null);
+
+  // 모바일 프로필 메뉴 접기/펴기 (기본 접힘)
+  const [profileMenuExpanded, setProfileMenuExpanded] = useState(false);
 
   const effectiveWidth = pageWidthOverride ?? contentWidth;
 
@@ -210,8 +215,6 @@ function LayoutContent({ children }: LayoutContentProps) {
                         badge="Admin"
                         badgeVariant="warning"
                         expanded={true}
-                        collapsible
-                        defaultCollapsed
                       >
                         {mobileAdminItems
                           .filter(
@@ -243,33 +246,79 @@ function LayoutContent({ children }: LayoutContentProps) {
                 {/* Bottom: Settings + User Actions */}
                 {user && (
                   <div className="flex-shrink-0 border-t border-line">
-                    {/* User Info */}
-                    <div className="px-4 py-3 border-b border-line">
-                      <div className="flex items-center gap-3">
-                        {user.avatar_url ? (
-                          <img
-                            src={user.avatar_url}
-                            alt={user.username}
-                            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-content-inverse font-medium text-body-base flex-shrink-0">
-                            {user.username.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-body-sm font-medium text-content-primary truncate">
-                            {user.username}
-                          </p>
-                          <p className="text-caption text-content-secondary truncate">
-                            {user.email}
-                          </p>
-                          <p className="text-caption text-content-tertiary">
-                            {getRoleDisplayName(user.role)} 권한
-                          </p>
+                    {/* User Info — 클릭 시 프로필 메뉴 토글 */}
+                    <button
+                      type="button"
+                      onClick={() => setProfileMenuExpanded((prev) => !prev)}
+                      aria-expanded={profileMenuExpanded}
+                      className="w-full px-4 py-3 border-b border-line flex items-center gap-3 hover:bg-surface-raised transition-colors text-left"
+                    >
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.username}
+                          className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-content-inverse font-medium text-body-base flex-shrink-0">
+                          {user.username.charAt(0).toUpperCase()}
                         </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-body-sm font-medium text-content-primary truncate">
+                          {user.username}
+                        </p>
+                        <p className="text-caption text-content-secondary truncate">
+                          {user.email}
+                        </p>
+                        <p className="text-caption text-content-tertiary">
+                          {getRoleDisplayName(user.role)} 권한
+                        </p>
                       </div>
-                    </div>
+                      {profileMenuExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-content-tertiary flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-content-tertiary flex-shrink-0" />
+                      )}
+                    </button>
+
+                    {/* Profile Actions — 접이식 (프로필/비밀번호/투어) */}
+                    {profileMenuExpanded && (
+                      <div className="border-b border-line bg-surface-raised/30">
+                        <button
+                          onClick={() => {
+                            closeMobile();
+                            navigate("/profile");
+                          }}
+                          className="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 text-body-sm text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
+                        >
+                          <User className="w-4 h-4" />
+                          프로필
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            closeMobile();
+                            navigate("/password-change");
+                          }}
+                          className="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 text-body-sm text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                          비밀번호 변경
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            closeMobile();
+                            startMainTour();
+                          }}
+                          className="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 text-body-sm text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          투어 다시 보기
+                        </button>
+                      </div>
+                    )}
 
                     {/* Settings Link */}
                     {mobileShowSettings && (
@@ -282,40 +331,6 @@ function LayoutContent({ children }: LayoutContentProps) {
                         설정
                       </Link>
                     )}
-
-                    {/* User Action Buttons */}
-                    <button
-                      onClick={() => {
-                        closeMobile();
-                        navigate("/profile");
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
-                    >
-                      <User className="w-5 h-5" />
-                      프로필
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        closeMobile();
-                        navigate("/password-change");
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors"
-                    >
-                      <KeyRound className="w-5 h-5" />
-                      비밀번호 변경
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        closeMobile();
-                        startMainTour();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-content-secondary hover:bg-surface-raised hover:text-content-primary transition-colors border-t border-line"
-                    >
-                      <Sparkles className="w-5 h-5" />
-                      투어 다시 보기
-                    </button>
 
                     <button
                       onClick={handleMobileLogout}
