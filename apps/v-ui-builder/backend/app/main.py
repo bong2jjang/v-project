@@ -16,6 +16,10 @@ from v_platform.services.websocket_manager import manager
 from v_platform.services.event_broadcaster import EventBroadcaster
 import v_platform.services.event_broadcaster as broadcaster_module
 
+# Base.metadata 에 ui_builder_* 테이블을 등록하기 위해 모델 모듈을 명시적으로 임포트.
+# v-platform 의 _run_migrations() 가 create_all 을 호출하기 전에 완료되어야 한다.
+from app import models  # noqa: F401
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)-8s %(name)s %(message)s")
 logger = structlog.get_logger()
 
@@ -45,14 +49,14 @@ platform = PlatformApp(
     lifespan=lifespan,
 )
 
-# ── 앱 전용 라우터 등록 (P1.1 단계에서 추가) ──
-# from app.api import projects, chat, artifacts, llm_settings
-# platform.register_app_routers(
-#     projects.router,
-#     chat.router,
-#     artifacts.router,
-#     llm_settings.router,
-# )
+# ── 앱 전용 라우터 등록 ──
+from app.api import chat, llm, projects
+
+platform.register_app_routers(
+    projects.router,
+    chat.router,
+    llm.router,
+)
 
 app = platform.fastapi
 
