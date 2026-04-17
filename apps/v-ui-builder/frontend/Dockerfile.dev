@@ -1,0 +1,20 @@
+# pnpm Workspace Development Environment
+FROM node:18-alpine
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apk add --no-cache wget
+
+WORKDIR /workspace
+
+COPY .npmrc pnpm-workspace.yaml package.json ./
+COPY platform/frontend/v-platform-core/package.json ./platform/frontend/v-platform-core/
+COPY apps/v-ui-builder/frontend/package.json ./apps/v-ui-builder/frontend/
+COPY pnpm-lock.yaml* ./
+
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --filter v-ui-builder-frontend... --no-frozen-lockfile --prefer-offline
+
+WORKDIR /workspace/apps/v-ui-builder/frontend
+
+EXPOSE 5173
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]
