@@ -101,7 +101,28 @@
       "Read(./.DS_Store)",
       "Read(./.idea/**)",
       "Read(./.vscode/**)",
-      "Read(./.tmp/**)"
+      "Read(./.tmp/**)",
+      "Read(./**/node_modules/**)",
+      "Read(./**/dist/**)",
+      "Read(./**/build/**)",
+      "Read(./**/coverage/**)",
+      "Read(./**/*.min.js)",
+      "Read(./**/*.min.css)",
+      "Read(./**/*.map)",
+      "Read(./**/package-lock.json)",
+      "Read(./**/yarn.lock)",
+      "Read(./**/pnpm-lock.yaml)",
+      "Read(./**/poetry.lock)",
+      "Read(./**/uv.lock)",
+      "Read(./**/*.log)",
+      "Read(./**/logs/**)",
+      "Read(./docusaurus/build/**)",
+      "Read(./docusaurus/.docusaurus/**)",
+      "Read(./backups/**)",
+      "Read(./monitoring/data/**)",
+      "Read(./**/*.sqlite)",
+      "Read(./**/*.db)",
+      "Read(./**/*.bak)"
     ]
   }
 }
