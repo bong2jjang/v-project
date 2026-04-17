@@ -15,11 +15,7 @@ import type {
   OrgDeptNode,
   OrgUserBrief,
 } from "../api/types";
-import {
-  isAdminRole,
-  isSystemAdmin,
-  getRoleDisplayName,
-} from "../api/types";
+import { isAdminRole, isSystemAdmin, getRoleDisplayName } from "../api/types";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
@@ -1305,8 +1301,8 @@ export default function UserManagement() {
                 )}
               </Select>
               <p className="mt-1 text-xs text-content-tertiary">
-                기본 역할에 따라 접근 가능한 기본 메뉴 권한이 결정됩니다.
-                앱별 세부 권한은 각 앱의 역할 그룹 관리에서 설정합니다.
+                기본 역할에 따라 접근 가능한 기본 메뉴 권한이 결정됩니다. 앱별
+                세부 권한은 각 앱의 권한 그룹 관리에서 설정합니다.
               </p>
             </div>
             {changingRoleUser && (
@@ -1414,7 +1410,8 @@ export default function UserManagement() {
                 )}
               </Select>
               <p className="mt-1 text-xs text-content-tertiary">
-                역할에 따라 접근 가능한 메뉴 권한이 결정됩니다. 앱별 권한 그룹은 권한 그룹 관리에서 설정합니다.
+                역할에 따라 접근 가능한 메뉴 권한이 결정됩니다. 앱별 권한 그룹은
+                권한 그룹 관리에서 설정합니다.
               </p>
             </div>
             <div>

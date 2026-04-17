@@ -848,6 +848,7 @@ function LayoutContent({ children }: LayoutContentProps) {
 - [ ] 버튼은 `btn` + `btn-primary`/`btn-secondary`/`btn-danger` 사용
 - [ ] 하드코딩 색상 없이 시맨틱 토큰만 사용
 - [ ] 반응형 레이아웃 (모바일 → 데스크톱) 확인
+- [ ] 정보 밀도가 높은 목록·테이블은 모바일에서 축소 대신 **가로 스크롤** 적용 (DESIGN_SYSTEM.md §10.4 참조)
 - [ ] 다크 모드에서 UI 확인
 - [ ] 라우트를 `App.tsx`에 등록
 - [ ] DB `menu_items`에 메뉴 항목 추가 (사이드바에 표시할 경우)

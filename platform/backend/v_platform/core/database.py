@@ -62,6 +62,7 @@ def init_db():
     from v_platform.models import permission_group, company, department  # noqa: F401
     from v_platform.models import user_oauth_token  # noqa: F401
     from v_platform.models import notification  # noqa: F401
+    from v_platform.models import uploaded_file  # noqa: F401
 
     # App models (lazy — only if available)
     try:

@@ -1,8 +1,8 @@
 /**
- * PermissionGroups 페이지 — 역할 그룹 관리
+ * PermissionGroups 페이지 — 권한 그룹 관리
  *
- * 역할 그룹 CRUD, 그룹별 메뉴 권한 설정, 소속 사용자 관리
- * 탭 1: 역할 그룹 기준 — 그룹을 선택하여 소속 사용자 관리
+ * 권한 그룹 CRUD, 그룹별 메뉴 권한 설정, 소속 사용자 관리
+ * 탭 1: 권한 그룹 기준 — 그룹을 선택하여 소속 사용자 관리
  * 탭 2: 사용자 기준 — 사용자를 선택하여 소속 그룹 관리
  */
 
@@ -33,7 +33,12 @@ import { Alert } from "../../components/ui/Alert";
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/Tabs";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "../../components/ui/Tabs";
 import { AccessLevelRadio } from "../../components/admin/permissions/AccessLevelRadio";
 import type {
   PermissionGroup,
@@ -221,13 +226,13 @@ export default function PermissionGroups() {
           name: formName.trim(),
           description: formDesc.trim() || undefined,
         });
-        setSuccess("역할 그룹이 수정되었습니다");
+        setSuccess("권한 그룹이 수정되었습니다");
       } else {
         await groupApi.createGroup({
           name: formName.trim(),
           description: formDesc.trim() || undefined,
         });
-        setSuccess("역할 그룹이 생성되었습니다");
+        setSuccess("권한 그룹이 생성되었습니다");
       }
       setFormModalOpen(false);
       fetchData();
@@ -240,10 +245,10 @@ export default function PermissionGroups() {
 
   const handleDelete = async (group: PermissionGroup) => {
     if (group.is_default) return;
-    if (!confirm(`"${group.name}" 역할 그룹을 삭제하시겠습니까?`)) return;
+    if (!confirm(`"${group.name}" 권한 그룹을 삭제하시겠습니까?`)) return;
     try {
       await groupApi.deleteGroup(group.id);
-      setSuccess("역할 그룹이 삭제되었습니다");
+      setSuccess("권한 그룹이 삭제되었습니다");
       fetchData();
     } catch {
       setError("삭제에 실패했습니다");
@@ -301,7 +306,7 @@ export default function PermissionGroups() {
         }))
         .filter((g) => g.access_level !== "none");
       await groupApi.setGroupGrants(group.id, grants);
-      setSuccess("역할 그룹 권한이 저장되었습니다");
+      setSuccess("권한 그룹 권한이 저장되었습니다");
       setGrantChanges(new Map());
       fetchData();
     } catch {
@@ -552,8 +557,8 @@ export default function PermissionGroups() {
     return (
       <>
         <ContentHeader
-          title="역할 그룹"
-          description="역할 그룹 관리 및 메뉴 권한 템플릿 설정"
+          title="권한 그룹"
+          description="권한 그룹 관리 및 메뉴 권한 템플릿 설정"
         />
         <div className="page-container space-y-section-gap">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -567,8 +572,8 @@ export default function PermissionGroups() {
   return (
     <>
       <ContentHeader
-        title="역할 그룹"
-        description="역할 그룹 관리 및 메뉴 권한 템플릿 설정"
+        title="권한 그룹"
+        description="권한 그룹 관리 및 메뉴 권한 템플릿 설정"
       />
 
       <div className="page-container space-y-section-gap">
@@ -590,249 +595,246 @@ export default function PermissionGroups() {
           }}
         >
           <TabsList>
-            <TabsTrigger
-              value="users"
-              icon={<UserIcon className="w-4 h-4" />}
-            >
+            <TabsTrigger value="users" icon={<UserIcon className="w-4 h-4" />}>
               사용자 기준
             </TabsTrigger>
-            <TabsTrigger
-              value="groups"
-              icon={<Shield className="w-4 h-4" />}
-            >
-              역할 그룹 기준
+            <TabsTrigger value="groups" icon={<Shield className="w-4 h-4" />}>
+              권한 그룹 기준
             </TabsTrigger>
           </TabsList>
 
-          {/* ── 탭 1: 역할 그룹 기준 ── */}
+          {/* ── 탭 1: 권한 그룹 기준 ── */}
           <TabsContent value="groups">
             <div className="flex justify-end mb-4">
               <Button onClick={openCreateModal} disabled={!canEdit}>
                 <Plus className="w-4 h-4 mr-1.5" />
-                역할 그룹 추가
+                권한 그룹 추가
               </Button>
             </div>
 
-            <div className="space-y-3">
-              {groups.map((group) => (
-                <Card key={group.id}>
-                  <CardBody>
-                    {/* 그룹 헤더 */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-brand-50 dark:bg-brand-950">
-                          <Shield className="w-5 h-5 text-brand-600" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-content-primary">
-                              {group.name}
-                            </span>
-                            {group.is_default && (
-                              <Badge variant="default">
-                                <Lock className="w-3 h-3 mr-0.5" />
-                                기본
-                              </Badge>
-                            )}
-                            <Badge variant="info">
-                              {group.member_count}명
-                            </Badge>
+            {/* 모바일에서는 가로 스크롤로 카드 폭을 유지 (텍스트 겹침 방지) */}
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <div className="space-y-3 min-w-[720px]">
+                {groups.map((group) => (
+                  <Card key={group.id}>
+                    <CardBody>
+                      {/* 그룹 헤더 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-brand-50 dark:bg-brand-950">
+                            <Shield className="w-5 h-5 text-brand-600" />
                           </div>
-                          {group.description && (
-                            <p className="text-xs text-content-tertiary mt-0.5">
-                              {group.description}
-                            </p>
-                          )}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-content-primary">
+                                {group.name}
+                              </span>
+                              {group.is_default && (
+                                <Badge variant="default">
+                                  <Lock className="w-3 h-3 mr-0.5" />
+                                  기본
+                                </Badge>
+                              )}
+                              <Badge variant="info">
+                                {group.member_count}명
+                              </Badge>
+                            </div>
+                            {group.description && (
+                              <p className="text-xs text-content-tertiary mt-0.5">
+                                {group.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => toggleMembers(group.id)}
-                          icon={<Users className="w-3.5 h-3.5" />}
-                          hideTextOnMobile
-                          title="소속 사용자"
-                        >
-                          소속 사용자
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => toggleGrantEditor(group.id)}
-                          icon={
-                            expandedGroupId === group.id ? (
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            ) : (
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            )
-                          }
-                          hideTextOnMobile
-                          title="권한 설정"
-                        >
-                          권한 설정
-                        </Button>
-                        {!group.is_default && (
-                          <>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openEditModal(group)}
-                              disabled={!canEdit}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDelete(group)}
-                              disabled={!canEdit}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 권한 편집 패널 */}
-                    {expandedGroupId === group.id && (
-                      <div className="mt-4 border-t border-line pt-4">
-                        <div className="space-y-1">
-                          {(["basic", "admin", "custom"] as const).map(
-                            (section) => {
-                              const nodes = tree[section];
-                              if (nodes.length === 0) return null;
-                              return (
-                                <div key={section} className="mb-3">
-                                  <h4 className="text-[10px] font-semibold uppercase tracking-wider text-content-tertiary px-3 mb-1">
-                                    {SECTION_LABELS[section]}
-                                  </h4>
-                                  <div className="border-t border-line pt-1">
-                                    {nodes.map((n) =>
-                                      renderGrantRow(n, group, 0),
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            },
-                          )}
-                        </div>
-                        <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-line">
+                        <div className="flex items-center gap-2">
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => setGrantChanges(new Map())}
-                            disabled={!canEdit || grantChanges.size === 0}
+                            onClick={() => toggleMembers(group.id)}
+                            icon={<Users className="w-3.5 h-3.5" />}
+                            hideTextOnMobile
+                            title="소속 사용자"
                           >
-                            초기화
+                            소속 사용자
                           </Button>
                           <Button
-                            variant="primary"
+                            variant="secondary"
                             size="sm"
-                            onClick={() => handleGrantSave(group)}
-                            loading={grantSaving}
-                            disabled={!canEdit || grantChanges.size === 0}
+                            onClick={() => toggleGrantEditor(group.id)}
+                            icon={
+                              expandedGroupId === group.id ? (
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              ) : (
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              )
+                            }
+                            hideTextOnMobile
+                            title="권한 설정"
                           >
-                            권한 저장
+                            권한 설정
                           </Button>
+                          {!group.is_default && (
+                            <>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => openEditModal(group)}
+                                disabled={!canEdit}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDelete(group)}
+                                disabled={!canEdit}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    {/* 소속 사용자 패널 */}
-                    {membersGroupId === group.id && (
-                      <div className="mt-4 border-t border-line pt-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-medium text-content-primary">
-                            소속 사용자 ({members.length}명)
-                          </h4>
-                          {canEdit && (
+                      {/* 권한 편집 패널 */}
+                      {expandedGroupId === group.id && (
+                        <div className="mt-4 border-t border-line pt-4">
+                          <div className="space-y-1">
+                            {(["basic", "admin", "custom"] as const).map(
+                              (section) => {
+                                const nodes = tree[section];
+                                if (nodes.length === 0) return null;
+                                return (
+                                  <div key={section} className="mb-3">
+                                    <h4 className="text-[10px] font-semibold uppercase tracking-wider text-content-tertiary px-3 mb-1">
+                                      {SECTION_LABELS[section]}
+                                    </h4>
+                                    <div className="border-t border-line pt-1">
+                                      {nodes.map((n) =>
+                                        renderGrantRow(n, group, 0),
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                          <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-line">
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => openAddMemberModal(group.id)}
+                              onClick={() => setGrantChanges(new Map())}
+                              disabled={!canEdit || grantChanges.size === 0}
                             >
-                              <UserPlus className="w-3.5 h-3.5 mr-1" />
-                              사용자 추가
+                              초기화
                             </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleGrantSave(group)}
+                              loading={grantSaving}
+                              disabled={!canEdit || grantChanges.size === 0}
+                            >
+                              권한 저장
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 소속 사용자 패널 */}
+                      {membersGroupId === group.id && (
+                        <div className="mt-4 border-t border-line pt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-medium text-content-primary">
+                              소속 사용자 ({members.length}명)
+                            </h4>
+                            {canEdit && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => openAddMemberModal(group.id)}
+                              >
+                                <UserPlus className="w-3.5 h-3.5 mr-1" />
+                                사용자 추가
+                              </Button>
+                            )}
+                          </div>
+                          {members.length === 0 ? (
+                            <p className="text-sm text-content-tertiary py-4 text-center">
+                              소속 사용자가 없습니다
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {members.map((m) => (
+                                <div
+                                  key={m.user_id}
+                                  className="flex items-center gap-2 p-2 rounded-lg bg-surface-raised group"
+                                >
+                                  <div className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center flex-shrink-0">
+                                    {m.username.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-sm font-medium text-content-primary truncate">
+                                        {m.username}
+                                      </span>
+                                      <Badge
+                                        variant={
+                                          m.role === "system_admin" ||
+                                          m.role === "org_admin"
+                                            ? "warning"
+                                            : "info"
+                                        }
+                                      >
+                                        {getRoleDisplayName(m.role)}
+                                      </Badge>
+                                    </div>
+                                    <div className="text-xs text-content-tertiary truncate">
+                                      {m.email}
+                                    </div>
+                                  </div>
+                                  {canEdit && (
+                                    <button
+                                      onClick={() =>
+                                        handleRemoveMember(group.id, m.user_id)
+                                      }
+                                      className="p-1 rounded text-content-tertiary hover:text-status-error hover:bg-status-error/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                                      title="그룹에서 제거"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
-                        {members.length === 0 ? (
-                          <p className="text-sm text-content-tertiary py-4 text-center">
-                            소속 사용자가 없습니다
-                          </p>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {members.map((m) => (
-                              <div
-                                key={m.user_id}
-                                className="flex items-center gap-2 p-2 rounded-lg bg-surface-raised group"
-                              >
-                                <div className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center flex-shrink-0">
-                                  {m.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-medium text-content-primary truncate">
-                                      {m.username}
-                                    </span>
-                                    <Badge
-                                      variant={
-                                        m.role === "system_admin" ||
-                                        m.role === "org_admin"
-                                          ? "warning"
-                                          : "info"
-                                      }
-                                    >
-                                      {getRoleDisplayName(m.role)}
-                                    </Badge>
-                                  </div>
-                                  <div className="text-xs text-content-tertiary truncate">
-                                    {m.email}
-                                  </div>
-                                </div>
-                                {canEdit && (
-                                  <button
-                                    onClick={() =>
-                                      handleRemoveMember(group.id, m.user_id)
-                                    }
-                                    className="p-1 rounded text-content-tertiary hover:text-status-error hover:bg-status-error/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-                                    title="그룹에서 제거"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardBody>
-                </Card>
-              ))}
+                      )}
+                    </CardBody>
+                  </Card>
+                ))}
 
-              {groups.length === 0 && (
-                <Card>
-                  <CardBody>
-                    <div className="text-center py-8 text-content-tertiary">
-                      <Shield className="w-10 h-10 mx-auto mb-2" />
-                      <p>등록된 역할 그룹이 없습니다</p>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="mt-3"
-                        onClick={openCreateModal}
-                        disabled={!canEdit}
-                      >
-                        첫 역할 그룹 추가
-                      </Button>
-                    </div>
-                  </CardBody>
-                </Card>
-              )}
+                {groups.length === 0 && (
+                  <Card>
+                    <CardBody>
+                      <div className="text-center py-8 text-content-tertiary">
+                        <Shield className="w-10 h-10 mx-auto mb-2" />
+                        <p>등록된 권한 그룹이 없습니다</p>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="mt-3"
+                          onClick={openCreateModal}
+                          disabled={!canEdit}
+                        >
+                          첫 권한 그룹 추가
+                        </Button>
+                      </div>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
             </div>
           </TabsContent>
 
@@ -1060,7 +1062,7 @@ export default function PermissionGroups() {
                                   </div>
                                 ) : userGroups.length === 0 ? (
                                   <p className="text-sm text-content-tertiary py-2">
-                                    소속된 역할 그룹이 없습니다
+                                    소속된 권한 그룹이 없습니다
                                   </p>
                                 ) : (
                                   <div className="flex flex-wrap gap-2">
@@ -1131,8 +1133,8 @@ export default function PermissionGroups() {
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-content-secondary">
-                        전체{" "}
-                        <span className="font-medium">{userTabTotal}</span>명 중{" "}
+                        전체 <span className="font-medium">{userTabTotal}</span>
+                        명 중{" "}
                         <span className="font-medium">
                           {(userTabPage - 1) * userTabPerPage + 1}
                         </span>
@@ -1187,7 +1189,7 @@ export default function PermissionGroups() {
         <Modal
           isOpen={formModalOpen}
           onClose={() => setFormModalOpen(false)}
-          title={editingGroup ? "역할 그룹 수정" : "새 역할 그룹 추가"}
+          title={editingGroup ? "권한 그룹 수정" : "새 권한 그룹 추가"}
           footer={
             <ModalFooter
               onCancel={() => setFormModalOpen(false)}
@@ -1203,7 +1205,7 @@ export default function PermissionGroups() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-content-primary mb-1">
-                역할 그룹명 <span className="text-status-error">*</span>
+                권한 그룹명 <span className="text-status-error">*</span>
               </label>
               <Input
                 type="text"
@@ -1217,7 +1219,7 @@ export default function PermissionGroups() {
                 설명
               </label>
               <Textarea
-                placeholder="역할 그룹 설명 (선택사항)"
+                placeholder="권한 그룹 설명 (선택사항)"
                 value={formDesc}
                 onChange={(e) => setFormDesc(e.target.value)}
                 rows={3}

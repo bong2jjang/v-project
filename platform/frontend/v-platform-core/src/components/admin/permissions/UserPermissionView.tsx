@@ -1,7 +1,7 @@
 /**
  * UserPermissionView — 사용자별 뷰
  *
- * 개별 사용자 또는 역할 그룹을 선택 → 전체 메뉴 권한 보기 + 일괄 변경
+ * 개별 사용자 또는 권한 그룹을 선택 → 전체 메뉴 권한 보기 + 일괄 변경
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -337,7 +337,7 @@ export function UserPermissionView({
               className="text-brand-600"
             />
             <Users className="w-4 h-4 text-content-secondary" />
-            <span className="text-sm font-medium">역할 그룹</span>
+            <span className="text-sm font-medium">권한 그룹</span>
           </label>
         </div>
 

@@ -2,8 +2,9 @@
  * useWebSocket Hook
  *
  * WebSocket 연결 및 메시지 처리
- * - 연결 실패 시 불필요한 리렌더 방지
- * - 안정적인 재연결 로직
+ * - Exponential backoff (1s → 30s 상한), 무제한 재시도
+ * - 브라우저 가시성 복귀 / 온라인 복귀 시 즉시 재연결
+ * - 초기 실패 5회까지만 에러 이벤트 호출 (콘솔 노이즈 억제)
  */
 
 import { useEffect, useRef, useCallback, useState } from "react";
@@ -15,8 +16,12 @@ export interface UseWebSocketOptions {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
+  /** 초기 재연결 간격(ms). Exponential backoff로 최대 maxReconnectInterval까지 증가. */
   reconnectInterval?: number;
-  maxReconnectAttempts?: number;
+  /** 재연결 간격 상한(ms). 기본 30초. */
+  maxReconnectInterval?: number;
+  /** onError 콜백을 호출할 최대 횟수(콘솔 스팸 방지). 재시도 자체는 무제한. */
+  errorReportLimit?: number;
   autoConnect?: boolean;
 }
 
@@ -26,8 +31,9 @@ export function useWebSocket({
   onConnect,
   onDisconnect,
   onError,
-  reconnectInterval = 3000,
-  maxReconnectAttempts = 5,
+  reconnectInterval = 1000,
+  maxReconnectInterval = 30000,
+  errorReportLimit = 5,
   autoConnect = true,
 }: UseWebSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
@@ -60,11 +66,6 @@ export function useWebSocket({
       return;
     }
 
-    // 재연결 제한 확인
-    if (reconnectCountRef.current >= maxReconnectAttempts) {
-      return;
-    }
-
     try {
       const ws = new WebSocket(url);
 
@@ -85,7 +86,10 @@ export function useWebSocket({
       };
 
       ws.onerror = (error) => {
-        onErrorRef.current?.(error);
+        // 초기 N회까지만 보고 — 백엔드 다운 중 무한 재시도 노이즈 방지
+        if (reconnectCountRef.current < errorReportLimit) {
+          onErrorRef.current?.(error);
+        }
       };
 
       ws.onclose = () => {
@@ -93,24 +97,25 @@ export function useWebSocket({
         setIsConnected(false);
         onDisconnectRef.current?.();
 
-        // 자동 재연결
-        if (
-          shouldConnectRef.current &&
-          reconnectCountRef.current < maxReconnectAttempts
-        ) {
-          reconnectCountRef.current += 1;
-          setReconnectCount(reconnectCountRef.current);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, reconnectInterval);
-        }
+        if (!shouldConnectRef.current) return;
+
+        // Exponential backoff: base * 2^attempt, max로 상한
+        reconnectCountRef.current += 1;
+        setReconnectCount(reconnectCountRef.current);
+        const delay = Math.min(
+          reconnectInterval * Math.pow(2, reconnectCountRef.current - 1),
+          maxReconnectInterval,
+        );
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connect();
+        }, delay);
       };
 
       wsRef.current = ws;
     } catch {
       // WebSocket 생성 실패
     }
-  }, [url, reconnectInterval, maxReconnectAttempts]);
+  }, [url, reconnectInterval, maxReconnectInterval, errorReportLimit]);
 
   const disconnect = useCallback(() => {
     shouldConnectRef.current = false;
@@ -146,12 +151,48 @@ export function useWebSocket({
     }
   }, []);
 
-  /** 재연결 카운터 초기화 및 재연결 시도 */
+  /** 재연결 카운터 초기화 및 즉시 재연결 시도 */
   const retry = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
     reconnectCountRef.current = 0;
     setReconnectCount(0);
     shouldConnectRef.current = true;
     connect();
+  }, [connect]);
+
+  // 가시성 복귀 / 온라인 복귀 시 즉시 재연결 (대기 백오프 건너뛰기)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const tryImmediate = () => {
+      if (!shouldConnectRef.current) return;
+      if (
+        wsRef.current?.readyState === WebSocket.OPEN ||
+        wsRef.current?.readyState === WebSocket.CONNECTING
+      ) {
+        return;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      connect();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") tryImmediate();
+    };
+    const onOnline = () => tryImmediate();
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", onOnline);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online", onOnline);
+    };
   }, [connect]);
 
   // 초기 연결 및 정리

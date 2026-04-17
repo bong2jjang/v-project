@@ -383,8 +383,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("[Auth] Token expires soon, refreshing now...");
       get()
         .refreshToken()
-        .catch((error) => {
-          console.error("[Auth] Auto refresh failed:", error);
+        .catch(() => {
+          // 갱신 실패 (revoked/만료/네트워크) → 로그아웃으로 깨끗한 상태 전환.
+          // 라우터 가드가 /login으로 리다이렉트 처리.
+          authLogger.logWarning("Auto-refresh failed on load, logging out");
+          get().logout();
         });
       return;
     }
@@ -405,8 +408,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("[Auth] Auto-refreshing token...");
       get()
         .refreshToken()
-        .catch((error) => {
-          console.error("[Auth] Auto refresh failed:", error);
+        .catch(() => {
+          // 타이머 갱신 실패 → 로그아웃으로 전환
+          authLogger.logWarning("Scheduled auto-refresh failed, logging out");
+          get().logout();
         });
     }, timeUntilRefresh);
   },

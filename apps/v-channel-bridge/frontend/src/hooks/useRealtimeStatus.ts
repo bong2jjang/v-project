@@ -82,8 +82,7 @@ export function useRealtimeStatus({
     url: wsUrl,
     onMessage: handleMessage,
     onConnect: handleConnect,
-    reconnectInterval: 3000,
-    maxReconnectAttempts: 5,
+    reconnectInterval: 1000,
     autoConnect: enabled && !!token,
   });
 

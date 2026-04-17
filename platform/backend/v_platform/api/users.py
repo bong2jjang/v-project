@@ -4,8 +4,6 @@ User Management API
 사용자 관리 API 엔드포인트 (관리자 및 일반 사용자)
 """
 
-import os
-import uuid
 from datetime import datetime, timezone
 from math import ceil
 from fastapi import (
@@ -51,6 +49,8 @@ from v_platform.utils.audit_logger import (
     log_user_password_change,
 )
 from v_platform.services.notification_service import NotificationService
+from v_platform.models.uploaded_file import UploadedFile
+from v_platform.api.uploads import save_uploaded_file
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -355,17 +355,18 @@ async def change_password(
 
 # ── Avatar Endpoints ──────────────────────────────────────────────
 
-AVATAR_DIR = os.path.join(
-    os.environ.get("DATABASE_DIR", "/app/data"), "uploads", "avatars"
-)
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2 MB
 AVATAR_ALLOWED_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
-AVATAR_MIME_EXT: dict[str, str] = {
-    "image/png": ".png",
-    "image/jpeg": ".jpg",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
-}
+
+
+def _extract_file_id(avatar_url: str | None) -> str | None:
+    """`/api/uploads/avatars/{id[.ext]}` → `id` 추출."""
+    if not avatar_url:
+        return None
+    last = avatar_url.rsplit("/", 1)[-1]
+    if "." in last:
+        last = last.rsplit(".", 1)[0]
+    return last or None
 
 
 @router.put("/me/avatar", response_model=UserResponse)
@@ -394,17 +395,6 @@ async def upload_avatar(
             detail="파일 크기가 2MB를 초과합니다.",
         )
 
-    os.makedirs(AVATAR_DIR, exist_ok=True)
-
-    # 새 파일 저장
-    ext = AVATAR_MIME_EXT.get(file.content_type, ".png")
-    filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(AVATAR_DIR, filename)
-
-    with open(filepath, "wb") as f:
-        f.write(data)
-
-    # DB 업데이트
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(
@@ -412,17 +402,29 @@ async def upload_avatar(
         )
 
     old_avatar = user.avatar_url
-    user.avatar_url = f"/api/uploads/avatars/{filename}"
+    old_file_id = _extract_file_id(old_avatar)
+
+    # 새 파일을 DB에 저장
+    file_id = save_uploaded_file(
+        db=db,
+        data=data,
+        mime_type=file.content_type,
+        purpose="avatar",
+        uploaded_by=current_user.id,
+    )
+
+    user.avatar_url = f"/api/uploads/avatars/{file_id}"
     user.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
 
-    # 이전 아바타 파일 삭제
-    if old_avatar:
-        old_filename = old_avatar.rsplit("/", 1)[-1]
-        old_path = os.path.join(AVATAR_DIR, old_filename)
-        if os.path.isfile(old_path):
-            os.remove(old_path)
+    # 이전 아바타 레코드 삭제
+    if old_file_id:
+        db.query(UploadedFile).filter(
+            UploadedFile.id == old_file_id,
+            UploadedFile.purpose == "avatar",
+        ).delete(synchronize_session=False)
+        db.commit()
 
     # 감사 로그
     app_id = (
@@ -464,11 +466,13 @@ async def delete_avatar(
     if not old_avatar:
         return user
 
-    # 파일 삭제
-    old_filename = old_avatar.rsplit("/", 1)[-1]
-    old_path = os.path.join(AVATAR_DIR, old_filename)
-    if os.path.isfile(old_path):
-        os.remove(old_path)
+    # DB 레코드 삭제
+    old_file_id = _extract_file_id(old_avatar)
+    if old_file_id:
+        db.query(UploadedFile).filter(
+            UploadedFile.id == old_file_id,
+            UploadedFile.purpose == "avatar",
+        ).delete(synchronize_session=False)
 
     user.avatar_url = None
     user.updated_at = datetime.now(timezone.utc)
