@@ -44,7 +44,8 @@ export function TourProvider({ children }: TourProviderProps) {
     <TourContextProvider
       value={{
         startMainTour,
-        startPageTour,
+        startPageTour: (page: string) =>
+          startPageTour(page as Parameters<typeof startPageTour>[0]),
         resetAllTours,
         isRunning: false,
       }}

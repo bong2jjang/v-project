@@ -28,7 +28,6 @@ const BUILDER_ROUTE_FLAG = "builder-editor";
 
 export default function Builder() {
   const { projectId } = useParams<{ projectId: string }>();
-  const project = useBuilderStore((s) => s.project);
   const setProject = useBuilderStore((s) => s.setProject);
   const setMessages = useBuilderStore((s) => s.setMessages);
   const setArtifacts = useBuilderStore((s) => s.setArtifacts);
@@ -146,14 +145,6 @@ export default function Builder() {
     );
   }
 
-  if (!project) {
-    return (
-      <div className="h-full bg-surface-page text-content-secondary flex items-center justify-center text-sm">
-        프로젝트를 불러오는 중…
-      </div>
-    );
-  }
-
   return (
     <div className="h-full bg-surface-page flex overflow-hidden relative">
       {snapOpen && (
@@ -207,7 +198,7 @@ export default function Builder() {
           type="button"
           onClick={() => setSnapOpen(true)}
           title="스냅샷 열기"
-          className={`absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-button bg-surface-card hover:bg-surface-overlay border border-line text-content-primary text-[11px] px-2.5 py-1 shadow-card ${chatOpen ? "max-md:hidden" : ""}`}
+          className={`absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-button bg-surface-card hover:bg-surface-overlay border border-line text-content-primary text-[11px] px-2.5 py-1 shadow-card ${chatOpen ? "max-md:hidden" : ""}`}
         >
           <History size={12} />
           스냅샷
@@ -219,7 +210,7 @@ export default function Builder() {
           type="button"
           onClick={() => setChatOpen(true)}
           title="채팅 열기"
-          className="absolute top-2 right-3 inline-flex items-center gap-1.5 rounded-button bg-brand-600 hover:bg-brand-700 text-content-inverse text-[11px] px-2.5 py-1 shadow-card"
+          className="absolute top-2 right-3 z-20 inline-flex items-center gap-1.5 rounded-button bg-brand-600 hover:bg-brand-700 text-content-inverse text-[11px] px-2.5 py-1 shadow-card"
         >
           <MessageSquare size={12} />
           채팅 열기

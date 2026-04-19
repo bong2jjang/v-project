@@ -12,8 +12,10 @@ import {
   SandpackLayout,
   SandpackPreview,
 } from "@codesandbox/sandpack-react";
+import { Loader2 } from "lucide-react";
 
 import { useBuilderStore } from "../../store/builder";
+import { presetFiles, presetDependencies } from "../../sandpack/preset";
 
 const DEFAULT_APP = `export default function App() {
   return (
@@ -56,10 +58,46 @@ function normalize(fileMap: Record<string, string>): Record<string, string> {
   return out;
 }
 
-export function PreviewPane() {
-  const fileMap = useBuilderStore((s) => s.fileMap);
+function SkeletonPreview({ hint }: { hint: string }) {
+  return (
+    <div className="h-full min-h-0 bg-surface-page p-3">
+      <div className="h-full min-h-0 rounded-card border border-line overflow-hidden shadow-card bg-surface-card flex flex-col">
+        <div className="shrink-0 h-9 border-b border-line bg-surface-chrome flex items-center px-3 gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-surface-raised animate-pulse" />
+          <span className="h-2.5 w-2.5 rounded-full bg-surface-raised animate-pulse" />
+          <span className="h-2.5 w-2.5 rounded-full bg-surface-raised animate-pulse" />
+          <span className="ml-3 h-3 w-48 rounded-sm bg-surface-raised animate-pulse" />
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 text-content-tertiary">
+          <Loader2 size={20} className="animate-spin text-brand-500" />
+          <span className="text-[12px]">{hint}</span>
+          <div className="w-[60%] max-w-sm space-y-2 mt-2">
+            <span className="block h-3 w-full rounded-sm bg-surface-raised animate-pulse" />
+            <span className="block h-3 w-4/5 rounded-sm bg-surface-raised animate-pulse" />
+            <span className="block h-3 w-3/5 rounded-sm bg-surface-raised animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const files: Record<string, string> = normalize(fileMap);
+export function PreviewPane() {
+  const project = useBuilderStore((s) => s.project);
+  const fileMap = useBuilderStore((s) => s.fileMap);
+  const isStreaming = useBuilderStore((s) => s.isStreaming);
+
+  if (!project) {
+    return <SkeletonPreview hint="프로젝트 불러오는 중…" />;
+  }
+  if (Object.keys(fileMap).length === 0 && isStreaming) {
+    return <SkeletonPreview hint="프리뷰 생성 중…" />;
+  }
+
+  const userFiles = normalize(fileMap);
+  // preset 을 먼저 깔고 그 위에 사용자 파일을 덮어씌운다 — 사용자가 같은 경로를
+  // 수정하면 그 수정본이 우선, 아니면 preset 이 그대로 노출된다.
+  const files: Record<string, string> = { ...presetFiles, ...userFiles };
   if (!files["/App.tsx"]) {
     files["/App.tsx"] = DEFAULT_APP;
   }
@@ -83,6 +121,7 @@ export function PreviewPane() {
               clsx: "^2.1.0",
               "framer-motion": "^11.0.0",
               "date-fns": "^3.6.0",
+              ...presetDependencies,
             },
           }}
         >
