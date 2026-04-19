@@ -1,18 +1,30 @@
 /**
- * Builder — 3-pane IDE (Chat | Code | Preview).
+ * Builder — VS Code 스타일 쉘.
  *
- * URL 의 projectId 로 프로젝트 상세(메시지 + 최신 아티팩트)를 불러와 store 를 초기화.
- * 이후 ChatPane 의 SSE 훅이 store 를 실시간 갱신한다.
+ * - 메인: Canvas(Preview/Code 통합 탭 바 + 에디터/미리보기 콘텐츠)
+ * - 우측 도킹: ChatPane (VS Code 터미널 패널 룩, 기본 열림, 드래그 리사이즈)
+ * - 콘텐츠 영역은 외부 스크롤을 만들지 않고, 내부 컨트롤(Editor/Preview/메시지/입력)이 자체 스크롤만 가진다.
+ *
+ * URL 의 projectId 로 프로젝트 상세를 불러와 store 를 초기화. 이후 ChatPane 의 SSE 훅이 store 를 실시간 갱신한다.
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { History, MessageSquare } from "lucide-react";
 
 import { ChatPane } from "../components/builder/ChatPane";
-import { CodePane } from "../components/builder/CodePane";
-import { PreviewPane } from "../components/builder/PreviewPane";
+import { CanvasPane } from "../components/builder/CanvasPane";
+import { SnapshotsPanel } from "../components/builder/SnapshotsPanel";
 import { uiBuilderApi } from "../lib/api/ui-builder";
 import { useBuilderStore } from "../store/builder";
+
+const MIN_CHAT_WIDTH = 280;
+const MAX_CHAT_WIDTH = 800;
+const DEFAULT_CHAT_WIDTH = 420;
+const MIN_SNAP_WIDTH = 220;
+const MAX_SNAP_WIDTH = 500;
+const DEFAULT_SNAP_WIDTH = 280;
+const BUILDER_ROUTE_FLAG = "builder-editor";
 
 export default function Builder() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -21,11 +33,91 @@ export default function Builder() {
   const setMessages = useBuilderStore((s) => s.setMessages);
   const setArtifacts = useBuilderStore((s) => s.setArtifacts);
 
+  const [chatOpen, setChatOpen] = useState(true);
+  const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH);
+  const [snapOpen, setSnapOpen] = useState(false);
+  const [snapWidth, setSnapWidth] = useState(DEFAULT_SNAP_WIDTH);
+
+  const dragStateRef = useRef<{
+    startX: number;
+    startWidth: number;
+    apply: (next: number) => void;
+    min: number;
+    max: number;
+    direction: "left" | "right";
+  } | null>(null);
+
+  const startDrag = useCallback(
+    (
+      e: React.MouseEvent,
+      opts: {
+        startWidth: number;
+        apply: (next: number) => void;
+        min: number;
+        max: number;
+        direction: "left" | "right";
+      },
+    ) => {
+      e.preventDefault();
+      dragStateRef.current = { startX: e.clientX, ...opts };
+
+      const onMove = (ev: MouseEvent) => {
+        if (!dragStateRef.current) return;
+        const { startX, startWidth, apply, min, max, direction } =
+          dragStateRef.current;
+        const dx = ev.clientX - startX;
+        const next = direction === "right" ? startWidth + dx : startWidth - dx;
+        apply(Math.max(min, Math.min(max, next)));
+      };
+      const onUp = () => {
+        dragStateRef.current = null;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [],
+  );
+
+  const handleChatDragStart = useCallback(
+    (e: React.MouseEvent) =>
+      startDrag(e, {
+        startWidth: chatWidth,
+        apply: setChatWidth,
+        min: MIN_CHAT_WIDTH,
+        max: MAX_CHAT_WIDTH,
+        direction: "left",
+      }),
+    [chatWidth, startDrag],
+  );
+
+  const handleSnapDragStart = useCallback(
+    (e: React.MouseEvent) =>
+      startDrag(e, {
+        startWidth: snapWidth,
+        apply: setSnapWidth,
+        min: MIN_SNAP_WIDTH,
+        max: MAX_SNAP_WIDTH,
+        direction: "right",
+      }),
+    [snapWidth, startDrag],
+  );
+
+  useEffect(() => {
+    document.body.setAttribute("data-route", BUILDER_ROUTE_FLAG);
+    return () => document.body.removeAttribute("data-route");
+  }, []);
+
   useEffect(() => {
     if (!projectId || projectId === "new") return;
     let alive = true;
 
-    // 이전 프로젝트 잔상 제거
     setProject(null);
     setMessages([]);
 
@@ -48,7 +140,7 @@ export default function Builder() {
 
   if (!projectId || projectId === "new") {
     return (
-      <div className="p-6 text-sm text-content-secondary">
+      <div className="h-full bg-surface-page text-content-secondary flex items-center justify-center text-sm">
         대시보드에서 프로젝트를 선택하거나 새로 만드세요.
       </div>
     );
@@ -56,17 +148,83 @@ export default function Builder() {
 
   if (!project) {
     return (
-      <div className="p-6 text-sm text-content-secondary">
+      <div className="h-full bg-surface-page text-content-secondary flex items-center justify-center text-sm">
         프로젝트를 불러오는 중…
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] grid grid-cols-[360px_1fr_1fr] gap-2 p-2">
-      <ChatPane projectId={projectId} />
-      <CodePane />
-      <PreviewPane />
+    <div className="h-full bg-surface-page flex overflow-hidden relative">
+      {snapOpen && (
+        <>
+          <div
+            className="h-full shrink-0 overflow-hidden border-r border-line max-md:absolute max-md:inset-0 max-md:z-30 max-md:!w-full max-md:border-r-0 max-md:bg-surface-page"
+            style={{ width: snapWidth }}
+          >
+            <SnapshotsPanel
+              projectId={projectId}
+              onClose={() => setSnapOpen(false)}
+            />
+          </div>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={handleSnapDragStart}
+            className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
+          />
+        </>
+      )}
+
+      <div
+        className={`flex-1 min-w-0 h-full overflow-hidden ${chatOpen ? "max-md:hidden" : ""}`}
+      >
+        <CanvasPane />
+      </div>
+
+      {chatOpen && (
+        <>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={handleChatDragStart}
+            className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
+          />
+          <div
+            className="h-full shrink-0 overflow-hidden border-l border-line max-md:!w-full max-md:border-l-0"
+            style={{ width: chatWidth }}
+          >
+            <ChatPane
+              projectId={projectId}
+              onClose={() => setChatOpen(false)}
+            />
+          </div>
+        </>
+      )}
+
+      {!snapOpen && (
+        <button
+          type="button"
+          onClick={() => setSnapOpen(true)}
+          title="스냅샷 열기"
+          className={`absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-button bg-surface-card hover:bg-surface-overlay border border-line text-content-primary text-[11px] px-2.5 py-1 shadow-card ${chatOpen ? "max-md:hidden" : ""}`}
+        >
+          <History size={12} />
+          스냅샷
+        </button>
+      )}
+
+      {!chatOpen && (
+        <button
+          type="button"
+          onClick={() => setChatOpen(true)}
+          title="채팅 열기"
+          className="absolute top-2 right-3 inline-flex items-center gap-1.5 rounded-button bg-brand-600 hover:bg-brand-700 text-content-inverse text-[11px] px-2.5 py-1 shadow-card"
+        >
+          <MessageSquare size={12} />
+          채팅 열기
+        </button>
+      )}
     </div>
   );
 }

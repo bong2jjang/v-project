@@ -11,6 +11,33 @@ export type Template = "react-ts" | "vue" | "vanilla-ts";
 export type LLMProvider = "openai" | "anthropic" | "gemini";
 export type MessageRole = "user" | "assistant" | "system";
 
+export interface SnapshotListItem {
+  id: string;
+  project_id: string;
+  slug: string;
+  title: string;
+  message_id: string | null;
+  created_at: string;
+}
+
+export interface SnapshotMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  created_at: string;
+}
+
+export interface Snapshot extends SnapshotListItem {
+  files: Record<string, string>;
+  user_prompt: SnapshotMessage | null;
+  assistant_message: SnapshotMessage | null;
+}
+
+export interface SnapshotConfirmResponse {
+  project_id: string;
+  current_snapshot_id: string | null;
+}
+
 export interface Project {
   id: string;
   user_id: number;
@@ -19,6 +46,8 @@ export interface Project {
   template: string;
   llm_provider: string;
   llm_model: string | null;
+  current_snapshot_id: string | null;
+  current_snapshot: SnapshotListItem | null;
   created_at: string;
   updated_at: string;
 }
@@ -90,6 +119,18 @@ export const uiBuilderApi = {
   listProviders: () => get<ProviderInfo[]>("/api/llm/providers"),
   testProvider: (name: string) =>
     post<{ provider: string; available: boolean }>(`/api/llm/test/${name}`, {}),
+
+  listSnapshots: (projectId: string) =>
+    get<SnapshotListItem[]>(`/api/projects/${projectId}/snapshots`),
+  getSnapshot: (snapshotId: string) =>
+    get<Snapshot>(`/api/snapshots/${snapshotId}`),
+  deleteSnapshot: (snapshotId: string) =>
+    del<void>(`/api/snapshots/${snapshotId}`),
+  confirmSnapshot: (projectId: string, snapshotId: string | null) =>
+    post<SnapshotConfirmResponse>(
+      `/api/projects/${projectId}/current-snapshot`,
+      { snapshot_id: snapshotId },
+    ),
 };
 
 export { put };

@@ -48,6 +48,9 @@
     --color-surface-card: #ffffff;
     --color-surface-raised: #e8e8e8;
     --color-surface-overlay: rgba(0, 0, 0, 0.4);
+    /* Builder 전용 chrome(탭 바/패널 헤더) — 컨텐츠보다 한 단계 어둡게 */
+    --color-surface-chrome: #d8d8d8;
+    --color-surface-chrome-border: #bfbfbf;
 
     /* Line */
     --color-line: #e5e5e5;
@@ -124,6 +127,9 @@
     --color-surface-card: #1e1e1e;
     --color-surface-raised: #2a2d2e;
     --color-surface-overlay: rgba(0, 0, 0, 0.5);
+    /* Builder 전용 chrome(탭 바/패널 헤더) — 컨텐츠보다 한 단계 어둡게 */
+    --color-surface-chrome: #0d0d0d;
+    --color-surface-chrome-border: #000000;
 
     /* Line — 미묘한 경계 */
     --color-line: #2b2b2b;
@@ -148,6 +154,30 @@
   /* ── 넓게보기 레이아웃 ── */
   .layout-wide {
     --content-max-width: 100%;
+  }
+
+  /* Builder 편집기 뷰: 플랫폼 Layout 의 넓게보기/기본보기 토글 숨김 */
+  body[data-route="builder-editor"] main > button[title="넓게보기"],
+  body[data-route="builder-editor"] main > button[title="기본보기"] {
+    display: none !important;
+  }
+
+  /* Sandpack 미리보기: 내부 계층 전부 컨테이너 높이 100% 전달
+     (SandpackProvider/Layout/Stack/PreviewContainer/Iframe 모두 flex/height 강제) */
+  .ui-builder-sandpack,
+  .ui-builder-sandpack > .sp-wrapper,
+  .ui-builder-sandpack .sp-layout,
+  .ui-builder-sandpack .sp-stack,
+  .ui-builder-sandpack .sp-preview,
+  .ui-builder-sandpack .sp-preview-container {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  .ui-builder-sandpack .sp-preview-iframe {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    border: 0 !important;
   }
 
   body {

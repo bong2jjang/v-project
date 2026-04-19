@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardBody } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -177,17 +178,32 @@ export default function Dashboard() {
                   <li key={p.id} className="py-3 first:pt-0 last:pb-0">
                     <Link
                       to={`/builder/${p.id}`}
-                      className="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-2 -mx-2"
+                      className="flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-2 -mx-2"
                     >
-                      <div>
-                        <div className="text-sm font-medium text-content-primary">
-                          {p.name}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium text-content-primary truncate">
+                            {p.name}
+                          </span>
+                          {p.current_snapshot && (
+                            <span
+                              title={`확정 스냅샷: ${p.current_snapshot.title}`}
+                              className="inline-flex items-center gap-1 shrink-0 rounded-full bg-status-success/15 text-status-success text-[10px] px-1.5 py-px font-mono"
+                            >
+                              <Check size={10} />
+                              {p.current_snapshot.slug}
+                            </span>
+                          )}
                         </div>
-                        {p.description && (
-                          <div className="text-xs text-content-secondary mt-0.5">
+                        {p.current_snapshot ? (
+                          <div className="text-xs text-content-secondary mt-0.5 truncate">
+                            {p.current_snapshot.title}
+                          </div>
+                        ) : p.description ? (
+                          <div className="text-xs text-content-secondary mt-0.5 truncate">
                             {p.description}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                       <div className="text-xs text-content-secondary shrink-0">
                         {p.llm_provider} · {new Date(p.updated_at).toLocaleDateString()}

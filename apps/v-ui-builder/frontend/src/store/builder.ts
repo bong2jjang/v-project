@@ -21,6 +21,7 @@ interface BuilderState {
   streamingMessageId: string | null;
   streamingBuffer: string;
   isStreaming: boolean;
+  viewingSnapshotId: string | null;
 
   setProject: (project: Project | null) => void;
   setMessages: (messages: Message[]) => void;
@@ -33,6 +34,8 @@ interface BuilderState {
   appendStreamingContent: (delta: string) => void;
   finishStreaming: (finalMessage: Message) => void;
   resetStreaming: () => void;
+  loadSnapshotFiles: (snapshotId: string, files: FileMap) => void;
+  clearSnapshotView: () => void;
 }
 
 export const useBuilderStore = create<BuilderState>((set) => ({
@@ -43,6 +46,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
   streamingMessageId: null,
   streamingBuffer: "",
   isStreaming: false,
+  viewingSnapshotId: null,
 
   setProject: (project) => set({ project }),
   setMessages: (messages) => set({ messages }),
@@ -88,4 +92,13 @@ export const useBuilderStore = create<BuilderState>((set) => ({
 
   resetStreaming: () =>
     set({ isStreaming: false, streamingBuffer: "", streamingMessageId: null }),
+
+  loadSnapshotFiles: (snapshotId, files) =>
+    set({
+      fileMap: { ...files },
+      activeFile: Object.keys(files)[0] ?? null,
+      viewingSnapshotId: snapshotId,
+    }),
+
+  clearSnapshotView: () => set({ viewingSnapshotId: null }),
 }));

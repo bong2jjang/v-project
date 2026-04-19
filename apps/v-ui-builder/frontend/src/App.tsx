@@ -55,7 +55,17 @@ function App() {
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       fetchSettings();
-      fetchPermissions();
+      fetchPermissions().then(() => {
+        // v-ui-builder 에서는 "dashboard" 메뉴를 "Sandpack 프로젝트"로 오버라이드.
+        // 플랫폼 공용 menu_items 레코드(app_id=NULL)를 건드리지 않고 클라이언트에서만 치환.
+        const current = usePermissionStore.getState().menus;
+        const patched = current.map((m) =>
+          m.permission_key === "dashboard"
+            ? { ...m, label: "Sandpack 프로젝트", icon: "boxes" }
+            : m,
+        );
+        usePermissionStore.setState({ menus: patched });
+      });
     } else if (isInitialized && !isAuthenticated) {
       resetPermissions();
     }

@@ -8,6 +8,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { createParser, type ParsedEvent } from "eventsource-parser";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useBuilderStore } from "../store/builder";
 import { uiBuilderApi, type Message } from "../lib/api/ui-builder";
@@ -22,8 +23,13 @@ interface ChatStreamOptions {
   onError?: (message: string) => void;
 }
 
+export interface ChatSendOptions {
+  model?: string;
+  contextSnapshotIds?: string[];
+}
+
 interface ChatStreamHandle {
-  send: (prompt: string, model?: string) => Promise<void>;
+  send: (prompt: string, options?: ChatSendOptions) => Promise<void>;
   abort: () => void;
   isStreaming: boolean;
 }
@@ -34,6 +40,7 @@ export function useChatStream({
 }: ChatStreamOptions): ChatStreamHandle {
   const [isStreaming, setIsStreaming] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
+  const queryClient = useQueryClient();
 
   const {
     appendMessage,
@@ -47,8 +54,9 @@ export function useChatStream({
   } = useBuilderStore.getState();
 
   const send = useCallback(
-    async (prompt: string, model?: string) => {
+    async (prompt: string, options?: ChatSendOptions) => {
       if (!prompt.trim()) return;
+      const { model, contextSnapshotIds } = options ?? {};
       if (controllerRef.current) controllerRef.current.abort();
 
       const controller = new AbortController();
@@ -86,6 +94,9 @@ export function useChatStream({
             project_id: projectId,
             prompt,
             ...(model ? { model } : {}),
+            ...(contextSnapshotIds && contextSnapshotIds.length > 0
+              ? { context_snapshot_ids: contextSnapshotIds }
+              : {}),
           }),
         });
 
@@ -137,6 +148,21 @@ export function useChatStream({
               }
               case "artifact_end": {
                 // 파일 블록 완료 — 현재 구현에서는 추가 처리 없음
+                break;
+              }
+              case "snapshot_created": {
+                // 새 스냅샷이 생성되었음 — 리스트 캐시와 프로젝트 상세를 무효화해
+                // 우측 패널이 즉시 갱신되도록 한다.
+                useBuilderStore.getState().clearSnapshotView();
+                queryClient.invalidateQueries({
+                  queryKey: ["ui-builder", "snapshots", projectId],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["ui-builder", "project", projectId],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["ui-builder", "projects"],
+                });
                 break;
               }
               case "done": {
