@@ -2,26 +2,28 @@
  * CustomIframe 페이지
  *
  * 커스텀 iframe 메뉴를 렌더링하는 동적 페이지
- * 라우트: /custom/:menuId
+ * 라우트: /custom/*  (단일/다중 세그먼트 모두 지원: /custom/grafana, /custom/menu/test01)
  */
 
 import { useMemo } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
 import { usePermissionStore } from "../stores/permission";
 import { ContentHeader } from "../components/Layout";
 import { Spinner } from "../components/ui/Spinner";
 
 export default function CustomIframe() {
-  const { menuId } = useParams<{ menuId: string }>();
+  const { pathname } = useLocation();
   const { menus, isLoaded } = usePermissionStore();
 
   const menu = useMemo(() => {
-    if (!menuId) return null;
-    // menuId를 숫자 또는 path segment로 매칭
+    if (!pathname.startsWith("/custom/")) return null;
+    // 전체 path 매칭 우선, 이후 숫자 ID 호환 (/custom/123)
+    const tail = pathname.slice("/custom/".length);
+    const numericId = /^\d+$/.test(tail) ? Number(tail) : null;
     return menus.find(
-      (m) => m.id === Number(menuId) || m.path === `/custom/${menuId}`,
+      (m) => m.path === pathname || (numericId !== null && m.id === numericId),
     );
-  }, [menuId, menus]);
+  }, [pathname, menus]);
 
   if (!isLoaded) {
     return (

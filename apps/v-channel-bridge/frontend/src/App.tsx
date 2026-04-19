@@ -250,7 +250,7 @@ function App() {
 
             {/* 커스텀 iframe 메뉴 (동적 라우트) */}
             <Route
-              path="/custom/:menuId"
+              path="/custom/*"
               element={
                 <ProtectedRoute>
                   <Layout>

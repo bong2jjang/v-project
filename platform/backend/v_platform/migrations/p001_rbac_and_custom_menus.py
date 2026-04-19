@@ -120,17 +120,11 @@ def migrate(engine) -> bool:
             logger.info("Created menu_items table")
 
             # ── 4. built_in 시드 데이터 삽입 ─────────────────────────
+            # 주의: `dashboard`, `help` 는 p032 이후 각 앱이 자체 등록한다
+            # (v-channel-bridge=dashboard/help, v-platform-portal=portal_home/portal_help,
+            #  v-platform-template=dashboard/help, v-ui-builder=ui_builder_sandpack/ui_builder_help).
             seed_menus = [
                 # 기본 메뉴
-                (
-                    "dashboard",
-                    "대시보드",
-                    "LayoutDashboard",
-                    "/",
-                    "built_in",
-                    None,
-                    100,
-                ),
                 ("channels", "채널 관리", "Radio", "/channels", "built_in", None, 200),
                 (
                     "messages",
@@ -160,7 +154,6 @@ def migrate(engine) -> bool:
                     500,
                 ),
                 ("settings", "설정", "Settings", "/settings", "built_in", None, 600),
-                ("help", "도움말", "HelpCircle", "/help", "built_in", None, 700),
                 # 관리 메뉴
                 ("users", "사용자 관리", "Users", "/users", "built_in", "admin", 800),
                 (

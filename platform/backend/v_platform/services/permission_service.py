@@ -76,6 +76,35 @@ class PermissionService:
         return user_level >= required
 
     @staticmethod
+    def _filter_shared_overridden(
+        menus: list[MenuItem],
+        db: Session | None = None,
+        app_id: str | None = None,
+    ) -> list[MenuItem]:
+        """공통(app_id=NULL) 메뉴를 두 가지 규칙으로 숨긴다:
+        1) 같은 permission_key 에 app-specific entry 가 있으면 공통 entry 제거
+           (app 이 공통 메뉴를 자신의 키로 오버라이드한 경우)
+        2) app-specific 'hide_shared' 마커 행 (menu_type='hide_shared', is_active=False)
+           의 permission_key 와 일치하는 공통 entry 제거
+           (app 이 공통 메뉴를 아예 표시하지 않으려는 경우 — 예: v-ui-builder 가
+           공통 '대시보드' 를 숨기고 자신만의 페이지를 노출)
+        """
+        overridden = {m.permission_key for m in menus if m.app_id is not None}
+
+        if db is not None and app_id is not None:
+            hide_rows = (
+                db.query(MenuItem.permission_key)
+                .filter(
+                    MenuItem.app_id == app_id,
+                    MenuItem.menu_type == "hide_shared",
+                )
+                .all()
+            )
+            overridden |= {r[0] for r in hide_rows}
+
+        return [m for m in menus if not (m.app_id is None and m.permission_key in overridden)]
+
+    @staticmethod
     def get_user_permissions(
         db: Session, user: User, app_id: str | None = None
     ) -> dict[str, str]:
@@ -96,12 +125,14 @@ class PermissionService:
                 .filter(MenuItem.is_active.is_(True), app_filter)
                 .all()
             )
+            menus = PermissionService._filter_shared_overridden(menus, db, app_id)
             return {m.permission_key: "write" for m in menus}
 
         effective = PermissionService.get_effective_permissions_for_user(db, user.id)
         menus = (
             db.query(MenuItem).filter(MenuItem.is_active.is_(True), app_filter).all()
         )
+        menus = PermissionService._filter_shared_overridden(menus, db, app_id)
         result = {}
         for menu in menus:
             info = effective.get(menu.id)
@@ -133,6 +164,7 @@ class PermissionService:
                 .order_by(MenuItem.sort_order)
                 .all()
             )
+            menus = PermissionService._filter_shared_overridden(menus, db, app_id)
             return [{**m.to_dict(), "access_level": "write"} for m in menus]
 
         effective = PermissionService.get_effective_permissions_for_user(db, user.id)
@@ -142,6 +174,7 @@ class PermissionService:
             .order_by(MenuItem.sort_order)
             .all()
         )
+        menus = PermissionService._filter_shared_overridden(menus, db, app_id)
 
         # 1차: 권한이 있는 메뉴 수집
         result = []

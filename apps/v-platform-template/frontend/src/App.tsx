@@ -100,7 +100,7 @@ function App() {
           <Route path="/admin/permissions" element={<ProtectedRoute permissionKey="permission_management"><Layout><PermissionMatrixPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/permission-groups" element={<ProtectedRoute permissionKey="permission_groups"><Layout><PermissionGroupsPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/organizations" element={<ProtectedRoute permissionKey="organizations"><Layout><OrganizationsPage /></Layout></ProtectedRoute>} />
-          <Route path="/custom/:menuId" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
+          <Route path="/custom/*" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
 
           {/* 앱 전용 라우트 (여기에 추가) */}
 

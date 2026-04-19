@@ -21,7 +21,6 @@ export { default as PasswordChangePage } from './PasswordChange';
 export { default as UserManagementPage } from './UserManagement';
 export { default as AuditLogsPage } from './AuditLogs';
 export { default as SettingsPage } from './Settings';
-export { default as HelpPage } from './Help';
 export { default as CustomIframePage } from './CustomIframe';
 
 // Admin management pages

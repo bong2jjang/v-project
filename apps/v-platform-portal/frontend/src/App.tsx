@@ -85,14 +85,14 @@ function App() {
 
           {/* 포탈 메인 (대시보드 위치) */}
           <Route path="/" element={
-            <ProtectedRoute permissionKey="dashboard">
+            <ProtectedRoute permissionKey="portal_home">
               <Layout><Portal /></Layout>
             </ProtectedRoute>
           } />
 
           {/* 플랫폼 공통 페이지 */}
           <Route path="/settings" element={<ProtectedRoute permissionKey="settings"><Layout><SettingsPage /></Layout></ProtectedRoute>} />
-          <Route path="/help" element={<ProtectedRoute permissionKey="help"><Layout><HelpPage /></Layout></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute permissionKey="portal_help"><Layout><HelpPage /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>} />
           <Route path="/password-change" element={<ProtectedRoute><Layout><PasswordChangePage /></Layout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute permissionKey="users"><Layout><UserManagementPage /></Layout></ProtectedRoute>} />
@@ -102,7 +102,7 @@ function App() {
           <Route path="/admin/permission-groups" element={<ProtectedRoute permissionKey="permission_groups"><Layout><PermissionGroupsPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/organizations" element={<ProtectedRoute permissionKey="organizations"><Layout><OrganizationsPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/apps" element={<ProtectedRoute permissionKey="app_management"><Layout><AppManagement /></Layout></ProtectedRoute>} />
-          <Route path="/custom/:menuId" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
+          <Route path="/custom/*" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

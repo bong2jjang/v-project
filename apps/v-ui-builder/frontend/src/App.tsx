@@ -39,6 +39,8 @@ import { useNotifications } from "./hooks/useNotifications";
 
 import Dashboard from "./pages/Dashboard";
 import Builder from "./pages/Builder";
+import GenUIProjects from "./pages/GenUIProjects";
+import GenUIBuilder from "./pages/GenUIBuilder";
 import Help from "./pages/Help";
 
 function App() {
@@ -55,17 +57,7 @@ function App() {
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       fetchSettings();
-      fetchPermissions().then(() => {
-        // v-ui-builder 에서는 "dashboard" 메뉴를 "Sandpack 프로젝트"로 오버라이드.
-        // 플랫폼 공용 menu_items 레코드(app_id=NULL)를 건드리지 않고 클라이언트에서만 치환.
-        const current = usePermissionStore.getState().menus;
-        const patched = current.map((m) =>
-          m.permission_key === "dashboard"
-            ? { ...m, label: "Sandpack 프로젝트", icon: "boxes" }
-            : m,
-        );
-        usePermissionStore.setState({ menus: patched });
-      });
+      fetchPermissions();
     } else if (isInitialized && !isAuthenticated) {
       resetPermissions();
     }
@@ -90,23 +82,35 @@ function App() {
           <Route path="/forbidden" element={<ForbiddenPage />} />
           <Route path="/sso/callback" element={<SSOCallbackPage />} />
 
-          {/* 대시보드 */}
+          {/* Sandpack 프로젝트 목록 */}
           <Route path="/" element={
-            <ProtectedRoute permissionKey="dashboard">
+            <ProtectedRoute permissionKey="ui_builder_sandpack">
               <Layout><Dashboard /></Layout>
             </ProtectedRoute>
           } />
 
-          {/* Builder — 3-pane IDE */}
+          {/* Sandpack Builder — 3-pane IDE */}
           <Route path="/builder/:projectId" element={
-            <ProtectedRoute permissionKey="dashboard">
+            <ProtectedRoute permissionKey="ui_builder_sandpack">
               <Layout><Builder /></Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* Generative UI 프로젝트 — 대시보드 위젯 보드 */}
+          <Route path="/genui" element={
+            <ProtectedRoute permissionKey="ui_builder_genui">
+              <Layout><GenUIProjects /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/genui/:projectId" element={
+            <ProtectedRoute permissionKey="ui_builder_genui">
+              <Layout><GenUIBuilder /></Layout>
             </ProtectedRoute>
           } />
 
           {/* 플랫폼 공통 페이지 */}
           <Route path="/settings" element={<ProtectedRoute permissionKey="settings"><Layout><SettingsPage /></Layout></ProtectedRoute>} />
-          <Route path="/help" element={<ProtectedRoute permissionKey="help"><Layout><Help /></Layout></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute permissionKey="ui_builder_help"><Layout><Help /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>} />
           <Route path="/password-change" element={<ProtectedRoute><Layout><PasswordChangePage /></Layout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute permissionKey="users"><Layout><UserManagementPage /></Layout></ProtectedRoute>} />
@@ -115,7 +119,7 @@ function App() {
           <Route path="/admin/permissions" element={<ProtectedRoute permissionKey="permission_management"><Layout><PermissionMatrixPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/permission-groups" element={<ProtectedRoute permissionKey="permission_groups"><Layout><PermissionGroupsPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/organizations" element={<ProtectedRoute permissionKey="organizations"><Layout><OrganizationsPage /></Layout></ProtectedRoute>} />
-          <Route path="/custom/:menuId" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
+          <Route path="/custom/*" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -95,12 +95,15 @@ CUSTOM_GROUP_NAMES = [g[0] for g in CUSTOM_GROUPS]
 # 그룹 grants (커스텀 그룹별 메뉴 권한)
 # ─────────────────────────────────────────────────────────────────────────────
 
+#
+# 주의: `dashboard`, `help` 는 p032 부터 공통 키가 아니다. 각 앱이 자체
+# (app_id 스코프) 메뉴를 소유하므로, 앱별 a* 마이그레이션에서 자체 grants 를
+# 삽입한다. 아래 그룹 grants 는 여전히 공통(app_id=NULL) 메뉴만을 대상으로
+# 한다 (설정은 공통 유지).
 GROUP_GRANTS: dict[str, dict[str, str]] = {
     # 사용자정의그룹-1: 기본(basic) 메뉴 read-only 세트
     "사용자정의그룹-1": {
         "channels": "read",
-        "dashboard": "read",
-        "help": "read",
         "integrations": "read",
         "messages": "read",
         "settings": "read",
@@ -111,8 +114,6 @@ GROUP_GRANTS: dict[str, dict[str, str]] = {
     # 데모그룹-운영: 기본 메뉴 write + 관리 메뉴 일부 read
     "데모그룹-운영": {
         "channels": "write",
-        "dashboard": "write",
-        "help": "write",
         "integrations": "write",
         "messages": "write",
         "settings": "write",
@@ -123,8 +124,7 @@ GROUP_GRANTS: dict[str, dict[str, str]] = {
     },
     # 데모그룹-뷰어: 최소 read
     "데모그룹-뷰어": {
-        "dashboard": "read",
-        "help": "read",
+        "settings": "read",
     },
 }
 
@@ -155,11 +155,9 @@ MEMBERSHIPS = [
 
 USER_PERMISSIONS = [
     # (user_email, permission_key, access_level)
-    # bong78 — 14 플랫폼 키 전체 write (사실상 관리자 권한 그룹 외 개별 부여)
+    # bong78 — 공통 메뉴 write (dashboard/help 는 p032 이후 앱별 키로 이관되어 여기서 제외)
     ("bong78@vms-solutions.com", "audit_logs", "write"),
     ("bong78@vms-solutions.com", "channels", "write"),
-    ("bong78@vms-solutions.com", "dashboard", "write"),
-    ("bong78@vms-solutions.com", "help", "write"),
     ("bong78@vms-solutions.com", "integrations", "write"),
     ("bong78@vms-solutions.com", "menu_management", "write"),
     ("bong78@vms-solutions.com", "messages", "write"),
@@ -184,9 +182,8 @@ USER_PERMISSIONS = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 MENU_SECTIONS = [
-    ("dashboard", "basic"),
+    # dashboard/help 는 p032 이후 앱별 소유로 이관됨 — 공통 section 보정 대상 아님.
     ("settings", "basic"),
-    ("help", "basic"),
     ("users", "admin"),
     ("audit_logs", "admin"),
     ("menu_management", "admin"),
