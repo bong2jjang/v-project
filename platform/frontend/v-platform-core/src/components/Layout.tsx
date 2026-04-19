@@ -38,6 +38,8 @@ import { SidebarSection } from "./layout/SidebarSection";
 import { Divider } from "./ui/Divider";
 import { useAuthStore } from "../stores/auth";
 import { usePermissionStore } from "../stores/permission";
+import { useSystemSettingsStore } from "../stores/systemSettings";
+import { usePlatformConfig } from "../providers/PlatformProvider";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useTour } from "../hooks/useTour";
 import { getRoleDisplayName } from "../api/types";
@@ -75,6 +77,8 @@ function LayoutContent({ children }: LayoutContentProps) {
   const { actualState, isMobileOpen, closeMobile } = useSidebar();
   const { user, logout } = useAuthStore();
   const { menus, isLoaded } = usePermissionStore();
+  const { settings } = useSystemSettingsStore();
+  const { appTitle } = usePlatformConfig();
   const location = useLocation();
   const navigate = useNavigate();
   const { startMainTour } = useTour();
@@ -162,20 +166,31 @@ function LayoutContent({ children }: LayoutContentProps) {
             {/* Mobile Sidebar - with text labels */}
             <aside className="fixed left-0 top-0 bottom-0 w-60 bg-surface-card z-50">
               <div className="h-full flex flex-col border-r border-line">
-                {/* Logo Area */}
+                {/* Logo Area — TopBar 와 동일한 settings 기반 로고/타이틀 */}
                 <div className="flex items-center h-12 px-3 border-b border-line flex-shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-7 h-7 bg-brand-600 rounded-lg shadow-sm">
-                      <svg
-                        className="w-4 h-4 text-content-inverse"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                      </svg>
-                    </div>
-                    <span className="text-body-sm font-bold text-content-primary">
-                      VMS Channel Bridge
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {settings?.app_logo_url ? (
+                      <img
+                        src={settings.app_logo_url}
+                        alt="Logo"
+                        className="h-7 w-auto rounded-lg flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-7 h-7 bg-brand-600 rounded-lg shadow-sm flex-shrink-0">
+                        <svg
+                          className="w-4 h-4 text-content-inverse"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                      </div>
+                    )}
+                    <span className="text-body-sm font-semibold text-content-primary truncate">
+                      {settings?.app_title || appTitle || "v-platform"}
                     </span>
                   </div>
                 </div>
@@ -282,7 +297,7 @@ function LayoutContent({ children }: LayoutContentProps) {
                       )}
                     </button>
 
-                    {/* Profile Actions — 접이식 (프로필/비밀번호/투어) */}
+                    {/* Profile Actions — 접이식 (프로필/비밀번호/투어/로그아웃) */}
                     {profileMenuExpanded && (
                       <div className="border-b border-line bg-surface-raised/30">
                         <button
@@ -317,6 +332,14 @@ function LayoutContent({ children }: LayoutContentProps) {
                           <Sparkles className="w-4 h-4" />
                           투어 다시 보기
                         </button>
+
+                        <button
+                          onClick={handleMobileLogout}
+                          className="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 text-body-sm text-status-danger hover:bg-status-danger-light transition-colors border-t border-line"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          로그아웃
+                        </button>
                       </div>
                     )}
 
@@ -331,14 +354,6 @@ function LayoutContent({ children }: LayoutContentProps) {
                         설정
                       </Link>
                     )}
-
-                    <button
-                      onClick={handleMobileLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-body-base text-status-danger hover:bg-status-danger-light transition-colors border-t border-line"
-                    >
-                      <LogOut className="w-5 h-5" />
-                      로그아웃
-                    </button>
                   </div>
                 )}
               </div>
