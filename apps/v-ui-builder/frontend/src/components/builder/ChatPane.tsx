@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronUp, Paperclip, Square, X } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Paperclip, Square, X } from "lucide-react";
 
 import { useBuilderStore } from "../../store/builder";
 import { useChatStream } from "../../hooks/useChatStream";
@@ -157,7 +157,12 @@ export function ChatPane({ projectId, onClose }: ChatPaneProps) {
         )}
 
         {messages.map((m) => (
-          <MessageBubble key={m.id} role={m.role} content={m.content} />
+          <MessageBubble
+            key={m.id}
+            role={m.role}
+            content={m.content}
+            timestamp={m.created_at}
+          />
         ))}
 
         {isStreaming && (
@@ -385,31 +390,69 @@ interface MessageBubbleProps {
   role: "user" | "assistant" | "system";
   content: string;
   streaming?: boolean;
+  timestamp?: string;
 }
 
-function MessageBubble({ role, content, streaming }: MessageBubbleProps) {
+function formatMessageTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function MessageBubble({
+  role,
+  content,
+  streaming,
+  timestamp,
+}: MessageBubbleProps) {
   const isUser = role === "user";
+  const [collapsed, setCollapsed] = useState(false);
+  const canCollapse = !streaming;
+  const isCollapsed = canCollapse && collapsed;
+  const timeLabel = timestamp ? formatMessageTime(timestamp) : "";
 
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="text-[10px] uppercase tracking-wider font-mono text-content-tertiary">
+      <button
+        type="button"
+        onClick={() => canCollapse && setCollapsed((v) => !v)}
+        disabled={!canCollapse}
+        aria-expanded={!isCollapsed}
+        className="flex items-center gap-1 self-start text-[10px] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary disabled:hover:text-content-tertiary disabled:cursor-default transition-colors"
+      >
+        {canCollapse &&
+          (isCollapsed ? (
+            <ChevronRight size={10} className="opacity-70" />
+          ) : (
+            <ChevronDown size={10} className="opacity-70" />
+          ))}
         {isUser ? (
           <span className="text-brand-500">user ›</span>
         ) : (
           <span className="text-status-success">assistant ›</span>
         )}
-      </div>
-      {isUser ? (
-        <div className="whitespace-pre-wrap break-words rounded-button px-2 py-1.5 bg-brand-600 text-content-inverse">
-          {content}
-          {streaming && <span className="animate-pulse">▍</span>}
-        </div>
-      ) : (
-        <div className="rounded-button bg-surface-raised text-content-primary border border-line px-2 py-1.5">
-          <MarkdownMessage content={content} streaming={streaming} />
-          {streaming && <span className="animate-pulse text-brand-500">▍</span>}
-        </div>
-      )}
+        {timeLabel && (
+          <span className="normal-case tracking-normal text-content-tertiary/70">
+            {timeLabel}
+          </span>
+        )}
+      </button>
+      {!isCollapsed &&
+        (isUser ? (
+          <div className="whitespace-pre-wrap break-words rounded-button px-2 py-1.5 bg-brand-600 text-content-inverse">
+            {content}
+            {streaming && <span className="animate-pulse">▍</span>}
+          </div>
+        ) : (
+          <div className="rounded-button bg-surface-raised text-content-primary border border-line px-2 py-1.5">
+            <MarkdownMessage content={content} streaming={streaming} />
+            {streaming && <span className="animate-pulse text-brand-500">▍</span>}
+          </div>
+        ))}
     </div>
   );
 }
