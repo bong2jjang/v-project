@@ -34,7 +34,6 @@ export function useNotifications() {
     url: wsUrl,
     autoConnect: !!token,
     reconnectInterval: 3000,
-    maxReconnectAttempts: 10, // 알림은 중요하므로 재연결 시도 증가
 
     onMessage: (message) => {
       // notification 타입 메시지 처리

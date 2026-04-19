@@ -5,7 +5,7 @@
  * - 다크모드에서는 ContentHeader에 브랜드 색상이 반영되지 않음을 프리뷰에 반영
  */
 
-import { useTheme, COLOR_PRESETS, type ContentWidth } from "../../hooks/useTheme";
+import { useTheme, COLOR_PRESETS } from "../../hooks/useTheme";
 import { InfoBox } from "../ui/InfoBox";
 
 export function ThemeSettings() {

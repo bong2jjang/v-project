@@ -30,7 +30,6 @@ export function useRealtimeStatus({
   const { isConnected, reconnectCount, send, connect } = useWebSocket({
     url: wsUrl,
     reconnectInterval: 5000,
-    maxReconnectAttempts: 10,
     autoConnect: enabled && !!token,
   });
 
