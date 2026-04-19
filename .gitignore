@@ -1,5 +1,6 @@
 # 환경 변수 파일 (보안 정보 포함)
 .env
+apps/*/.env
 
 # node_modules (Docker symlink 포함)
 **/node_modules
