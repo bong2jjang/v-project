@@ -17,6 +17,7 @@ import {
   Loader2,
   Pin,
   Rows,
+  Settings2,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -60,6 +61,10 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
   const dashboard = useDashboardStore((s) => s.dashboard);
   const selectedWidgetIds = useDashboardStore((s) => s.selectedWidgetIds);
   const toggleSelection = useDashboardStore((s) => s.toggleSelection);
+  const inspectedWidgetId = useDashboardStore((s) => s.inspectedWidgetId);
+  const setInspectedWidgetId = useDashboardStore(
+    (s) => s.setInspectedWidgetId,
+  );
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropError, setDropError] = useState<string | null>(null);
@@ -384,7 +389,13 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
                   <WidgetTile
                     widget={asCall(w)}
                     selected={selectedWidgetIds.includes(w.id)}
+                    inspecting={inspectedWidgetId === w.id}
                     onToggleSelect={() => toggleSelection(w.id)}
+                    onInspect={() =>
+                      setInspectedWidgetId(
+                        inspectedWidgetId === w.id ? null : w.id,
+                      )
+                    }
                     onRemove={() => handleDelete(w)}
                     removing={deleteMutation.isPending}
                   />
@@ -506,7 +517,9 @@ interface WidgetTileProps {
     call: UiCallRecord;
   };
   selected: boolean;
+  inspecting: boolean;
   onToggleSelect: () => void;
+  onInspect: () => void;
   onRemove: () => void;
   removing: boolean;
 }
@@ -514,7 +527,9 @@ interface WidgetTileProps {
 function WidgetTile({
   widget,
   selected,
+  inspecting,
   onToggleSelect,
+  onInspect,
   onRemove,
   removing,
 }: WidgetTileProps) {
@@ -534,6 +549,21 @@ function WidgetTile({
           )}
         </span>
         <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={onInspect}
+            onMouseDown={(e) => e.stopPropagation()}
+            title={inspecting ? "Inspector 닫기" : "속성 편집"}
+            aria-label="속성 편집"
+            aria-pressed={inspecting}
+            className={`widget-no-drag inline-flex items-center justify-center p-0.5 rounded-button transition-all ${
+              inspecting
+                ? "text-brand-500 opacity-100"
+                : "text-content-tertiary opacity-0 group-hover:opacity-100 hover:text-brand-500 hover:bg-surface-overlay"
+            }`}
+          >
+            <Settings2 size={12} />
+          </button>
           <button
             type="button"
             onClick={onToggleSelect}

@@ -31,7 +31,6 @@ import {
   Building2,
   Menu,
   KeyRound,
-  MessageCircle,
 } from "lucide-react";
 
 const Help = () => {

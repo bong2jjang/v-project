@@ -4,9 +4,11 @@
  * Vite proxy(`/api` → ui-builder-backend:8000) 기준 상대 경로.
  */
 
-import { get, post, put, del } from "@v-platform/core/api/client";
+import { get, post, put, del, apiClient } from "@v-platform/core/api/client";
 
 import type { Message } from "./ui-builder";
+
+export type WidgetSource = "chat" | "pin-drag" | "manual";
 
 export interface DashboardWidget {
   id: string;
@@ -17,6 +19,8 @@ export interface DashboardWidget {
   props: Record<string, unknown>;
   source_message_id: string | null;
   source_call_id: string | null;
+  source: WidgetSource;
+  category: string | null;
   grid_x: number;
   grid_y: number;
   grid_w: number;
@@ -58,6 +62,42 @@ export interface WidgetLayoutItem {
   grid_h: number;
 }
 
+export interface WidgetCatalogEntry {
+  tool: string;
+  label: string;
+  description: string;
+  category: string;
+  icon: string | null;
+  component: string;
+  default_grid: { w: number; h: number };
+  default_args: Record<string, unknown>;
+  schema: Record<string, unknown>;
+  order: number;
+}
+
+export interface WidgetManualCreateRequest {
+  tool: string;
+  props?: Record<string, unknown> | null;
+  grid_x?: number | null;
+  grid_y?: number | null;
+  grid_w?: number | null;
+  grid_h?: number | null;
+}
+
+export interface WidgetUpdateRequest {
+  props?: Record<string, unknown> | null;
+  grid_x?: number | null;
+  grid_y?: number | null;
+  grid_w?: number | null;
+  grid_h?: number | null;
+  expected_updated_at?: string | null;
+}
+
+export interface WidgetConflictBody {
+  detail: string;
+  code: "widget_conflict";
+}
+
 export const dashboardsApi = {
   getDashboard: (projectId: string) =>
     get<DashboardDetail>(`/api/projects/${projectId}/dashboard`),
@@ -79,6 +119,29 @@ export const dashboardsApi = {
       `/api/projects/${projectId}/dashboard/widgets/layout`,
       { items },
     ),
+
+  getCatalog: (projectId: string) =>
+    get<WidgetCatalogEntry[]>(
+      `/api/projects/${projectId}/dashboard/widgets/catalog`,
+    ),
+
+  createManualWidget: (projectId: string, body: WidgetManualCreateRequest) =>
+    post<DashboardWidget>(
+      `/api/projects/${projectId}/dashboard/widgets/manual`,
+      body,
+    ),
+
+  updateWidget: (
+    projectId: string,
+    widgetId: string,
+    body: WidgetUpdateRequest,
+  ) =>
+    apiClient
+      .patch<DashboardWidget>(
+        `/api/projects/${projectId}/dashboard/widgets/${widgetId}`,
+        body,
+      )
+      .then((r) => r.data),
 };
 
 /** Pin 드래그 MIME (ChatPane → DashboardCanvas). */

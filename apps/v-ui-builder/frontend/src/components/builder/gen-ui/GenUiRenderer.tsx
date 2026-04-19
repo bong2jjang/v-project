@@ -21,6 +21,37 @@ import { WeatherCard } from "./WeatherCard";
 import type { WeatherCardProps } from "./WeatherCard";
 import { useUiActionScope } from "./UiActionScope";
 
+import { AlertBanner } from "./dashboard-widgets/AlertBanner";
+import type { AlertBannerProps } from "./dashboard-widgets/AlertBanner";
+import { BarChart } from "./dashboard-widgets/BarChart";
+import type { BarChartProps } from "./dashboard-widgets/BarChart";
+import { CalloutBox } from "./dashboard-widgets/CalloutBox";
+import type { CalloutBoxProps } from "./dashboard-widgets/CalloutBox";
+import { DataTableManual } from "./dashboard-widgets/DataTableManual";
+import type { DataTableManualProps } from "./dashboard-widgets/DataTableManual";
+import { DescriptionText } from "./dashboard-widgets/DescriptionText";
+import type { DescriptionTextProps } from "./dashboard-widgets/DescriptionText";
+import { Divider } from "./dashboard-widgets/Divider";
+import type { DividerProps } from "./dashboard-widgets/Divider";
+import { DonutChart } from "./dashboard-widgets/DonutChart";
+import type { DonutChartProps } from "./dashboard-widgets/DonutChart";
+import { HorizontalBarChart } from "./dashboard-widgets/HorizontalBarChart";
+import type { HorizontalBarChartProps } from "./dashboard-widgets/HorizontalBarChart";
+import { KpiCard } from "./dashboard-widgets/KpiCard";
+import type { KpiCardProps } from "./dashboard-widgets/KpiCard";
+import { LineChart } from "./dashboard-widgets/LineChart";
+import type { LineChartProps } from "./dashboard-widgets/LineChart";
+import { PieChart } from "./dashboard-widgets/PieChart";
+import type { PieChartProps } from "./dashboard-widgets/PieChart";
+import { ProgressBar } from "./dashboard-widgets/ProgressBar";
+import type { ProgressBarProps } from "./dashboard-widgets/ProgressBar";
+import { SectionHeader } from "./dashboard-widgets/SectionHeader";
+import type { SectionHeaderProps } from "./dashboard-widgets/SectionHeader";
+import { StatGrid } from "./dashboard-widgets/StatGrid";
+import type { StatGridProps } from "./dashboard-widgets/StatGrid";
+import { TitleBlock } from "./dashboard-widgets/TitleBlock";
+import type { TitleBlockProps } from "./dashboard-widgets/TitleBlock";
+
 interface GenUiRendererProps {
   call: UiCallRecord;
 }
@@ -69,6 +100,40 @@ export function GenUiRenderer({ call }: GenUiRendererProps) {
       );
     case "DataTableCard":
       return <DataTableCard {...(props as unknown as DataTableCardProps)} />;
+    case "TitleBlock":
+      return <TitleBlock {...(props as unknown as TitleBlockProps)} />;
+    case "SectionHeader":
+      return <SectionHeader {...(props as unknown as SectionHeaderProps)} />;
+    case "DescriptionText":
+      return <DescriptionText {...(props as unknown as DescriptionTextProps)} />;
+    case "Divider":
+      return <Divider {...(props as unknown as DividerProps)} />;
+    case "CalloutBox":
+      return <CalloutBox {...(props as unknown as CalloutBoxProps)} />;
+    case "AlertBanner":
+      return <AlertBanner {...(props as unknown as AlertBannerProps)} />;
+    case "KpiCard":
+      return <KpiCard {...(props as unknown as KpiCardProps)} />;
+    case "StatGrid":
+      return <StatGrid {...(props as unknown as StatGridProps)} />;
+    case "ProgressBar":
+      return <ProgressBar {...(props as unknown as ProgressBarProps)} />;
+    case "LineChart":
+      return <LineChart {...(props as unknown as LineChartProps)} />;
+    case "BarChart":
+      return <BarChart {...(props as unknown as BarChartProps)} />;
+    case "HorizontalBarChart":
+      return (
+        <HorizontalBarChart
+          {...(props as unknown as HorizontalBarChartProps)}
+        />
+      );
+    case "PieChart":
+      return <PieChart {...(props as unknown as PieChartProps)} />;
+    case "DonutChart":
+      return <DonutChart {...(props as unknown as DonutChartProps)} />;
+    case "DataTableManual":
+      return <DataTableManual {...(props as unknown as DataTableManualProps)} />;
     default:
       return (
         <div className="rounded-button border border-line-heavy bg-surface-page px-2 py-1.5 text-[11px] text-content-tertiary">

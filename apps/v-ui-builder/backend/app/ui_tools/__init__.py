@@ -17,6 +17,7 @@ from .echo import EchoUiTool  # noqa: F401 — 등록만을 위한 import
 from .weather import WeatherUiTool  # noqa: F401
 from .stock import StockUiTool  # noqa: F401
 from .data_table import DataTableUiTool  # noqa: F401
+from . import static  # noqa: F401 — 정적 위젯 14종 일괄 등록 (charts/kpi/layout/table/feedback)
 from .dashboard_ops import dashboard_ops_registry  # noqa: F401 — 대시보드 ops 등록
 
 __all__ = [

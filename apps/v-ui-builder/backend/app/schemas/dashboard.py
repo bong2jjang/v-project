@@ -20,6 +20,8 @@ class WidgetRead(BaseModel):
     props: dict[str, Any] = Field(default_factory=dict)
     source_message_id: UUID | None = None
     source_call_id: str | None = None
+    source: str = "chat"
+    category: str | None = None
     grid_x: int
     grid_y: int
     grid_w: int
@@ -37,10 +39,50 @@ class WidgetCreate(BaseModel):
     props: dict[str, Any] = Field(default_factory=dict)
     source_message_id: UUID | None = None
     source_call_id: str | None = Field(default=None, max_length=64)
+    source: str = Field(default="pin-drag", max_length=16)
+    category: str | None = Field(default=None, max_length=32)
     grid_x: int | None = None
     grid_y: int | None = None
     grid_w: int | None = None
     grid_h: int | None = None
+
+
+class WidgetManualCreate(BaseModel):
+    """팔레트에서 수동 추가 — tool 이름만 주면 서버가 default_args/grid 를 채워준다."""
+
+    tool: str = Field(..., min_length=1, max_length=100)
+    props: dict[str, Any] | None = Field(
+        default=None, description="override default_args (없으면 카탈로그 기본값 사용)"
+    )
+    grid_x: int | None = None
+    grid_y: int | None = None
+    grid_w: int | None = None
+    grid_h: int | None = None
+
+
+class WidgetUpdate(BaseModel):
+    """Inspector 편집 — props/grid 변경. `expected_updated_at` 로 낙관적 잠금."""
+
+    props: dict[str, Any] | None = None
+    grid_x: int | None = None
+    grid_y: int | None = None
+    grid_w: int | None = None
+    grid_h: int | None = None
+    expected_updated_at: datetime | None = Field(
+        default=None,
+        description="클라이언트가 가진 updated_at. 서버 값과 다르면 409 반환.",
+    )
+
+
+class WidgetConflict(BaseModel):
+    """409 응답 본문 — 클라이언트가 최신 상태로 갱신하거나 덮어쓰기 결정."""
+
+    detail: str = "widget was modified by another editor"
+    current: WidgetRead
+
+
+# 팔레트 카탈로그는 레지스트리가 `schema` 키를 포함하는 dict 배열을 반환.
+# Pydantic v2 의 `schema` 필드명 충돌을 피하려 라우터에서 list[dict[str, Any]] 그대로 전달.
 
 
 class WidgetLayoutItem(BaseModel):

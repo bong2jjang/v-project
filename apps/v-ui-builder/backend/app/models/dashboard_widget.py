@@ -59,6 +59,16 @@ class UIBuilderDashboardWidget(Base):
     )
     source_call_id = Column(String(64), nullable=True)
 
+    # 'chat' (LLM 스트리밍) | 'pin-drag' (채팅→캔버스) | 'manual' (팔레트 수동 추가)
+    source = Column(
+        String(16),
+        nullable=False,
+        server_default=text("'chat'"),
+        default="chat",
+    )
+    # 팔레트 카테고리 (layout/kpi/charts/table/feedback). NULL 허용 — tool→category 런타임 매핑 가능.
+    category = Column(String(32), nullable=True)
+
     grid_x = Column(Integer, nullable=False, default=0)
     grid_y = Column(Integer, nullable=False, default=0)
     grid_w = Column(Integer, nullable=False, default=6)

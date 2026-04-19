@@ -76,11 +76,27 @@ class BaseUiTool(ABC):
     - `Params`           : pydantic.BaseModel — 도구 인자 타입 (단일 소스).
     - `render(args, ctx)`: Params 에 합치되는 dict 를 받아 UiChunk 를 yield.
     - `invoke_action`    : 후속 인터랙션(/api/ui-action) 진입점 (옵션).
+
+    팔레트 노출용 메타(모두 옵션):
+    - `category`         : "layout"|"kpi"|"charts"|"table"|"filter"|"feedback"|"data" 등.
+                           None 이면 팔레트에서 숨김 (AI 전용 도구 예: weather/stock).
+    - `label`            : 팔레트 표시명(한국어). 없으면 name 사용.
+    - `icon`             : Lucide 아이콘 이름.
+    - `default_grid`     : 팔레트 추가 시 기본 그리드 {w,h}.
+    - `default_args`     : 팔레트 추가 시 기본 인자.
+    - `palette_order`    : 카테고리 내 정렬 키(작을수록 앞).
     """
 
     name: str = "base"
     description: str = ""
     Params: type[BaseModel] = BaseModel
+    component: str = ""
+    category: str | None = None
+    label: str | None = None
+    icon: str | None = None
+    default_grid: dict[str, int] | None = None
+    default_args: dict[str, Any] | None = None
+    palette_order: int = 100
 
     def schema(self) -> ToolSchema:
         return ToolSchema(

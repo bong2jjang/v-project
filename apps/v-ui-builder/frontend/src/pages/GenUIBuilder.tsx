@@ -1,22 +1,24 @@
 /**
  * GenUIBuilder — Generative UI(`project_type='genui'`) 프로젝트 전용 쉘.
  *
- * - 메인: DashboardCanvas (react-grid-layout 위젯 보드)
- * - 우측 도킹: ChatPane (scope="dashboard") — Sandpack Builder 와 공용, 모드만 분기.
- *   기본 열림, 드래그 리사이즈.
- * - Sandpack Builder 와 달리 스냅샷 개념이 없으므로 SnapshotsPanel / 좌측 토글은 없음.
+ * 4-pane 레이아웃:
+ * - 좌측 (240px, 접을 수 있음): WidgetPalette — 카탈로그 기반 수동 위젯 추가
+ * - 중앙 (flex-1): DashboardCanvas — react-grid-layout 위젯 보드
+ * - 우측 Inspector (320px, `inspectedWidgetId` 있을 때만 렌더): 위젯 props 편집
+ * - 최우측 ChatPane (기본 420px, 드래그 리사이즈): scope="dashboard"
  *
- * `useParams.projectId` 가 sandpack 프로젝트라면 백엔드가 404 를 반환하여
- * DashboardCanvas 쪽에서 에러 상태로 노출된다 (ProjectService.get_owned 가
- * expected_type='genui' 로 가드).
+ * Sandpack Builder 와 달리 스냅샷 개념이 없어 SnapshotsPanel 은 없음.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { DashboardCanvas } from "../components/builder/dashboard/DashboardCanvas";
+import { Inspector } from "../components/builder/dashboard/inspector/Inspector";
+import { WidgetPalette } from "../components/builder/dashboard/WidgetPalette";
 import { ChatPane } from "../components/builder/ChatPane";
+import { useDashboardStore } from "../store/dashboard";
 
 const MIN_CHAT_WIDTH = 280;
 const MAX_CHAT_WIDTH = 800;
@@ -26,8 +28,11 @@ const BUILDER_ROUTE_FLAG = "genui-builder";
 export default function GenUIBuilder() {
   const { projectId } = useParams<{ projectId: string }>();
 
+  const [paletteOpen, setPaletteOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH);
+
+  const inspectedWidgetId = useDashboardStore((s) => s.inspectedWidgetId);
 
   const dragStateRef = useRef<{
     startX: number;
@@ -77,11 +82,39 @@ export default function GenUIBuilder() {
 
   return (
     <div className="h-full bg-surface-page flex overflow-hidden relative">
-      <div
-        className={`flex-1 min-w-0 h-full overflow-hidden ${chatOpen ? "max-md:hidden" : ""}`}
-      >
+      {paletteOpen ? (
+        <div className="relative h-full w-[240px] shrink-0 max-md:hidden">
+          <WidgetPalette projectId={projectId} />
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(false)}
+            title="팔레트 닫기"
+            className="absolute top-1.5 right-2 inline-flex items-center justify-center w-6 h-6 rounded-button text-content-tertiary hover:text-content-primary hover:bg-surface-overlay z-10"
+          >
+            <PanelLeftClose size={13} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          title="팔레트 열기"
+          className="absolute top-2 left-2 z-20 inline-flex items-center gap-1.5 rounded-button border border-line bg-surface-card hover:border-brand-500 text-content-secondary hover:text-brand-500 text-[11px] px-2 py-1 shadow-card max-md:hidden"
+        >
+          <PanelLeftOpen size={12} />
+          팔레트
+        </button>
+      )}
+
+      <div className="flex-1 min-w-0 h-full overflow-hidden">
         <DashboardCanvas projectId={projectId} />
       </div>
+
+      {inspectedWidgetId && (
+        <div className="max-md:hidden h-full shrink-0 flex">
+          <Inspector projectId={projectId} />
+        </div>
+      )}
 
       {chatOpen && (
         <>

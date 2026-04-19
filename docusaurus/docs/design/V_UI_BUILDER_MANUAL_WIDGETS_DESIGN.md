@@ -1,6 +1,6 @@
 # v-ui-builder 수동 위젯(Manual Widgets) 설계 문서
 
-**상태**: Draft v0.1
+**상태**: v0.2 (결정 반영 + 외부 데이터 소스 제안)
 **작성일**: 2026-04-19
 **작성자**: v-project 팀
 **영향 범위**: `apps/v-ui-builder/**` 내부 — 플랫폼/타 앱 영향 없음
@@ -445,17 +445,89 @@ class WidgetManualCreate(BaseModel):
 
 ---
 
-## 10. 열린 질문 (v0.1 시점)
+## 10. 의사결정 로그 (v0.2 확정)
 
-1. **데이터 테이블 rows 대량 입력 UX** — 빈 테이블에 50 행을 수동으로 넣기엔 Inspector 폼이 비효율. CSV 붙여넣기 탭을 Inspector 고급 탭에 둘지?
-2. **필터 위젯 시각적 일관성** — 대시보드 전체에서 단 하나의 날짜 범위가 유효(싱글톤)한지, 필터별 독립 스코프인지 (P3.2 에서 결정).
-3. **팔레트 다국어** — 현재 한국어 라벨 하드코딩 예정. i18n 키 분리는 v-platform 패턴을 따를지 별도.
-4. **수동 ↔ AI 편집 충돌** — AI 가 `set_props` 중 사용자가 Inspector 로 편집한 경우 last-write-wins + 토스트 알림으로 처리(동시편집 락은 비채택).
-5. **복잡 차트의 data 입력** — 라인/바 차트 series 를 Inspector 에서 직접 치기 부담스러움. "샘플 데이터 자동 채우기" 버튼으로 데모 데이터셋 1~3종 제공할지?
+v0.1 의 "열린 질문" 5개에 대한 최종 결정:
+
+| # | 질문 | 결정 | 적용 | Phase |
+|---|---|---|---|---|
+| Q1 | 데이터 테이블 rows 대량 입력 UX | **CSV 붙여넣기 탭을 Inspector "고급" 탭 내부**에 둔다 (JSON 에디터와 병렬 서브탭) | `data_table` 전용 `CsvPasteField` — 헤더 자동 감지, `columns`/`rows` 로 치환 | P3.0 |
+| Q2 | 필터 위젯 시각적 일관성 | **하이브리드** — 필터마다 `scope: "global" \| "local"` props 로 선택. 기본값 `"global"` (싱글톤 날짜/선택값), 사용자가 위젯별 독립이 필요하면 `"local"` 전환 | `DashboardFilterScope` 스토어 키 `global.<type>` 와 `local.<widget_id>` 이원화 | P3.1 (위젯), P3.2 (바인딩) |
+| Q3 | 팔레트 다국어 | **연기** — v0.2 는 한국어 라벨 하드코딩. 후속 Phase 에서 v-platform i18n 패턴 도입 시 함께 이관 | — | 후속 |
+| Q4 | 수동 ↔ AI 편집 충돌 | **Last-write-wins + 토스트 알림** (동시편집 락 비채택). 충돌 감지 기준: `UIBuilderDashboardWidget.updated_at` 을 낙관 버전으로 사용 — PATCH 요청 시 `If-Match: <iso8601>` 헤더, 서버에서 불일치면 `409`, 프론트가 최신 props 재조회 후 덮어쓰기 확인 토스트 노출 | Inspector PATCH + dashboard_update_widget op 둘 다 | P3.0 |
+| Q5 | 복잡 차트 data 입력 | **외부 오픈 API 연결이 정답 방향** (Q 참조). v0.2 는 **제안 수준만 문서화** (§11 신규) + 임시로 `data_table`/차트에 `sample_dataset` 버튼으로 1~3 종 데모 데이터 채우기만 지원 | `inspector/SampleDataButton.tsx` | P3.0 (샘플), 외부 API 연결은 별도 설계 |
+
+### 10.1 Q4 세부 — 충돌 감지 구현 합의 사항
+
+1. `UIBuilderDashboardWidget` 의 `updated_at` 은 이미 존재 (타임스탬프 자동 갱신). 별도 버전 컬럼 추가하지 않음.
+2. 프론트는 Inspector 에서 편집 시작 시 해당 위젯의 `updated_at` 을 로컬 스냅샷으로 기록. 저장 요청(`PATCH`) 바디에 `expected_updated_at` 을 포함.
+3. 서버 `DashboardService.update_widget()` 가 `expected_updated_at` 이 주어지면 현재 값과 비교, 다르면 `HTTPException(409, detail={"code":"stale", "current": WidgetRead})`.
+4. 프론트는 409 수신 시 토스트("AI 가 먼저 수정했어요. 내용을 덮어쓸까요?") + [덮어쓰기]/[취소] 제공. 덮어쓰기 시 `expected_updated_at` 제외하고 재요청.
+5. AI(`dashboard_update_widget`) 경로는 항상 최신 상태로 덮어쓰므로 `expected_updated_at` 을 사용하지 않는다 — 충돌은 "사용자 → AI 최신값" 방향으로만 안내된다.
 
 ---
 
-## 11. 관련 문서
+## 11. 외부 데이터 소스 연결 — 제안(Proposal) 수준
+
+**범위 공지**: 아래는 v0.2 시점 **구현하지 않는 제안서**이다. Q5 논의 결과, 차트/테이블에 실제 데이터를 채우려면 "사용자가 Inspector 에 JSON 직접 붙여넣기"보다 **외부 Open API 연결**이 본질적 해답이다. MVP(P3.0) 는 샘플 데이터 버튼으로 대체하고, 실제 연결은 별도 설계 문서(`V_UI_BUILDER_DATA_SOURCES_DESIGN.md`, 예정)로 분리한다.
+
+### 11.1 목표
+
+- 사용자가 `line_chart`, `bar_chart`, `data_table` 등 데이터형 위젯의 `data`/`rows` props 를 **REST / GraphQL / CSV URL** 등 외부 리소스에 바인딩.
+- 연결은 **프로젝트 단위 Data Source** 로 먼저 등록하고, 위젯에서 `data_source_id` + `transform` 을 지정하는 2-단계 구조.
+- 실행 주체는 **백엔드 서버 측 fetcher** — 프론트에서 직접 외부 API 를 치지 않음(CORS/토큰 노출 회피).
+
+### 11.2 제안 데이터 모델
+
+| 테이블(신규) | 컬럼 요지 |
+|---|---|
+| `ui_builder_data_sources` | `id`, `project_id`, `name`, `kind (rest\|graphql\|csv_url\|sample)`, `config JSONB`(URL/headers/query/auth), `created_at`, `updated_at` |
+| `ui_builder_data_bindings` | `id`, `widget_id` (FK), `source_id` (FK), `transform JSONB` (jq-style or declarative mapping), `refresh_interval_sec` |
+
+### 11.3 제안 엔드포인트
+
+| 메서드 | 경로 | 용도 |
+|---|---|---|
+| GET/POST/PATCH/DELETE | `/api/ui-builder/projects/{id}/data-sources` | 소스 CRUD |
+| POST | `/api/ui-builder/data-sources/{sid}/preview` | 스키마 미리보기 (최대 N 행) |
+| GET | `/api/ui-builder/projects/{id}/dashboard/widgets/{wid}/data` | 바인딩된 최신 data 캐시 응답 (서버 fetcher 가 주기적 refresh) |
+
+### 11.4 Inspector 통합 이미지
+
+- 차트/테이블 위젯 Inspector 상단에 "데이터" 토글(수동 / 외부 소스)
+- 외부 소스 선택 시: 소스 드롭다운 + `transform`(기본값 자동 추정) + "미리보기" 버튼
+- 바인딩 후에는 수동 rows 편집 UI 비활성(뷰 전용) + "바인딩 해제" 링크
+
+### 11.5 보안 / 운영 고려
+
+- 토큰은 서버에서 **encryption_key 로 대칭 암호화**(기존 `v_platform.utils.encryption` 재사용)
+- 호출 로그는 감사로그(`audit_log`) 에 `action="data_source_fetch"` 로 기록
+- 무한 리프레시 방지: `refresh_interval_sec` 최솟값 60초, 프로젝트당 활성 바인딩 상한(예: 50)
+- CSRF/토큰 노출 회피: 외부 API 직접 호출은 금지, 반드시 서버 fetcher 경유
+
+### 11.6 일정
+
+- v0.3 설계서 (`V_UI_BUILDER_DATA_SOURCES_DESIGN.md`) → P3.2 또는 후속 Phase 에서 구현.
+- P3.0/P3.1 는 **외부 소스 없이** 샘플 데이터 + Inspector 수동 입력만 지원.
+
+### 11.7 레이아웃 관련 컴포넌트 재확인
+
+사용자 확인 사항 — "간단한 레이아웃 관련 컴포넌트도 추가되는거지?" → **YES**.
+
+§3.1 A 카테고리의 MVP(✅) 6 종은 **모두 P3.0 에서 구현 대상**이다:
+
+- `title_block` (타이틀)
+- `section_header` (섹션 헤더 + 아이콘 + 액션)
+- `description_text` (마크다운 설명)
+- `divider` (구분선)
+- `callout_box` (정보/주의/성공/에러 박스)
+- `alert_banner` (§3.6 전체 너비 배너, 기능적으로 레이아웃 동반)
+
+스페이서/이미지/링크버튼/아이콘배지 는 P3.1 로 유보.
+
+---
+
+## 12. 관련 문서
 
 - [`V_UI_BUILDER_DASHBOARD_CANVAS_DESIGN.md`](./V_UI_BUILDER_DASHBOARD_CANVAS_DESIGN.md) — 드래그·채팅 기반 캔버스 기본 설계
 - [`V_UI_BUILDER_GENERATIVE_UI_DESIGN.md`](./V_UI_BUILDER_GENERATIVE_UI_DESIGN.md) — UiTool / dashboard_ops 인터페이스
@@ -463,5 +535,5 @@ class WidgetManualCreate(BaseModel):
 
 ---
 
-**문서 버전**: 0.1 (Draft)
+**문서 버전**: 0.2 (Q1~Q5 결정 반영 + 외부 데이터 소스 제안 §11)
 **최종 업데이트**: 2026-04-19

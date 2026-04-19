@@ -38,5 +38,34 @@ class _UiToolRegistry:
     def all_openai(self) -> list[dict[str, Any]]:
         return [tool.schema().to_openai() for tool in self._tools.values()]
 
+    def catalog_entries(self) -> list[dict[str, Any]]:
+        """팔레트 노출용 카탈로그 — category 가 지정된 도구만.
+
+        각 엔트리:
+        - tool, label, description, category, icon
+        - default_grid, default_args
+        - schema (params_schema: JSON Schema)
+        """
+        entries: list[dict[str, Any]] = []
+        for tool in self._tools.values():
+            if not tool.category:
+                continue
+            entries.append(
+                {
+                    "tool": tool.name,
+                    "label": tool.label or tool.name,
+                    "description": tool.description,
+                    "category": tool.category,
+                    "icon": tool.icon,
+                    "component": tool.component or tool.name,
+                    "default_grid": tool.default_grid or {"w": 6, "h": 4},
+                    "default_args": tool.default_args or {},
+                    "schema": tool.Params.model_json_schema(),
+                    "order": tool.palette_order,
+                }
+            )
+        entries.sort(key=lambda e: (e["category"], e["order"], e["label"]))
+        return entries
+
 
 registry = _UiToolRegistry()

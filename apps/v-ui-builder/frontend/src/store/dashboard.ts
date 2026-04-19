@@ -21,6 +21,9 @@ interface DashboardState {
   /** 대시보드 채팅에서 "포커스된" 위젯 ID. LLM 에 상세 props 를 전달할 대상. */
   selectedWidgetIds: string[];
 
+  /** Inspector 에서 편집 중인 단일 위젯 ID (null = Inspector 닫힘). */
+  inspectedWidgetId: string | null;
+
   /** EmptyState suggestion chip 클릭 시 ChatPane(scope="dashboard") 이 자동 전송할 프롬프트. */
   pendingChatPrompt: string | null;
 
@@ -37,6 +40,8 @@ interface DashboardState {
   clearSelection: () => void;
   setSelection: (ids: string[]) => void;
 
+  setInspectedWidgetId: (id: string | null) => void;
+
   setPendingChatPrompt: (prompt: string | null) => void;
 
   reset: () => void;
@@ -48,6 +53,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   isLoading: false,
   error: null,
   selectedWidgetIds: [],
+  inspectedWidgetId: null,
   pendingChatPrompt: null,
 
   setProjectId: (projectId) => set({ projectId }),
@@ -75,6 +81,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           widgets: s.dashboard.widgets.filter((w) => w.id !== widgetId),
         },
         selectedWidgetIds: s.selectedWidgetIds.filter((id) => id !== widgetId),
+        inspectedWidgetId:
+          s.inspectedWidgetId === widgetId ? null : s.inspectedWidgetId,
       };
     }),
 
@@ -101,6 +109,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   clearSelection: () => set({ selectedWidgetIds: [] }),
   setSelection: (ids) => set({ selectedWidgetIds: ids }),
 
+  setInspectedWidgetId: (id) => set({ inspectedWidgetId: id }),
+
   setPendingChatPrompt: (prompt) => set({ pendingChatPrompt: prompt }),
 
   reset: () =>
@@ -110,6 +120,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       isLoading: false,
       error: null,
       selectedWidgetIds: [],
+      inspectedWidgetId: null,
       pendingChatPrompt: null,
     }),
 }));
