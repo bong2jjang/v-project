@@ -186,6 +186,7 @@ export default function Builder() {
             style={{ width: chatWidth }}
           >
             <ChatPane
+              scope="project"
               projectId={projectId}
               onClose={() => setChatOpen(false)}
             />

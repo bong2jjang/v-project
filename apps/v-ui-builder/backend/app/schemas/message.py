@@ -22,6 +22,7 @@ class UiCallRecord(BaseModel):
     tool: str
     args: dict[str, Any] = Field(default_factory=dict)
     status: Literal["ok", "error", "loading"] = "ok"
+    component: str | None = None
     props: dict[str, Any] | None = None
     error: str | None = None
     created_at: datetime | None = None

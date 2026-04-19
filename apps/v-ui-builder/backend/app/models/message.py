@@ -37,6 +37,17 @@ class UIBuilderMessage(Base):
         server_default=text("'[]'::jsonb"),
         default=list,
     )
+    scope = Column(
+        String(16),
+        nullable=False,
+        server_default=text("'project'"),
+        default="project",
+    )
+    dashboard_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("ui_builder_dashboards.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

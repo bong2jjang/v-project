@@ -129,7 +129,7 @@ class SnapshotService:
     def list_for_project(
         self, project_id: UUID, user_id: int
     ) -> list[UIBuilderSnapshot]:
-        self.projects.get_owned(project_id, user_id)
+        self.projects.get_owned(project_id, user_id, expected_type="sandpack")
         return (
             self.db.query(UIBuilderSnapshot)
             .filter(UIBuilderSnapshot.project_id == project_id)
@@ -147,7 +147,7 @@ class SnapshotService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="snapshot not found"
             )
-        self.projects.get_owned(snap.project_id, user_id)
+        self.projects.get_owned(snap.project_id, user_id, expected_type="sandpack")
         return snap
 
     def get_linked_messages(
@@ -181,7 +181,7 @@ class SnapshotService:
     def delete(self, snapshot_id: UUID, user_id: int) -> UUID:
         """스냅샷 1건 삭제. 확정 스냅샷이면 project.current_snapshot_id 를 먼저 해제."""
         snap = self.get_owned(snapshot_id, user_id)
-        project = self.projects.get_owned(snap.project_id, user_id)
+        project = self.projects.get_owned(snap.project_id, user_id, expected_type="sandpack")
         if project.current_snapshot_id == snap.id:
             project.current_snapshot_id = None
             self.db.flush()
@@ -195,7 +195,7 @@ class SnapshotService:
     def confirm(
         self, project_id: UUID, snapshot_id: UUID | None, user_id: int
     ) -> UIBuilderProject:
-        project = self.projects.get_owned(project_id, user_id)
+        project = self.projects.get_owned(project_id, user_id, expected_type="sandpack")
         if snapshot_id is None:
             project.current_snapshot_id = None
         else:

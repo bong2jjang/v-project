@@ -8,7 +8,12 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models import UIBuilderArtifact, UIBuilderMessage, UIBuilderProject
+from app.models import (
+    UIBuilderArtifact,
+    UIBuilderDashboard,
+    UIBuilderMessage,
+    UIBuilderProject,
+)
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
@@ -21,24 +26,61 @@ class ProjectService:
             user_id=user_id,
             name=data.name,
             description=data.description,
+            project_type=data.project_type,
             template=data.template,
             llm_provider=data.llm_provider,
             llm_model=data.llm_model,
         )
         self.db.add(project)
+        self.db.flush()  # project.id 확정 → dashboard.project_id FK 참조
+
+        # genui 프로젝트만 기본 대시보드 동반. sandpack 은 Dashboard 와 무관하므로 생성하지 않는다.
+        if project.project_type == "genui":
+            dashboard = UIBuilderDashboard(project_id=project.id, name="Dashboard")
+            self.db.add(dashboard)
+
         self.db.commit()
         self.db.refresh(project)
         return project
 
-    def list_by_user(self, user_id: int) -> list[UIBuilderProject]:
-        return (
-            self.db.query(UIBuilderProject)
-            .filter(UIBuilderProject.user_id == user_id)
-            .order_by(UIBuilderProject.updated_at.desc())
-            .all()
+    def ensure_dashboard(
+        self, project_id: UUID, user_id: int, expected_type: str | None = None
+    ) -> UIBuilderDashboard:
+        """프로젝트의 기본 대시보드를 보장(없으면 생성)."""
+        self.get_owned(project_id, user_id, expected_type=expected_type)
+        dashboard = (
+            self.db.query(UIBuilderDashboard)
+            .filter(UIBuilderDashboard.project_id == project_id)
+            .first()
         )
+        if dashboard is None:
+            dashboard = UIBuilderDashboard(project_id=project_id, name="Dashboard")
+            self.db.add(dashboard)
+            self.db.commit()
+            self.db.refresh(dashboard)
+        return dashboard
 
-    def get_owned(self, project_id: UUID, user_id: int) -> UIBuilderProject:
+    def list_by_user(
+        self, user_id: int, project_type: str | None = None
+    ) -> list[UIBuilderProject]:
+        q = self.db.query(UIBuilderProject).filter(
+            UIBuilderProject.user_id == user_id
+        )
+        if project_type is not None:
+            q = q.filter(UIBuilderProject.project_type == project_type)
+        return q.order_by(UIBuilderProject.updated_at.desc()).all()
+
+    def get_owned(
+        self,
+        project_id: UUID,
+        user_id: int,
+        expected_type: str | None = None,
+    ) -> UIBuilderProject:
+        """소유권 검증 + 선택적으로 project_type 검증.
+
+        expected_type 가 주어지면 타입이 다를 때 404 를 던진다 — 메뉴 수준 분리로
+        잘못된 타입의 프로젝트가 타 경로에 섞여 들어가지 못하게 한다.
+        """
         project = (
             self.db.query(UIBuilderProject)
             .filter(UIBuilderProject.id == project_id)
@@ -51,6 +93,11 @@ class ProjectService:
         if project.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="not your project"
+            )
+        if expected_type is not None and project.project_type != expected_type:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"project is not a {expected_type} project",
             )
         return project
 
@@ -70,15 +117,21 @@ class ProjectService:
         self.db.commit()
 
     def list_messages(
-        self, project_id: UUID, user_id: int
+        self,
+        project_id: UUID,
+        user_id: int,
+        scope: str | None = "project",
     ) -> list[UIBuilderMessage]:
+        """프로젝트 메시지 조회. 기본 scope='project' (sandpack 채팅),
+        scope='dashboard' 는 genui 대시보드 채팅 히스토리.
+        None 이면 모든 scope."""
         self.get_owned(project_id, user_id)
-        return (
-            self.db.query(UIBuilderMessage)
-            .filter(UIBuilderMessage.project_id == project_id)
-            .order_by(UIBuilderMessage.created_at.asc())
-            .all()
+        q = self.db.query(UIBuilderMessage).filter(
+            UIBuilderMessage.project_id == project_id
         )
+        if scope is not None:
+            q = q.filter(UIBuilderMessage.scope == scope)
+        return q.order_by(UIBuilderMessage.created_at.asc()).all()
 
     def latest_artifacts(
         self, project_id: UUID, user_id: int

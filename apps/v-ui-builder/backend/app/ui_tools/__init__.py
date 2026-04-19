@@ -17,10 +17,12 @@ from .echo import EchoUiTool  # noqa: F401 — 등록만을 위한 import
 from .weather import WeatherUiTool  # noqa: F401
 from .stock import StockUiTool  # noqa: F401
 from .data_table import DataTableUiTool  # noqa: F401
+from .dashboard_ops import dashboard_ops_registry  # noqa: F401 — 대시보드 ops 등록
 
 __all__ = [
     "BaseUiTool",
     "UiChunk",
     "UiContext",
     "registry",
+    "dashboard_ops_registry",
 ]

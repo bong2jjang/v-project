@@ -92,6 +92,15 @@ class BaseUiTool(ABC):
     def validate_args(self, args: dict[str, Any]) -> BaseModel:
         return self.Params.model_validate(args)
 
+    def summarize_props(self, props: dict[str, Any]) -> str:
+        """대시보드 채팅에서 레이아웃 JSON 에 실을 한 줄 요약.
+
+        전체 props(특히 series 같은 배열)를 LLM 에 태우면 토큰이 폭발하므로,
+        각 도구가 "무엇을 보여주는 카드인지" 정도만 짧게 돌려준다.
+        기본은 빈 문자열 — 하위 클래스가 필요 시 재정의.
+        """
+        return ""
+
     @abstractmethod
     async def render(
         self, args: dict[str, Any], ctx: UiContext

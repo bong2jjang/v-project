@@ -8,14 +8,20 @@ from __future__ import annotations
 
 from typing import Any, AsyncIterator, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from .base import BaseUiTool, UiChunk, UiContext
 from .registry import registry
 
 
 class WeatherParams(BaseModel):
-    location: str = Field(..., description="도시 또는 지역 이름 (예: Seoul, Tokyo)")
+    model_config = ConfigDict(populate_by_name=True)
+
+    location: str = Field(
+        ...,
+        description="도시 또는 지역 이름 (예: Seoul, Tokyo, 경기도 화성시)",
+        validation_alias=AliasChoices("location", "city", "place", "region"),
+    )
     unit: Literal["celsius", "fahrenheit"] = Field(
         default="celsius", description="온도 단위"
     )
@@ -36,6 +42,13 @@ class WeatherUiTool(BaseUiTool):
         "사용자가 날씨/기온/기상 조건을 물을 때 호출."
     )
     Params = WeatherParams
+
+    def summarize_props(self, props: dict[str, Any]) -> str:
+        loc = props.get("location") or "?"
+        t = props.get("temperature")
+        unit = "°C" if props.get("unit") == "celsius" else "°F"
+        cond = props.get("condition") or "?"
+        return f"{loc} {t}{unit} {cond}"
 
     async def render(
         self, args: dict[str, Any], ctx: UiContext

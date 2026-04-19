@@ -38,6 +38,13 @@ class DataTableUiTool(BaseUiTool):
     )
     Params = DataTableParams
 
+    def summarize_props(self, props: dict[str, Any]) -> str:
+        cols = props.get("columns") or []
+        rows = props.get("rows") or []
+        title = props.get("title") or ""
+        suffix = f" — {title}" if title else ""
+        return f"{len(cols)} cols × {len(rows)} rows{suffix}"
+
     async def render(
         self, args: dict[str, Any], ctx: UiContext
     ) -> AsyncIterator[UiChunk]:

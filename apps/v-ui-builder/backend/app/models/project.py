@@ -22,6 +22,9 @@ class UIBuilderProject(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
+    project_type = Column(
+        String(32), nullable=False, default="sandpack", server_default="sandpack"
+    )
     template = Column(String(50), nullable=False, default="react-ts")
     llm_provider = Column(String(50), nullable=False, default="openai")
     llm_model = Column(String(100), nullable=True)
@@ -69,4 +72,10 @@ class UIBuilderProject(Base):
         "UIBuilderSnapshot",
         foreign_keys=[current_snapshot_id],
         post_update=True,
+    )
+    dashboard = relationship(
+        "UIBuilderDashboard",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        uselist=False,
     )

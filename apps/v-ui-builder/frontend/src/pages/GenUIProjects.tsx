@@ -1,14 +1,14 @@
 /**
- * Dashboard — Sandpack 프로젝트 목록 + 새 프로젝트 생성 (`project_type='sandpack'`).
+ * GenUIProjects — Generative UI(`project_type='genui'`) 프로젝트 목록 + 생성.
  *
- * genui 프로젝트는 별도 `/genui` 페이지에서 관리한다. 이 페이지는 sandpack 프로젝트만
- * 조회/생성하며, 목록 조회 시 `?type=sandpack` 쿼리로 필터링된다.
+ * Dashboard.tsx 의 sandpack 버전과 형제 페이지. 목록은 `?type=genui` 로 필터링되고,
+ * 생성 후에는 `/genui/:projectId` 의 GenUIBuilder 로 이동한다.
  */
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardBody } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -20,23 +20,23 @@ import {
   type ProjectCreateRequest,
 } from "../lib/api/ui-builder";
 
-const PROJECTS_KEY = ["ui-builder", "projects", "sandpack"] as const;
+const PROJECTS_KEY = ["ui-builder", "projects", "genui"] as const;
 
-export default function Dashboard() {
+export default function GenUIProjects() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: PROJECTS_KEY,
-    queryFn: () => uiBuilderApi.listProjects("sandpack"),
+    queryFn: () => uiBuilderApi.listProjects("genui"),
   });
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ProjectCreateRequest>({
     name: "",
     description: "",
-    project_type: "sandpack",
+    project_type: "genui",
     template: "react-ts",
     llm_provider: "openai",
   });
@@ -49,11 +49,11 @@ export default function Dashboard() {
       setForm({
         name: "",
         description: "",
-        project_type: "sandpack",
+        project_type: "genui",
         template: "react-ts",
         llm_provider: "openai",
       });
-      navigate(`/builder/${created.id}`);
+      navigate(`/genui/${created.id}`);
     },
   });
 
@@ -71,10 +71,10 @@ export default function Dashboard() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-content-primary">
-                  {user?.username || "사용자"}님, 무엇을 만들어 볼까요?
+                  {user?.username || "사용자"}님, 어떤 대시보드를 만들어 볼까요?
                 </h2>
                 <p className="mt-1 text-content-secondary">
-                  대화로 UI를 만들고 Sandpack 으로 즉시 미리봅니다.
+                  대화로 위젯을 고정하고 자유롭게 배치하는 Generative UI 프로젝트입니다.
                 </p>
               </div>
               <Button
@@ -100,7 +100,7 @@ export default function Dashboard() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, name: e.target.value }))
                     }
-                    placeholder="예: 로그인 폼 실험"
+                    placeholder="예: 시장 모니터링 대시보드"
                     required
                     className="w-full rounded border border-gray-300 dark:border-gray-700 bg-transparent p-2 text-sm"
                   />
@@ -161,7 +161,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>최근 프로젝트</CardTitle>
+            <CardTitle>최근 대시보드</CardTitle>
           </CardHeader>
           <CardBody>
             {isLoading && (
@@ -170,7 +170,7 @@ export default function Dashboard() {
 
             {!isLoading && (!projects || projects.length === 0) && (
               <p className="text-sm text-content-secondary">
-                아직 프로젝트가 없습니다. 새 프로젝트를 만들어 시작하세요.
+                아직 대시보드가 없습니다. 새 프로젝트를 만들어 시작하세요.
               </p>
             )}
 
@@ -179,29 +179,20 @@ export default function Dashboard() {
                 {projects.map((p: Project) => (
                   <li key={p.id} className="py-3 first:pt-0 last:pb-0">
                     <Link
-                      to={`/builder/${p.id}`}
+                      to={`/genui/${p.id}`}
                       className="flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-2 -mx-2"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 min-w-0">
+                          <LayoutDashboard
+                            size={12}
+                            className="shrink-0 text-brand-500"
+                          />
                           <span className="text-sm font-medium text-content-primary truncate">
                             {p.name}
                           </span>
-                          {p.current_snapshot && (
-                            <span
-                              title={`확정 스냅샷: ${p.current_snapshot.title}`}
-                              className="inline-flex items-center gap-1 shrink-0 rounded-full bg-status-success/15 text-status-success text-[10px] px-1.5 py-px font-mono"
-                            >
-                              <Check size={10} />
-                              {p.current_snapshot.slug}
-                            </span>
-                          )}
                         </div>
-                        {p.current_snapshot ? (
-                          <div className="text-xs text-content-secondary mt-0.5 truncate">
-                            {p.current_snapshot.title}
-                          </div>
-                        ) : p.description ? (
+                        {p.description ? (
                           <div className="text-xs text-content-secondary mt-0.5 truncate">
                             {p.description}
                           </div>

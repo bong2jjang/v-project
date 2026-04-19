@@ -1,8 +1,10 @@
 /**
- * CanvasPane — VS Code 에디터 영역 룩.
+ * CanvasPane — VS Code 에디터 영역 룩 (Sandpack Builder 전용).
  *
- * 상단 탭 바: [Preview] [file1.tsx] [file2.tsx] ... 를 단일 레일로 표시한다.
- * Preview 탭은 가상 탭, 나머지는 실제 파일 탭(클릭 시 해당 파일을 Monaco 에 띄움).
+ * 상단 탭 바: [Preview] [file1.tsx] [file2.tsx] ...
+ * Preview 는 가상 탭, 나머지는 실제 파일 탭(클릭 시 Monaco 에 띄움).
+ * Dashboard 탭은 제거되었다 — genui 프로젝트는 별도 `/genui/:id` 경로와
+ * `GenUIBuilder` 페이지(우측 ChatPane[scope="dashboard"] + 좌측 DashboardCanvas)로 분리됨.
  * 외곽 컨테이너는 Builder 가 담당하고, 이 컴포넌트는 tab bar + 콘텐츠만 책임진다.
  * 콘텐츠 영역은 자체 스크롤만 가지며 외부 스크롤을 만들지 않는다.
  */
@@ -43,6 +45,10 @@ export function CanvasPane() {
     setShowPreview(false);
   };
 
+  const openPreview = () => {
+    setShowPreview(true);
+  };
+
   return (
     <div className="h-full min-h-0 flex flex-col bg-surface-page">
       <div
@@ -53,7 +59,7 @@ export function CanvasPane() {
           active={activeKey === "preview"}
           icon={<Eye size={14} />}
           label="Preview"
-          onClick={() => setShowPreview(true)}
+          onClick={openPreview}
         />
         {!hasFiles && (
           <VsTab

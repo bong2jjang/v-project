@@ -15,11 +15,13 @@ from .snapshot import SnapshotListItem
 
 Template = Literal["react-ts", "vue", "vanilla-ts"]
 LLMProviderName = Literal["openai", "anthropic", "gemini"]
+ProjectType = Literal["sandpack", "genui"]
 
 
 class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
+    project_type: ProjectType = "sandpack"
     template: Template = "react-ts"
     llm_provider: LLMProviderName = "openai"
     llm_model: str | None = None
@@ -39,6 +41,7 @@ class ProjectResponse(BaseModel):
     user_id: int
     name: str
     description: str | None
+    project_type: str = "sandpack"
     template: str
     llm_provider: str
     llm_model: str | None

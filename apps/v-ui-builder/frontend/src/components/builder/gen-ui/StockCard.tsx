@@ -1,6 +1,8 @@
 /**
  * StockCard — stock ui tool 의 component 렌더러.
- * Recharts LineChart 로 시계열 price 를 표시한다.
+ * Recharts LineChart 로 시계열 price 를 표시하고, 하단 Range Pills(1D~1Y)로
+ * 기간을 전환한다. `onAction("setRange", { symbol, range })` 를 호출하면
+ * 서버의 stock.invoke_action 이 새 props 를 ui_patch 로 내려보낸다.
  */
 
 import { TrendingDown, TrendingUp } from "lucide-react";
@@ -13,13 +15,26 @@ export interface StockSeriesPoint {
   price: number;
 }
 
+export type StockRange = "1d" | "5d" | "1mo" | "3mo" | "6mo" | "1y";
+
+const RANGE_OPTIONS: { value: StockRange; label: string }[] = [
+  { value: "1d", label: "1D" },
+  { value: "5d", label: "5D" },
+  { value: "1mo", label: "1M" },
+  { value: "3mo", label: "3M" },
+  { value: "6mo", label: "6M" },
+  { value: "1y", label: "1Y" },
+];
+
 export interface StockCardProps {
   symbol: string;
-  range: "1d" | "5d" | "1mo" | "3mo";
+  range: StockRange;
   current: number;
   change: number;
   change_pct: number;
   series: StockSeriesPoint[];
+  onAction?: (action: string, args: Record<string, unknown>) => void;
+  actionPending?: boolean;
 }
 
 export function StockCard({
@@ -29,10 +44,17 @@ export function StockCard({
   change,
   change_pct,
   series,
+  onAction,
+  actionPending,
 }: StockCardProps) {
   const up = change >= 0;
   const accent = up ? "#16a34a" : "#dc2626";
   const Trend = up ? TrendingUp : TrendingDown;
+
+  const handleRange = (next: StockRange) => {
+    if (!onAction || actionPending || next === range) return;
+    onAction("setRange", { symbol, range: next });
+  };
 
   return (
     <Card>
@@ -84,6 +106,33 @@ export function StockCard({
             </LineChart>
           </ResponsiveContainer>
         </div>
+        {onAction && (
+          <div className="mt-2 flex items-center gap-1">
+            {RANGE_OPTIONS.map((opt) => {
+              const active = opt.value === range;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleRange(opt.value)}
+                  disabled={actionPending || active}
+                  className={`rounded-button px-2 py-0.5 text-[10.5px] font-medium transition-colors disabled:cursor-not-allowed ${
+                    active
+                      ? "bg-brand-600 text-content-inverse"
+                      : "bg-surface-page text-content-secondary hover:bg-surface-overlay hover:text-content-primary disabled:opacity-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+            {actionPending && (
+              <span className="ml-1 text-[10px] text-content-tertiary">
+                불러오는 중…
+              </span>
+            )}
+          </div>
+        )}
       </CardBody>
     </Card>
   );

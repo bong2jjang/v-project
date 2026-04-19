@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from v_platform.core.database import get_db_session
@@ -37,12 +38,16 @@ def create_project(
 
 @router.get("", response_model=list[ProjectResponse])
 def list_projects(
+    type: Literal["sandpack", "genui"] | None = Query(
+        default=None, description="프로젝트 종류 필터 (미지정 시 전체)"
+    ),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ) -> list[ProjectResponse]:
     svc = ProjectService(db)
     return [
-        ProjectResponse.model_validate(p) for p in svc.list_by_user(current_user.id)
+        ProjectResponse.model_validate(p)
+        for p in svc.list_by_user(current_user.id, project_type=type)
     ]
 
 
@@ -104,6 +109,7 @@ def list_artifacts(
     current_user: User = Depends(get_current_user),
 ) -> list[ArtifactResponse]:
     svc = ProjectService(db)
+    svc.get_owned(project_id, current_user.id, expected_type="sandpack")
     return [
         ArtifactResponse.model_validate(a)
         for a in svc.latest_artifacts(project_id, current_user.id)
@@ -122,6 +128,7 @@ def upsert_artifact(
     current_user: User = Depends(get_current_user),
 ) -> ArtifactResponse:
     svc = ProjectService(db)
+    svc.get_owned(project_id, current_user.id, expected_type="sandpack")
     artifact = svc.upsert_artifact(
         project_id, current_user.id, data.file_path, data.content
     )

@@ -98,6 +98,34 @@ def _to_sse(event: str, data: dict) -> bytes:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n".encode()
 
 
+def _summarize_tool_results(records: list[dict[str, Any]]) -> str:
+    """도구 호출 결과를 한국어 한 줄(또는 여러 줄)로 요약.
+
+    LLM 이 tool_call 만 내보내고 content 를 생략한 턴에, 어시스턴트 버블이
+    비지 않도록 보조 텍스트로 사용한다.
+    """
+    lines: list[str] = []
+    for r in records:
+        name = r.get("tool") or "tool"
+        status = r.get("status")
+        if status == "error":
+            err = r.get("error") or "알 수 없는 오류"
+            lines.append(f"⚠️ `{name}` 도구 호출 실패: {err}")
+        elif status == "ok":
+            props = r.get("props") or {}
+            summary = ""
+            if ui_tool_registry.has(name):
+                try:
+                    summary = ui_tool_registry.get(name).summarize_props(props) or ""
+                except Exception:  # noqa: BLE001
+                    summary = ""
+            if summary:
+                lines.append(f"✅ `{name}` — {summary}")
+            else:
+                lines.append(f"✅ `{name}` 결과를 표시했습니다.")
+    return "\n".join(lines)
+
+
 class ChatService:
     def __init__(self, db: Session):
         self.db = db
@@ -174,6 +202,7 @@ class ChatService:
             "tool": tool_name,
             "args": args,
             "status": "loading",
+            "component": None,
             "props": None,
             "error": None,
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -214,9 +243,13 @@ class ChatService:
 
                 if ui_chunk.kind == "component":
                     record["status"] = "ok"
+                    if ui_chunk.component is not None:
+                        record["component"] = ui_chunk.component
                     record["props"] = ui_chunk.props
                 elif ui_chunk.kind == "patch" and ui_chunk.props:
                     record["status"] = "ok"
+                    if ui_chunk.component is not None:
+                        record["component"] = ui_chunk.component
                     record["props"] = {**(record.get("props") or {}), **ui_chunk.props}
                 elif ui_chunk.kind == "error":
                     record["status"] = "error"
@@ -307,6 +340,14 @@ class ChatService:
         except Exception as exc:
             yield _to_sse("error", {"message": str(exc)})
             return
+
+        # LLM 이 tool_call 만 내보내고 content 를 생략한 경우, 빈 버블을 피하기 위해
+        # 도구 결과를 기반으로 보조 요약 텍스트를 추가한다.
+        if ui_calls_accum and not "".join(assistant_buf).strip():
+            fallback = _summarize_tool_results(ui_calls_accum)
+            if fallback:
+                yield _to_sse("content", {"delta": fallback})
+                assistant_buf.append(fallback)
 
         # assistant 메시지 영속화 (ui_calls 포함)
         assistant_content = "".join(assistant_buf)

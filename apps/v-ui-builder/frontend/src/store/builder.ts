@@ -54,6 +54,11 @@ interface BuilderState {
   startStreaming: () => void;
   appendStreamingContent: (delta: string) => void;
   applyUiEvent: (kind: UiEventKind, payload: UiEventPayload) => void;
+  applyUiPatchToMessage: (
+    messageId: string,
+    kind: UiEventKind,
+    payload: UiEventPayload,
+  ) => void;
   finishStreaming: (finalMessage: Message) => void;
   resetStreaming: () => void;
   loadSnapshotFiles: (snapshotId: string, files: FileMap) => void;
@@ -192,6 +197,15 @@ export const useBuilderStore = create<BuilderState>((set) => ({
     set((s) => ({
       streamingUiCalls: reduceUiEvent(s.streamingUiCalls, kind, payload),
     })),
+
+  applyUiPatchToMessage: (messageId, kind, payload) =>
+    set((s) => {
+      const prev = s.uiCallsByMessageId[messageId] ?? [];
+      const next = reduceUiEvent(prev, kind, payload);
+      return {
+        uiCallsByMessageId: { ...s.uiCallsByMessageId, [messageId]: next },
+      };
+    }),
 
   finishStreaming: (finalMessage) =>
     set((s) => {

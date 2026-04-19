@@ -10,6 +10,7 @@ import { apiClient, get, post, put, del } from "@v-platform/core/api/client";
 export type Template = "react-ts" | "vue" | "vanilla-ts";
 export type LLMProvider = "openai" | "anthropic" | "gemini";
 export type MessageRole = "user" | "assistant" | "system";
+export type ProjectType = "sandpack" | "genui";
 
 export interface SnapshotListItem {
   id: string;
@@ -43,6 +44,7 @@ export interface Project {
   user_id: number;
   name: string;
   description: string | null;
+  project_type: ProjectType;
   template: string;
   llm_provider: string;
   llm_model: string | null;
@@ -93,6 +95,7 @@ export interface ProjectDetail extends Project {
 export interface ProjectCreateRequest {
   name: string;
   description?: string;
+  project_type?: ProjectType;
   template?: Template;
   llm_provider?: LLMProvider;
   llm_model?: string;
@@ -112,7 +115,8 @@ export interface ProviderInfo {
 }
 
 export const uiBuilderApi = {
-  listProjects: () => get<Project[]>("/api/projects"),
+  listProjects: (type?: ProjectType) =>
+    get<Project[]>(type ? `/api/projects?type=${type}` : "/api/projects"),
   getProject: (id: string) => get<ProjectDetail>(`/api/projects/${id}`),
   createProject: (data: ProjectCreateRequest) =>
     post<Project>("/api/projects", data),

@@ -158,7 +158,9 @@
 
   /* Builder 편집기 뷰: 플랫폼 Layout 의 넓게보기/기본보기 토글 숨김 */
   body[data-route="builder-editor"] main > button[title="넓게보기"],
-  body[data-route="builder-editor"] main > button[title="기본보기"] {
+  body[data-route="builder-editor"] main > button[title="기본보기"],
+  body[data-route="genui-builder"] main > button[title="넓게보기"],
+  body[data-route="genui-builder"] main > button[title="기본보기"] {
     display: none !important;
   }
 

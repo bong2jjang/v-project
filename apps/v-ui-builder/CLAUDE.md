@@ -32,8 +32,34 @@
 | Frontend | `v-ui-builder-frontend` | `5181:5173` |
 
 - API prefix: `/api/ui-builder/*` (P1.1 에서 라우터 등록)
-- SSE 엔드포인트: `POST /api/ui-builder/chat/stream`
+- SSE 엔드포인트:
+  - Sandpack Builder — `POST /api/ui-builder/projects/{id}/chat` (scope=project)
+  - Generative UI — `POST /api/ui-builder/projects/{id}/dashboard/chat` (scope=dashboard)
 - Docker profile: `ui-builder`
+
+### 프론트엔드 라우트 (메뉴 분리 후)
+
+| 경로 | 페이지 | 메뉴 (permission_key) | 아이콘 |
+|---|---|---|---|
+| `/` | `Dashboard` (Sandpack 프로젝트 목록) | "Sandpack 프로젝트" (`ui_builder_sandpack`) | `Code2` |
+| `/builder/:projectId` | `Builder` (3-pane IDE + SnapshotsPanel) | — (`ui_builder_sandpack` 상속) | — |
+| `/genui` | `GenUIProjects` (Generative UI 프로젝트 목록) | "Generative UI 프로젝트" (`ui_builder_genui`) | `Sparkles` |
+| `/genui/:projectId` | `GenUIBuilder` (DashboardCanvas + 우측 ChatPane) | — (`ui_builder_genui` 상속) | — |
+
+**메뉴 분리 전략 (DB 기반)**: 앱 마이그레이션 `a006_ui_builder_menus.py` 가 `menu_items` 에 `app_id='v-ui-builder'` 행 3개를 INSERT 한다:
+1. `ui_builder_sandpack` (path=`/`, icon=`Code2`) — Sandpack 프로젝트 메뉴
+2. `ui_builder_genui` (path=`/genui`, icon=`Sparkles`) — Generative UI 프로젝트 메뉴
+3. `menu_type='hide_shared'`, `permission_key='dashboard'` (is_active=FALSE, path=`__hidden__/...`) — 공통 대시보드 숨김 마커
+
+각 페이지는 고유 `permission_key` 를 가져 권한 관리 매트릭스에서 개별 제어 가능. 공통 `dashboard` (app_id=NULL) 메뉴의 기존 RBAC 그룹 grants 는 마이그레이션에서 새 2행에 복사된다.
+
+플랫폼 `permission_service._filter_shared_overridden` 가 두 가지 규칙으로 공통 메뉴를 숨긴다:
+1. **오버라이드 규칙**: 같은 `permission_key` 의 app-specific entry 존재 시 공통 entry 제거
+2. **hide_shared 마커 규칙**: `menu_type='hide_shared'` 행의 `permission_key` 와 일치하는 공통 entry 제거
+
+v-ui-builder 는 **(2) 마커 규칙**을 사용해 공통 "대시보드" 를 숨긴다. 두 규칙 모두 다른 앱에서 재사용 가능한 패턴.
+
+관련 플랫폼 마이그레이션: `p031_menu_unique_include_path.py` — `uq_menu_items_key_app` 를 path 포함으로 확장하여 같은 permission_key 가 다른 경로에 공존하도록 허용 (hide_shared 마커는 센티넬 path 로 실제 메뉴 행과 공존).
 
 ## 4. 디렉터리 맵
 
@@ -56,8 +82,17 @@ apps/v-ui-builder/
 │   └── requirements.txt
 └── frontend/
     ├── src/
-    │   ├── pages/{Dashboard,Builder,Help}.tsx
-    │   ├── components/builder/{ChatPane,CodePane,PreviewPane}.tsx
+    │   ├── pages/
+    │   │   ├── Dashboard.tsx               # Sandpack 프로젝트 목록 (/)
+    │   │   ├── Builder.tsx                 # Sandpack 3-pane IDE (/builder/:id)
+    │   │   ├── GenUIProjects.tsx           # Generative UI 목록 (/genui)
+    │   │   ├── GenUIBuilder.tsx            # Generative UI 쉘 (/genui/:id)
+    │   │   └── Help.tsx
+    │   ├── components/builder/
+    │   │   ├── ChatPane.tsx                             # 공용 Chat (scope="project" | "dashboard")
+    │   │   ├── {CodePane,PreviewPane}.tsx               # Sandpack 2-pane
+    │   │   └── dashboard/
+    │   │       └── DashboardCanvas.tsx                  # react-grid-layout 위젯 보드
     │   └── (Layout/ProtectedRoute/auth 등은 template 에서 복제)
     ├── Dockerfile.dev
     ├── package.json             # sandpack-react, monaco-editor
@@ -92,7 +127,7 @@ apps/v-ui-builder/
 ### 금지
 - `platform/**` 수정 (PlatformApp 개선이 필요하면 별도 PR 로 플랫폼 팀에 제안)
 - 타 앱(`apps/v-channel-bridge`, `apps/v-platform-portal`, `apps/v-platform-template`) 파일 수정
-- 플랫폼 테이블(`users`, `permissions`, `audit_log`, `menu_items`, …) 스키마 변경
+- 플랫폼 테이블(`users`, `permissions`, `audit_log`, …) 스키마 변경 (※ `menu_items` 는 `app_id='v-ui-builder'` 범위 내 INSERT 만 허용 — 앱 전용 메뉴 등록 목적)
 - `docker-compose.yml` 의 타 앱 / 공용 서비스(postgres, redis, mailhog) 섹션 편집
 
 ### 교차 영향 사전 체크리스트
@@ -149,5 +184,5 @@ OPENAI_MODEL=gpt-4o-mini
 
 ---
 
-**문서 버전**: 0.1 (스캐폴딩 단계 P1.0)
-**최종 업데이트**: 2026-04-18
+**문서 버전**: 0.3 (Phase 3 — 고유 permission_key + hide_shared 마커)
+**최종 업데이트**: 2026-04-19
