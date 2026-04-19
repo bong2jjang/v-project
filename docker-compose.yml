@@ -80,21 +80,24 @@ services:
       - ./apps/v-channel-bridge/backend:/app
       - ./platform/backend:/platform/backend
       - backend_data:/app/data
+    env_file:
+      - path: ./apps/v-channel-bridge/.env
+        required: false
     environment:
       # v-channel-bridge
       - BRIDGE_TYPE=native
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app:/platform/backend
-      # Database
+      # Database (공용)
       - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - DATABASE_DIR=/app/data
-      # Redis (동적 라우팅 룰 저장)
+      # Redis (공용)
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
-      # Security
+      # Security (공용)
       - SECRET_KEY=${SECRET_KEY:-v-project-secret-key-change-in-production-12345}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - ENVIRONMENT=${ENVIRONMENT:-development}
-      # Email
+      # Email (공용, SMTP_FROM_NAME 은 앱별 .env 에서 override 가능)
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
@@ -102,21 +105,15 @@ services:
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-channel-bridge}
       - FRONTEND_URL=${FRONTEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:5173}
-      # Slack Provider (Socket Mode)
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      # Teams Provider (Graph API)
+      # SSO (공용: 모든 앱이 Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
-      - TEAMS_TEAM_ID=${TEAMS_TEAM_ID}
-      # Microsoft OAuth (Delegated Auth)
-      - MS_OAUTH_REDIRECT_URI=${MS_OAUTH_REDIRECT_URI:-}
-      # Graph API Change Notifications / SSO 콜백 루트
+      # Graph API Change Notifications / SSO 콜백 루트 (compose interpolation 유지)
       - BACKEND_URL=${BRIDGE_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8000}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180}
-      - TEAMS_NOTIFICATION_URL=${TEAMS_NOTIFICATION_URL:-}
-      # SSO: TEAMS_* 환경변수를 재사용 (별도 SSO 변수 불필요)
+      # 앱 전용 변수(SLACK_*, TEAMS_TEAM_ID, MS_OAUTH_REDIRECT_URI, TEAMS_NOTIFICATION_URL)는
+      # apps/v-channel-bridge/.env 에서 env_file 로 주입됨
     depends_on:
       postgres:
         condition: service_healthy
@@ -228,14 +225,20 @@ services:
       - ./apps/v-platform-portal/backend:/app
       - ./platform/backend:/platform/backend
       - portal_backend_data:/app/data
+    env_file:
+      - path: ./apps/v-platform-portal/.env
+        required: false
     environment:
       - PYTHONPATH=/app:/platform/backend
       - DATABASE_DIR=/app/data
       - PYTHONUNBUFFERED=1
+      # Database / Redis (공용)
       - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      # Security (공용)
       - SECRET_KEY=${SECRET_KEY:-v-platform-portal-secret-key-32chars!!}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      # Email (공용)
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
@@ -243,14 +246,14 @@ services:
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-platform-portal}
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5180
-      # SSO 콜백 루트 (MS OAuth redirect_uri 생성에 사용)
+      # SSO 콜백 루트 (compose interpolation 유지)
       - BACKEND_URL=${PORTAL_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8080}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180}
-      # SSO (Teams 자격증명 재사용)
+      # SSO (공용: Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
-      - PORTAL_APPS=v-channel-bridge|Channel Bridge|Slack ↔ Teams 메시지 브리지|MessageSquare|http://${PUBLIC_HOST:-127.0.0.1}:5173|http://v-project-bridge-backend:8000,v-platform-template|Platform Template|플랫폼 템플릿 앱|LayoutDashboard|http://${PUBLIC_HOST:-127.0.0.1}:5174|http://v-project-template-backend:8000
+      # 앱 전용 변수(PORTAL_APPS)는 apps/v-platform-portal/.env 에서 env_file 로 주입됨
     depends_on:
       postgres:
         condition: service_healthy
@@ -326,14 +329,20 @@ services:
       - ./apps/v-platform-template/backend:/app
       - ./platform/backend:/platform/backend
       - template_backend_data:/app/data
+    env_file:
+      - path: ./apps/v-platform-template/.env
+        required: false
     environment:
       - PYTHONPATH=/app:/platform/backend
       - DATABASE_DIR=/app/data
       - PYTHONUNBUFFERED=1
+      # Database / Redis (공용)
       - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      # Security (공용)
       - SECRET_KEY=${SECRET_KEY:-v-platform-template-secret-key-32chars!!}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      # Email (공용)
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
@@ -341,13 +350,14 @@ services:
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@v-project.local}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-v-platform-template}
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5174
-      # SSO 콜백 루트 (MS OAuth redirect_uri 생성에 사용)
+      # SSO 콜백 루트 (compose interpolation 유지)
       - BACKEND_URL=${TEMPLATE_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8002}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180}
-      # SSO (Teams 자격증명 재사용)
+      # SSO (공용: Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
+      # 앱 전용 변수는 apps/v-platform-template/.env 에서 env_file 로 주입됨
     depends_on:
       postgres:
         condition: service_healthy
@@ -417,20 +427,38 @@ services:
       dockerfile: apps/v-ui-builder/backend/Dockerfile
     container_name: v-ui-builder-backend
     restart: unless-stopped
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app
+      - --reload-dir
+      - /platform/backend
     ports:
       - "8004:8000"
     volumes:
       - ./apps/v-ui-builder/backend:/app
       - ./platform/backend:/platform/backend
       - ui_builder_backend_data:/app/data
+    env_file:
+      - path: ./apps/v-ui-builder/.env
+        required: false
     environment:
       - PYTHONPATH=/app:/platform/backend
       - DATABASE_DIR=/app/data
       - PYTHONUNBUFFERED=1
+      # Database / Redis (공용)
       - DATABASE_URL=${DATABASE_URL:-postgresql://vmsuser:vmspassword@postgres:5432/v_project}
       - REDIS_URL=${REDIS_URL:-redis://:redispassword@redis:6379/0}
+      # Security (공용)
       - SECRET_KEY=${SECRET_KEY:-v-ui-builder-secret-key-32chars!!!!}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      # Email (공용)
       - SMTP_HOST=${SMTP_HOST:-mailhog}
       - SMTP_PORT=${SMTP_PORT:-1025}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
@@ -440,14 +468,12 @@ services:
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5181
       - BACKEND_URL=${UI_BUILDER_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8004}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180,http://${PUBLIC_HOST:-127.0.0.1}:5181}
-      # LLM Provider (P1.1 에서 활성화)
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
-      # SSO (Teams 자격증명 재사용)
+      # SSO (공용: Teams 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
+      # 앱 전용 변수(LLM_PROVIDER, OPENAI_API_KEY, OPENAI_MODEL)는
+      # apps/v-ui-builder/.env 에서 env_file 로 주입됨
     depends_on:
       postgres:
         condition: service_healthy

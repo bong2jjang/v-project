@@ -70,15 +70,21 @@ docker compose --profile template --profile portal up -d --build  # 전체
 | PostgreSQL / Redis | 5432 / 6379 |
 | Docusaurus / MailHog / debugpy | 3000 / 8025 / 5678 |
 
-## 환경 변수 (.env)
+## 환경 변수 (.env) — 스코프 분리
 
-**플랫폼 공통**:
-```
-DATABASE_URL, REDIS_URL, SECRET_KEY (32자+), FRONTEND_URL
-SMTP_HOST, SMTP_PORT, SMTP_FROM_EMAIL
-```
+| 파일 | 스코프 | 포함 변수 |
+|---|---|---|
+| `.env` (루트) | 공용 + compose interpolation | `DATABASE_URL`, `REDIS_URL`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `SECRET_KEY`, `ENCRYPTION_KEY`, `ENVIRONMENT`, `SMTP_*`, `PUBLIC_HOST`, `CORS_ORIGINS`, `FRONTEND_URL`, `*_BACKEND_URL`, `TEAMS_TENANT_ID/APP_ID/APP_PASSWORD` (SSO 공용) |
+| `apps/v-channel-bridge/.env` | bridge 전용 | `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `TEAMS_TEAM_ID`, `MS_OAUTH_REDIRECT_URI`, `TEAMS_NOTIFICATION_URL` |
+| `apps/v-platform-portal/.env` | portal 전용 | `PORTAL_APPS` |
+| `apps/v-platform-template/.env` | template 전용 | (현재 없음, 새 앱 복제 시 추가) |
+| `apps/v-ui-builder/.env` | ui-builder 전용 | `LLM_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL` |
 
-앱 전용 변수(`SLACK_*`, `TEAMS_*`, `PORTAL_APPS` 등)는 각 앱 `CLAUDE.md` 참조. **`.env` 파일은 절대 커밋하지 마세요.**
+**원칙**:
+- 공용 변수와 compose `${VAR}` 치환에 쓰이는 변수는 루트 `.env`에 유지 (치환은 루트 `.env`만 소스로 사용)
+- 앱 고유 비밀·설정은 `apps/{app}/.env`에 분리 → docker-compose의 `env_file: (required: false)`로 주입
+- `.env`, `apps/*/.env`는 커밋 금지 (`.gitignore`에 포함)
+- 예시 파일은 각 위치에 `.env.example` → `cp .env.example .env` 후 실제 값 채우기
 
 ## 코딩 규칙
 
