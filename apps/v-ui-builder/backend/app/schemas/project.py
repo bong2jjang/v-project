@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .artifact import ArtifactResponse
 from .message import MessageResponse
+from .snapshot import SnapshotListItem
 
 
 Template = Literal["react-ts", "vue", "vanilla-ts"]
@@ -41,6 +42,8 @@ class ProjectResponse(BaseModel):
     template: str
     llm_provider: str
     llm_model: str | None
+    current_snapshot_id: UUID | None = None
+    current_snapshot: SnapshotListItem | None = None
     created_at: datetime
     updated_at: datetime
 

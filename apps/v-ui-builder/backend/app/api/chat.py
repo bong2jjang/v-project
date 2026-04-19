@@ -29,6 +29,7 @@ async def chat_stream(
         user_id=current_user.id,
         prompt=payload.prompt,
         model=payload.model,
+        context_snapshot_ids=payload.context_snapshot_ids,
     )
     return StreamingResponse(
         generator,

@@ -1,13 +1,14 @@
 """OpenAI Provider — Chat Completions 스트리밍 구현.
 
-응답 스트림을 순회하며 다음 규약의 코드 펜스를 artifact 이벤트로 분리:
+응답 스트림은 **원본 그대로** `content` 이벤트로 내보내고, 아래 규약의
+코드 펜스가 감지되면 Sandpack 라이브 프리뷰용으로 `artifact_*` 이벤트를
+**추가로** 병행 방출한다 (채팅 버블에는 펜스가 그대로 남도록):
 
     ```tsx file=/src/App.tsx
     ...코드...
     ```
 
-펜스 밖의 텍스트는 `content` 이벤트로 내보낸다. 파일 경로가 없는 코드 블록은
-`content` 이벤트로 유지된다.
+파일 경로가 없는 코드 블록은 `content` 이벤트로만 유지된다.
 """
 
 from __future__ import annotations
@@ -123,6 +124,12 @@ class _FenceParser:
         return events
 
     def _process_line(self, line: str) -> list[LLMChunk]:
+        """원본 텍스트는 항상 content 로, 아트팩트 감지 시 병행 이벤트를 추가.
+
+        채팅 버블은 펜스 포함 원본을 받아 코드블록으로 렌더링하고,
+        Sandpack 은 artifact 이벤트로 라이브 프리뷰를 갱신한다.
+        """
+        events: list[LLMChunk] = [LLMChunk(kind="content", delta=line)]
         stripped = line.strip()
         match = _FENCE_RE.match(stripped)
         if match:
@@ -130,20 +137,18 @@ class _FenceParser:
             if not self._in_artifact and path:
                 self._in_artifact = True
                 self._artifact_path = path
-                return [LLMChunk(kind="artifact_start", file_path=path)]
-            if self._in_artifact:
+                events.append(LLMChunk(kind="artifact_start", file_path=path))
+            elif self._in_artifact:
                 ended = self._artifact_path
                 self._in_artifact = False
                 self._artifact_path = None
-                return [LLMChunk(kind="artifact_end", file_path=ended)]
-            return [LLMChunk(kind="content", delta=line)]
-
-        if self._in_artifact:
-            return [
+                events.append(LLMChunk(kind="artifact_end", file_path=ended))
+        elif self._in_artifact:
+            events.append(
                 LLMChunk(
                     kind="artifact_delta",
                     file_path=self._artifact_path,
                     delta=line,
                 )
-            ]
-        return [LLMChunk(kind="content", delta=line)]
+            )
+        return events

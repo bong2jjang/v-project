@@ -50,12 +50,13 @@ platform = PlatformApp(
 )
 
 # ── 앱 전용 라우터 등록 ──
-from app.api import chat, llm, projects
+from app.api import chat, llm, projects, snapshots
 
 platform.register_app_routers(
     projects.router,
     chat.router,
     llm.router,
+    snapshots.router,
 )
 
 app = platform.fastapi

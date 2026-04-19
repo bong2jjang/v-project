@@ -3,5 +3,11 @@
 from .artifact import UIBuilderArtifact
 from .message import UIBuilderMessage
 from .project import UIBuilderProject
+from .snapshot import UIBuilderSnapshot
 
-__all__ = ["UIBuilderProject", "UIBuilderMessage", "UIBuilderArtifact"]
+__all__ = [
+    "UIBuilderProject",
+    "UIBuilderMessage",
+    "UIBuilderArtifact",
+    "UIBuilderSnapshot",
+]

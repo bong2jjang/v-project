@@ -11,6 +11,7 @@ class ChatRequest(BaseModel):
     project_id: UUID
     prompt: str = Field(..., min_length=1)
     model: str | None = None
+    context_snapshot_ids: list[UUID] = Field(default_factory=list)
 
 
 class ProviderInfo(BaseModel):

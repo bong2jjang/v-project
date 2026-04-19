@@ -25,6 +25,16 @@ class UIBuilderProject(Base):
     template = Column(String(50), nullable=False, default="react-ts")
     llm_provider = Column(String(50), nullable=False, default="openai")
     llm_model = Column(String(100), nullable=True)
+    current_snapshot_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "ui_builder_snapshots.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_ui_builder_projects_current_snapshot",
+        ),
+        nullable=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -47,4 +57,16 @@ class UIBuilderProject(Base):
         "UIBuilderArtifact",
         back_populates="project",
         cascade="all, delete-orphan",
+    )
+    snapshots = relationship(
+        "UIBuilderSnapshot",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="UIBuilderSnapshot.created_at.desc()",
+        foreign_keys="UIBuilderSnapshot.project_id",
+    )
+    current_snapshot = relationship(
+        "UIBuilderSnapshot",
+        foreign_keys=[current_snapshot_id],
+        post_update=True,
     )
