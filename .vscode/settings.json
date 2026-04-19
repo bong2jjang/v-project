@@ -1,53 +1,15 @@
 {
-  // Python 설정
-  "python.defaultInterpreterPath": "./backend/venv/bin/python",
-  "python.analysis.extraPaths": ["./backend"],
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.fixAll.ruff": "explicit",
-      "source.organizeImports.ruff": "explicit"
-    }
+  "python.defaultInterpreterPath": "C:\Users\bong-gram\AppData\Local\Programs\Python\Python312\python.exe",
+  "python.analysis.extraPaths": [
+    "./apps/v-channel-bridge/backend",
+    "./apps/v-platform-portal/backend",
+    "./apps/v-platform-template/backend"
+  ],
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "warning",
+    "reportMissingModuleSource": "none"
   },
-
-  // TypeScript 설정
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
-
-  // 파일 탐색기에서 제외
-  "files.exclude": {
-    "**/__pycache__": true,
-    "**/.pytest_cache": true,
-    "**/.mypy_cache": true,
-    "**/.ruff_cache": true,
-    "**/node_modules": true,
-    "**/.DS_Store": true
-  },
-
-  // 검색에서 제외
-  "search.exclude": {
-    "**/node_modules": true,
-    "**/dist": true,
-    "**/__pycache__": true
-  },
-
-  // 파일 연결
-  "files.associations": {
-    "*.toml": "toml",
-    "docker-compose*.yml": "dockercompose"
-  },
-
-  // 에디터 설정
-  "editor.rulers": [100],
-  "editor.tabSize": 2,
-  "[python]": {
-    "editor.tabSize": 4
-  }
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.useLibraryCodeForTypes": true
 }

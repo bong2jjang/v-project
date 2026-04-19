@@ -4,7 +4,9 @@
       "Bash(rm -rf /d/Github/v-project/.git)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(mkdir -p .claude/skills/backup-config .claude/skills/sync-docs)",
+      "Bash(git mv *)"
     ]
   }
 }
