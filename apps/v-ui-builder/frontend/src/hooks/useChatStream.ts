@@ -46,6 +46,7 @@ export function useChatStream({
     appendMessage,
     startStreaming,
     appendStreamingContent,
+    applyUiEvent,
     finishStreaming,
     resetStreaming,
     updateFile,
@@ -150,6 +151,34 @@ export function useChatStream({
                 // 파일 블록 완료 — 현재 구현에서는 추가 처리 없음
                 break;
               }
+              case "ui_loading":
+              case "ui_component":
+              case "ui_patch":
+              case "ui_error": {
+                const kind = event.slice("ui_".length) as
+                  | "loading"
+                  | "component"
+                  | "patch"
+                  | "error";
+                const call_id = String(payload.call_id ?? "");
+                const tool = String(payload.tool ?? "");
+                if (!call_id || !tool) return;
+                applyUiEvent(kind, {
+                  call_id,
+                  tool,
+                  component:
+                    typeof payload.component === "string"
+                      ? payload.component
+                      : null,
+                  props:
+                    payload.props && typeof payload.props === "object"
+                      ? (payload.props as Record<string, unknown>)
+                      : null,
+                  error:
+                    typeof payload.error === "string" ? payload.error : null,
+                });
+                break;
+              }
               case "snapshot_created": {
                 // 새 스냅샷이 생성되었음 — 리스트 캐시와 프로젝트 상세를 무효화해
                 // 우측 패널이 즉시 갱신되도록 한다.
@@ -173,6 +202,7 @@ export function useChatStream({
                   content: contentBuffer.join(""),
                   tokens_in: null,
                   tokens_out: null,
+                  ui_calls: useBuilderStore.getState().streamingUiCalls,
                   created_at: new Date().toISOString(),
                 };
                 finishStreaming(finalMessage);
@@ -226,11 +256,13 @@ export function useChatStream({
       appendMessage,
       startStreaming,
       appendStreamingContent,
+      applyUiEvent,
       appendToFile,
       updateFile,
       setActiveFile,
       finishStreaming,
       resetStreaming,
+      queryClient,
       onError,
     ],
   );

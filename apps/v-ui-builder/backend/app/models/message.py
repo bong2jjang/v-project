@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from v_platform.models.base import Base
@@ -31,6 +31,12 @@ class UIBuilderMessage(Base):
     content = Column(Text, nullable=False)
     tokens_in = Column(Integer, nullable=True)
     tokens_out = Column(Integer, nullable=True)
+    ui_calls = Column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        default=list,
+    )
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

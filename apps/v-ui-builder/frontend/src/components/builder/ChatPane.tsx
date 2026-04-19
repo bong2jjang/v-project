@@ -17,8 +17,14 @@ import { ChevronDown, ChevronRight, ChevronUp, Paperclip, Square, X } from "luci
 
 import { useBuilderStore } from "../../store/builder";
 import { useChatStream } from "../../hooks/useChatStream";
-import { uiBuilderApi, type SnapshotListItem } from "../../lib/api/ui-builder";
+import {
+  uiBuilderApi,
+  type Message,
+  type SnapshotListItem,
+  type UiCallRecord,
+} from "../../lib/api/ui-builder";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { GenUiRenderer } from "./gen-ui/GenUiRenderer";
 
 interface ChatPaneProps {
   projectId: string;
@@ -31,6 +37,8 @@ const snapshotsKey = (projectId: string) =>
 export function ChatPane({ projectId, onClose }: ChatPaneProps) {
   const messages = useBuilderStore((s) => s.messages);
   const streamingBuffer = useBuilderStore((s) => s.streamingBuffer);
+  const streamingUiCalls = useBuilderStore((s) => s.streamingUiCalls);
+  const uiCallsByMessageId = useBuilderStore((s) => s.uiCallsByMessageId);
   const isStreaming = useBuilderStore((s) => s.isStreaming);
 
   const [prompt, setPrompt] = useState("");
@@ -156,19 +164,16 @@ export function ChatPane({ projectId, onClose }: ChatPaneProps) {
           </div>
         )}
 
-        {messages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            role={m.role}
-            content={m.content}
-            timestamp={m.created_at}
-          />
-        ))}
+        <MessageGroups
+          messages={messages}
+          uiCallsByMessageId={uiCallsByMessageId}
+        />
 
         {isStreaming && (
           <MessageBubble
             role="assistant"
             content={streamingBuffer || "…"}
+            uiCalls={streamingUiCalls}
             streaming
           />
         )}
@@ -391,16 +396,152 @@ interface MessageBubbleProps {
   content: string;
   streaming?: boolean;
   timestamp?: string;
+  uiCalls?: UiCallRecord[];
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function getDateKey(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "unknown";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getDateLabel(key: string): string {
+  if (key === "unknown") return "날짜 미상";
+  const [y, m, d] = key.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const today = startOfDay(new Date());
+  const diffDays = Math.round(
+    (today.getTime() - target.getTime()) / 86_400_000,
+  );
+  if (diffDays === 0) return "오늘";
+  if (diffDays === 1) return "어제";
+  const weekday = target.toLocaleDateString("ko-KR", { weekday: "short" });
+  if (y === today.getFullYear()) return `${m}월 ${d}일 (${weekday})`;
+  return `${y}년 ${m}월 ${d}일 (${weekday})`;
 }
 
 function formatMessageTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString([], {
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHour = Math.floor(diffMs / 3_600_000);
+
+  const hm = d.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
   });
+
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+
+  if (sameDay) {
+    if (diffMin < 1) return "방금 전";
+    if (diffMin < 60) return `${diffMin}분 전`;
+    if (diffHour < 24) return `${diffHour}시간 전`;
+    return `오늘 ${hm}`;
+  }
+
+  const yesterday = startOfDay(new Date(now.getTime() - 86_400_000));
+  const targetDay = startOfDay(d);
+  if (targetDay.getTime() === yesterday.getTime()) return `어제 ${hm}`;
+
+  const y = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  if (y === now.getFullYear()) return `${mm}-${dd} ${hm}`;
+  return `${y}-${mm}-${dd} ${hm}`;
+}
+
+interface MessageGroup {
+  key: string;
+  label: string;
+  messages: Message[];
+}
+
+function groupMessagesByDate(messages: Message[]): MessageGroup[] {
+  const groups: MessageGroup[] = [];
+  for (const m of messages) {
+    const key = getDateKey(m.created_at);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.messages.push(m);
+    } else {
+      groups.push({ key, label: getDateLabel(key), messages: [m] });
+    }
+  }
+  return groups;
+}
+
+interface MessageGroupsProps {
+  messages: Message[];
+  uiCallsByMessageId: Record<string, UiCallRecord[]>;
+}
+
+function MessageGroups({
+  messages,
+  uiCallsByMessageId,
+}: MessageGroupsProps) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const groups = groupMessagesByDate(messages);
+
+  const toggle = (key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  return (
+    <>
+      {groups.map((g) => {
+        const isCollapsed = collapsed.has(g.key);
+        return (
+          <div key={g.key} className="space-y-2">
+            <button
+              type="button"
+              onClick={() => toggle(g.key)}
+              aria-expanded={!isCollapsed}
+              className="group/divider flex w-full items-center gap-2 py-1 text-[10px] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary transition-colors"
+            >
+              <span className="h-px flex-1 bg-line" />
+              <span className="flex items-center gap-1 px-1">
+                {isCollapsed ? (
+                  <ChevronRight size={10} className="opacity-70" />
+                ) : (
+                  <ChevronDown size={10} className="opacity-70" />
+                )}
+                <span>{g.label}</span>
+                <span className="normal-case tracking-normal text-content-tertiary/70">
+                  ({g.messages.length})
+                </span>
+              </span>
+              <span className="h-px flex-1 bg-line" />
+            </button>
+            {!isCollapsed &&
+              g.messages.map((m) => (
+                <MessageBubble
+                  key={m.id}
+                  role={m.role}
+                  content={m.content}
+                  timestamp={m.created_at}
+                  uiCalls={uiCallsByMessageId[m.id] ?? m.ui_calls}
+                />
+              ))}
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 function MessageBubble({
@@ -408,12 +549,14 @@ function MessageBubble({
   content,
   streaming,
   timestamp,
+  uiCalls,
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const [collapsed, setCollapsed] = useState(false);
   const canCollapse = !streaming;
   const isCollapsed = canCollapse && collapsed;
   const timeLabel = timestamp ? formatMessageTime(timestamp) : "";
+  const hasUiCalls = !isUser && uiCalls && uiCalls.length > 0;
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -453,6 +596,58 @@ function MessageBubble({
             {streaming && <span className="animate-pulse text-brand-500">▍</span>}
           </div>
         ))}
+      {!isCollapsed && hasUiCalls && (
+        <div className="mt-1 flex flex-col gap-1">
+          {uiCalls!.map((call) => (
+            <UiCallCard key={call.call_id} call={call} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface UiCallCardProps {
+  call: UiCallRecord;
+}
+
+function UiCallCard({ call }: UiCallCardProps) {
+  const statusStyle =
+    call.status === "error"
+      ? "border-status-danger-border bg-status-danger-light text-status-danger"
+      : call.status === "loading"
+        ? "border-line-heavy bg-surface-page text-content-tertiary"
+        : "border-brand-500/40 bg-brand-500/5 text-content-primary";
+
+  return (
+    <div
+      className={`rounded-button border px-2 py-1.5 text-[11px] font-mono ${statusStyle}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate">
+          <span className="text-content-tertiary">tool ›</span>{" "}
+          <span className="text-content-primary">{call.tool}</span>
+          {call.component && (
+            <span className="text-content-tertiary">
+              {" "}
+              · <span className="text-content-secondary">{call.component}</span>
+            </span>
+          )}
+        </span>
+        <span className="text-[9.5px] uppercase tracking-wider text-content-tertiary shrink-0">
+          {call.status}
+        </span>
+      </div>
+      {call.status === "error" && call.error && (
+        <div className="mt-1 whitespace-pre-wrap break-words text-status-danger">
+          {call.error}
+        </div>
+      )}
+      {call.status === "ok" && call.component && call.props && (
+        <div className="mt-2">
+          <GenUiRenderer call={call} />
+        </div>
+      )}
     </div>
   );
 }

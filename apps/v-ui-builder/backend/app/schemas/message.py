@@ -3,13 +3,28 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 MessageRole = Literal["user", "assistant", "system"]
+
+
+class UiCallRecord(BaseModel):
+    """메시지에 첨부된 Generative UI tool-call 결과 (방안 C).
+
+    ChatService 가 스트림 종료 시 메시지 ui_calls 배열에 누적한다.
+    """
+
+    call_id: str
+    tool: str
+    args: dict[str, Any] = Field(default_factory=dict)
+    status: Literal["ok", "error", "loading"] = "ok"
+    props: dict[str, Any] | None = None
+    error: str | None = None
+    created_at: datetime | None = None
 
 
 class MessageResponse(BaseModel):
@@ -21,4 +36,5 @@ class MessageResponse(BaseModel):
     content: str
     tokens_in: int | None
     tokens_out: int | None
+    ui_calls: list[UiCallRecord] = Field(default_factory=list)
     created_at: datetime

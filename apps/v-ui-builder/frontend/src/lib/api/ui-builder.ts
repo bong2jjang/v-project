@@ -52,6 +52,19 @@ export interface Project {
   updated_at: string;
 }
 
+export type UiCallStatus = "loading" | "ok" | "error";
+
+export interface UiCallRecord {
+  call_id: string;
+  tool: string;
+  args?: Record<string, unknown>;
+  status: UiCallStatus;
+  component?: string | null;
+  props?: Record<string, unknown> | null;
+  error?: string | null;
+  created_at?: string | null;
+}
+
 export interface Message {
   id: string;
   project_id: string;
@@ -59,6 +72,7 @@ export interface Message {
   content: string;
   tokens_in: number | null;
   tokens_out: number | null;
+  ui_calls?: UiCallRecord[];
   created_at: string;
 }
 

@@ -9,17 +9,24 @@
     ```
 
 파일 경로가 없는 코드 블록은 `content` 이벤트로만 유지된다.
+
+Generative UI (방안 C): `tools` 인자가 주어지면 OpenAI tool-calling 을
+활성화하고, 모델이 tool_call 을 완성할 때마다 `tool_call` LLMChunk 를 방출.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 import re
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
 
 from .base import ArtifactFile, BaseLLMProvider, ChatMessage, LLMChunk
+
+logger = logging.getLogger(__name__)
 
 
 _FENCE_RE = re.compile(
@@ -43,6 +50,7 @@ class OpenAIProvider(BaseLLMProvider):
         system_prompt: str,
         file_context: list[ArtifactFile],
         model: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[LLMChunk]:
         if self._client is None:
             raise RuntimeError("OpenAI API key is not configured")
@@ -57,21 +65,39 @@ class OpenAIProvider(BaseLLMProvider):
             )
         payload.extend({"role": m.role, "content": m.content} for m in messages)
 
-        stream = await self._client.chat.completions.create(
-            model=model or self._default_model,
-            messages=payload,
-            stream=True,
-        )
+        kwargs: dict[str, Any] = {
+            "model": model or self._default_model,
+            "messages": payload,
+            "stream": True,
+        }
+        if tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
+
+        stream = await self._client.chat.completions.create(**kwargs)
 
         parser = _FenceParser()
+        tool_buf = _ToolCallBuffer()
         async for chunk in stream:
             if not chunk.choices:
                 continue
-            delta = chunk.choices[0].delta.content or ""
-            for event in parser.feed(delta):
-                yield event
+            choice = chunk.choices[0]
+            delta = choice.delta
+
+            if delta.content:
+                for event in parser.feed(delta.content):
+                    yield event
+
+            if getattr(delta, "tool_calls", None):
+                tool_buf.feed(delta.tool_calls)
+
+            if choice.finish_reason in ("tool_calls", "stop"):
+                for event in tool_buf.flush():
+                    yield event
 
         for event in parser.flush():
+            yield event
+        for event in tool_buf.flush():
             yield event
         yield LLMChunk(kind="done")
 
@@ -151,4 +177,61 @@ class _FenceParser:
                     delta=line,
                 )
             )
+        return events
+
+
+class _ToolCallBuffer:
+    """OpenAI 스트리밍 tool_call 조립기.
+
+    `delta.tool_calls` 는 index 단위로 쪼개져 arrivals 가 나뉘며,
+    `function.arguments` 는 JSON 문자열이 조각조각 도착한다.
+    index 로 슬롯을 확보한 뒤 누적 → flush 시점에 JSON 파싱해 방출.
+    """
+
+    def __init__(self) -> None:
+        # index → { id, name, args_buf }
+        self._slots: dict[int, dict[str, Any]] = {}
+        self._emitted: set[int] = set()
+
+    def feed(self, tool_calls: list[Any]) -> None:
+        for tc in tool_calls:
+            idx = getattr(tc, "index", 0)
+            slot = self._slots.setdefault(
+                idx, {"id": None, "name": None, "args_buf": ""}
+            )
+            tc_id = getattr(tc, "id", None)
+            if tc_id:
+                slot["id"] = tc_id
+            fn = getattr(tc, "function", None)
+            if fn is not None:
+                if getattr(fn, "name", None):
+                    slot["name"] = fn.name
+                args_delta = getattr(fn, "arguments", None)
+                if args_delta:
+                    slot["args_buf"] += args_delta
+
+    def flush(self) -> list[LLMChunk]:
+        events: list[LLMChunk] = []
+        for idx, slot in self._slots.items():
+            if idx in self._emitted or not slot.get("name"):
+                continue
+            raw = slot.get("args_buf") or "{}"
+            try:
+                parsed = json.loads(raw) if raw.strip() else {}
+            except json.JSONDecodeError:
+                logger.warning(
+                    "tool_call args JSON parse failed: tool=%s raw=%r",
+                    slot.get("name"),
+                    raw,
+                )
+                parsed = {}
+            events.append(
+                LLMChunk(
+                    kind="tool_call",
+                    tool_call_id=slot.get("id") or f"call_{idx}",
+                    tool_name=slot["name"],
+                    tool_args=parsed,
+                )
+            )
+            self._emitted.add(idx)
         return events

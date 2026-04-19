@@ -50,13 +50,17 @@ platform = PlatformApp(
 )
 
 # ── 앱 전용 라우터 등록 ──
-from app.api import chat, llm, projects, snapshots
+from app.api import chat, llm, projects, snapshots, ui_action
+
+# ui_tools 레지스트리 로드 (import 시 EchoUiTool 자동 등록)
+from app import ui_tools  # noqa: F401
 
 platform.register_app_routers(
     projects.router,
     chat.router,
     llm.router,
     snapshots.router,
+    ui_action.router,
 )
 
 app = platform.fastapi
