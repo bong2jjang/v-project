@@ -41,6 +41,7 @@ import Dashboard from "./pages/Dashboard";
 import Builder from "./pages/Builder";
 import GenUIProjects from "./pages/GenUIProjects";
 import GenUIBuilder from "./pages/GenUIBuilder";
+import GenUIViewer from "./pages/GenUIViewer";
 import Help from "./pages/Help";
 
 function App() {
@@ -105,6 +106,11 @@ function App() {
           <Route path="/genui/:projectId" element={
             <ProtectedRoute permissionKey="ui_builder_genui">
               <Layout><GenUIBuilder /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/genui/:projectId/view" element={
+            <ProtectedRoute permissionKey="ui_builder_genui">
+              <Layout><GenUIViewer /></Layout>
             </ProtectedRoute>
           } />
 

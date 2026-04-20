@@ -44,7 +44,13 @@
 | `/` | `Dashboard` (Sandpack 프로젝트 목록) | "Sandpack 프로젝트" (`ui_builder_sandpack`) | `Code2` |
 | `/builder/:projectId` | `Builder` (3-pane IDE + SnapshotsPanel) | — (`ui_builder_sandpack` 상속) | — |
 | `/genui` | `GenUIProjects` (Generative UI 프로젝트 목록) | "Generative UI 프로젝트" (`ui_builder_genui`) | `Sparkles` |
-| `/genui/:projectId` | `GenUIBuilder` (DashboardCanvas + 우측 ChatPane) | — (`ui_builder_genui` 상속) | — |
+| `/genui/:projectId` | `GenUIBuilder` (DashboardCanvas + 우측 ChatPane, 에디터/프리뷰 토글) | — (`ui_builder_genui` 상속) | — |
+| `/genui/:projectId/view` | `GenUIViewer` (풀스크린 프리뷰 뷰어, Palette/Inspector/Chat 제외) | — (`ui_builder_genui` 상속) | — |
+
+**에디터/프리뷰 모드** (`DashboardCanvas` `mode` prop):
+- `mode="edit"` (기본): 드래그/리사이즈/Reflow/액션 버튼 모두 활성
+- `mode="preview"`: `isDraggable/isResizable=false`, WidgetTile 헤더·액션 버튼 제거, 드롭존 비활성, EmptyState 간소화
+- `GenUIBuilder` 에서 에디터 내부 토글(상단 중앙 Eye/EyeOff 버튼) + `/genui/:id/view` 뷰어 라우트 진입점 제공
 
 **메뉴 분리 전략 (DB 기반)**: 앱 마이그레이션 `a006_ui_builder_menus.py` 가 `menu_items` 에 `app_id='v-ui-builder'` 행 3개를 INSERT 한다:
 1. `ui_builder_sandpack` (path=`/`, icon=`Code2`) — Sandpack 프로젝트 메뉴
@@ -86,7 +92,8 @@ apps/v-ui-builder/
     │   │   ├── Dashboard.tsx               # Sandpack 프로젝트 목록 (/)
     │   │   ├── Builder.tsx                 # Sandpack 3-pane IDE (/builder/:id)
     │   │   ├── GenUIProjects.tsx           # Generative UI 목록 (/genui)
-    │   │   ├── GenUIBuilder.tsx            # Generative UI 쉘 (/genui/:id)
+    │   │   ├── GenUIBuilder.tsx            # Generative UI 쉘 (/genui/:id) — 에디터/프리뷰 토글
+    │   │   ├── GenUIViewer.tsx             # Generative UI 뷰어 (/genui/:id/view) — 풀스크린 프리뷰
     │   │   └── Help.tsx
     │   ├── components/builder/
     │   │   ├── ChatPane.tsx                             # 공용 Chat (scope="project" | "dashboard")
@@ -184,5 +191,5 @@ OPENAI_MODEL=gpt-4o-mini
 
 ---
 
-**문서 버전**: 0.3 (Phase 3 — 고유 permission_key + hide_shared 마커)
-**최종 업데이트**: 2026-04-19
+**문서 버전**: 0.4 (에디터/프리뷰 토글 + `/genui/:id/view` 뷰어 라우트 추가)
+**최종 업데이트**: 2026-04-20

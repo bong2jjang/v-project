@@ -45,6 +45,7 @@ const DELETE_UNDO_MS = 6000;
 
 interface DashboardCanvasProps {
   projectId: string;
+  mode?: "edit" | "preview";
 }
 
 const dashboardKey = (projectId: string) =>
@@ -54,7 +55,11 @@ const ResponsiveGrid = WidthProvider(GridLayout);
 const DRAG_CANCEL_SELECTOR = ".widget-no-drag";
 const LAYOUT_SAVE_DEBOUNCE_MS = 300;
 
-export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
+export function DashboardCanvas({
+  projectId,
+  mode = "edit",
+}: DashboardCanvasProps) {
+  const isPreview = mode === "preview";
   const setDashboard = useDashboardStore((s) => s.setDashboard);
   const setProjectId = useDashboardStore((s) => s.setProjectId);
   const replaceWidgets = useDashboardStore((s) => s.replaceWidgets);
@@ -299,6 +304,7 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
   }, []);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (isPreview) return;
     if (!e.dataTransfer.types.includes(PIN_DRAG_MIME)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
@@ -306,11 +312,13 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (isPreview) return;
     if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
     setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (isPreview) return;
     e.preventDefault();
     setIsDragOver(false);
     setDropError(null);
@@ -359,7 +367,7 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
           </div>
         )}
 
-        {widgets.length > 0 && (
+        {!isPreview && widgets.length > 0 && (
           <ReflowToolbar
             onApply={applyReflow}
             disabled={layoutMutation.isPending}
@@ -367,7 +375,11 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
         )}
 
         {widgets.length === 0 ? (
-          <EmptyState isDragOver={isDragOver} projectId={projectId} />
+          <EmptyState
+            isDragOver={isDragOver}
+            projectId={projectId}
+            isPreview={isPreview}
+          />
         ) : (
           <ResponsiveGrid
             className="layout"
@@ -380,6 +392,8 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
             onLayoutChange={handleLayoutChange}
             compactType="vertical"
             isBounded
+            isDraggable={!isPreview}
+            isResizable={!isPreview}
           >
             {widgets.map((w) => (
               <div key={w.id}>
@@ -398,6 +412,7 @@ export function DashboardCanvas({ projectId }: DashboardCanvasProps) {
                     }
                     onRemove={() => handleDelete(w)}
                     removing={deleteMutation.isPending}
+                    readOnly={isPreview}
                   />
                 </UiActionScopeProvider>
               </div>
@@ -473,12 +488,31 @@ const EMPTY_SUGGESTIONS = [
 interface EmptyStateProps {
   isDragOver: boolean;
   projectId: string;
+  isPreview?: boolean;
 }
 
-function EmptyState({ isDragOver, projectId: _projectId }: EmptyStateProps) {
+function EmptyState({
+  isDragOver,
+  projectId: _projectId,
+  isPreview = false,
+}: EmptyStateProps) {
   const setPendingChatPrompt = useDashboardStore(
     (s) => s.setPendingChatPrompt,
   );
+
+  if (isPreview) {
+    return (
+      <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center rounded-input border border-dashed border-line-heavy text-content-tertiary px-4">
+        <Pin size={22} className="mb-2 opacity-60" />
+        <div className="text-[12.5px] font-medium text-content-primary">
+          아직 위젯이 없습니다
+        </div>
+        <div className="text-[11px] mt-1">
+          편집 모드로 전환해 위젯을 추가하세요.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -522,6 +556,7 @@ interface WidgetTileProps {
   onInspect: () => void;
   onRemove: () => void;
   removing: boolean;
+  readOnly?: boolean;
 }
 
 function WidgetTile({
@@ -532,7 +567,18 @@ function WidgetTile({
   onInspect,
   onRemove,
   removing,
+  readOnly = false,
 }: WidgetTileProps) {
+  if (readOnly) {
+    return (
+      <div className="h-full w-full rounded-input border border-line bg-surface-card shadow-card overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 overflow-auto p-2">
+          <GenUiRenderer call={widget.call} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`h-full w-full relative group rounded-input border bg-surface-card shadow-card overflow-hidden flex flex-col transition-colors ${

@@ -11,8 +11,15 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { MessageSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import {
+  Eye,
+  EyeOff,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ExternalLink,
+} from "lucide-react";
 
 import { DashboardCanvas } from "../components/builder/dashboard/DashboardCanvas";
 import { Inspector } from "../components/builder/dashboard/inspector/Inspector";
@@ -31,8 +38,12 @@ export default function GenUIBuilder() {
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const inspectedWidgetId = useDashboardStore((s) => s.inspectedWidgetId);
+  const setInspectedWidgetId = useDashboardStore(
+    (s) => s.setInspectedWidgetId,
+  );
 
   const dragStateRef = useRef<{
     startX: number;
@@ -72,6 +83,13 @@ export default function GenUIBuilder() {
     return () => document.body.removeAttribute("data-route");
   }, []);
 
+  useEffect(() => {
+    if (previewMode) {
+      setPaletteOpen(false);
+      setInspectedWidgetId(null);
+    }
+  }, [previewMode, setInspectedWidgetId]);
+
   if (!projectId || projectId === "new") {
     return (
       <div className="h-full bg-surface-page text-content-secondary flex items-center justify-center text-sm">
@@ -82,7 +100,45 @@ export default function GenUIBuilder() {
 
   return (
     <div className="h-full bg-surface-page flex overflow-hidden relative">
-      {paletteOpen ? (
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-1 rounded-button border border-line bg-surface-card shadow-card px-1 py-0.5 max-md:hidden">
+        <button
+          type="button"
+          onClick={() => setPreviewMode(false)}
+          title="편집 모드"
+          className={`inline-flex items-center gap-1 rounded-button px-2 py-0.5 text-[11px] transition-colors ${
+            !previewMode
+              ? "bg-brand-600 text-content-inverse"
+              : "text-content-secondary hover:text-brand-500"
+          }`}
+        >
+          <EyeOff size={12} />
+          편집
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreviewMode(true)}
+          title="프리뷰 모드"
+          className={`inline-flex items-center gap-1 rounded-button px-2 py-0.5 text-[11px] transition-colors ${
+            previewMode
+              ? "bg-brand-600 text-content-inverse"
+              : "text-content-secondary hover:text-brand-500"
+          }`}
+        >
+          <Eye size={12} />
+          프리뷰
+        </button>
+        <span className="w-px h-4 bg-line mx-0.5" />
+        <Link
+          to={`/genui/${projectId}/view`}
+          title="뷰어 페이지에서 열기"
+          className="inline-flex items-center gap-1 rounded-button px-2 py-0.5 text-[11px] text-content-secondary hover:text-brand-500"
+        >
+          <ExternalLink size={12} />
+          뷰어
+        </Link>
+      </div>
+
+      {paletteOpen && !previewMode ? (
         <div className="relative h-full w-[240px] shrink-0 max-md:hidden">
           <WidgetPalette projectId={projectId} />
           <button
@@ -94,7 +150,7 @@ export default function GenUIBuilder() {
             <PanelLeftClose size={13} />
           </button>
         </div>
-      ) : (
+      ) : !previewMode ? (
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
@@ -104,13 +160,16 @@ export default function GenUIBuilder() {
           <PanelLeftOpen size={12} />
           팔레트
         </button>
-      )}
+      ) : null}
 
       <div className="flex-1 min-w-0 h-full overflow-hidden">
-        <DashboardCanvas projectId={projectId} />
+        <DashboardCanvas
+          projectId={projectId}
+          mode={previewMode ? "preview" : "edit"}
+        />
       </div>
 
-      {inspectedWidgetId && (
+      {!previewMode && inspectedWidgetId && (
         <div className="max-md:hidden h-full shrink-0 flex">
           <Inspector projectId={projectId} />
         </div>
