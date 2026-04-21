@@ -160,6 +160,27 @@
     --content-max-width: 100%;
   }
 
+  /* ── 글자 크기 (rem 기반 토큰 전역 스케일) ──
+     IDE 영역(Builder/GenUI 편집기·뷰어)은 rem 스케일을 끄고 16px 고정 유지.
+     Monaco/Sandpack 내부는 자체 px 기반이라 원래 영향 없음. */
+  html.font-size-small { font-size: 15px; }
+  html.font-size-large { font-size: 17.5px; }
+  html.font-size-small:has(body[data-route="builder-editor"]),
+  html.font-size-small:has(body[data-route="genui-builder"]),
+  html.font-size-small:has(body[data-route="genui-viewer"]),
+  html.font-size-large:has(body[data-route="builder-editor"]),
+  html.font-size-large:has(body[data-route="genui-builder"]),
+  html.font-size-large:has(body[data-route="genui-viewer"]) {
+    font-size: 16px;
+  }
+
+  /* ChatPane 만 예외적으로 반응형: 루트 font-size 를 유저 설정값으로 재설정해
+     내부 em 기반 텍스트가 비율대로 스케일되도록 한다.
+     (Monaco/Sandpack/Palette/Inspector/Canvas 는 계속 16px rem 고정을 유지) */
+  .chat-pane-scaled { font-size: 16px; }
+  html.font-size-small .chat-pane-scaled { font-size: 15px; }
+  html.font-size-large .chat-pane-scaled { font-size: 17.5px; }
+
   /* Builder 편집기 뷰: 플랫폼 Layout 의 넓게보기/기본보기 토글 숨김 */
   body[data-route="builder-editor"] main > button[title="넓게보기"],
   body[data-route="builder-editor"] main > button[title="기본보기"],
@@ -168,6 +189,15 @@
   body[data-route="genui-viewer"] main > button[title="넓게보기"],
   body[data-route="genui-viewer"] main > button[title="기본보기"] {
     display: none !important;
+  }
+
+  /* Builder / Generative UI 편집기 뷰 — 라이트 모드 한정 가독성 개선.
+     기본 --color-content-tertiary(#a0a0a0)는 WCAG AA 미달이라 보조 라벨이
+     흐리게 보이는 원인. 다크 모드는 건드리지 않도록 html:not(.dark) 로 스코프. */
+  html:not(.dark) body[data-route="builder-editor"],
+  html:not(.dark) body[data-route="genui-builder"] {
+    --color-content-secondary: #3f3f3f;
+    --color-content-tertiary: #6b6b6b;
   }
 
   /* Sandpack 미리보기: 내부 계층 전부 컨테이너 높이 100% 전달

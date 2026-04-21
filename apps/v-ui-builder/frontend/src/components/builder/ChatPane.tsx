@@ -247,12 +247,12 @@ export function ChatPane({
       : "프롬프트 입력 (Enter 전송 · Shift+Enter 줄바꿈)";
 
   return (
-    <div className="h-full min-h-0 flex flex-col bg-surface-card text-content-primary">
+    <div className="chat-pane-scaled h-full min-h-0 flex flex-col bg-surface-card text-content-primary">
       {/* Panel header */}
       {!hideHeader && (
         <div className="flex items-stretch justify-between h-9 bg-[var(--color-surface-chrome)] border-b border-[var(--color-surface-chrome-border)]">
           <div className="flex items-center">
-            <div className="relative h-full inline-flex items-center px-3 text-[11px] uppercase tracking-wider text-content-primary font-medium">
+            <div className="relative h-full inline-flex items-center px-3 text-[0.6875em] uppercase tracking-wider text-content-primary font-medium">
               <span className="absolute top-0 left-0 right-0 h-[2px] bg-brand-600" />
               {title}
             </div>
@@ -263,7 +263,7 @@ export function ChatPane({
                 type="button"
                 onClick={abort}
                 title="생성 중지"
-                className="inline-flex items-center gap-1 text-[11px] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
+                className="inline-flex items-center gap-1 text-[0.6875em] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
               >
                 <Square size={11} />
                 중지
@@ -288,10 +288,10 @@ export function ChatPane({
       <div className="relative flex-1 min-h-0 flex flex-col">
       <div
         ref={listRef}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-2.5 space-y-3 text-[12.5px] leading-relaxed"
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-2.5 space-y-3 text-[0.78125em] leading-relaxed"
       >
         {messages.length === 0 && !isStreaming && (
-          <div className="text-[11px] text-content-tertiary font-mono">
+          <div className="text-[0.6875em] text-content-tertiary font-mono">
             <span className="text-brand-500">$</span> {emptyHead}
             <div className="mt-1 text-content-tertiary/80">{emptyExamples}</div>
           </div>
@@ -319,7 +319,7 @@ export function ChatPane({
         )}
 
         {error && (
-          <div className="text-[11px] text-status-danger bg-status-danger-light border border-status-danger-border rounded-button px-2 py-1.5 font-mono">
+          <div className="text-[0.6875em] text-status-danger bg-status-danger-light border border-status-danger-border rounded-button px-2 py-1.5 font-mono">
             {error}
           </div>
         )}
@@ -359,7 +359,7 @@ export function ChatPane({
         className="border-t border-line p-2 bg-surface-card"
       >
         {isDashboard && selectedWidgets.length > 0 && (
-          <div className="mb-1.5 flex items-center gap-1.5 flex-wrap text-[11px]">
+          <div className="mb-1.5 flex items-center gap-1.5 flex-wrap text-[0.6875em]">
             <span className="text-content-tertiary">포커스:</span>
             {selectedWidgets.map((w) => (
               <span
@@ -407,7 +407,7 @@ export function ChatPane({
           placeholder={inputPlaceholder}
           rows={3}
           disabled={isStreaming}
-          className="w-full resize-none rounded-input border border-line-heavy bg-surface-page text-content-primary placeholder:text-content-tertiary px-2 py-1.5 text-[12.5px] font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 disabled:opacity-60 transition-colors"
+          className="w-full resize-none rounded-input border border-line-heavy bg-surface-page text-content-primary placeholder:text-content-tertiary px-2 py-1.5 text-[0.78125em] font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 disabled:opacity-60 transition-colors"
         />
 
         <div className="flex items-center justify-between mt-1.5 gap-2">
@@ -419,7 +419,7 @@ export function ChatPane({
                 disabled={isStreaming}
                 title="스냅샷을 컨텍스트로 첨부"
                 aria-label="컨텍스트 첨부"
-                className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${
+                className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-[0.6875em] transition-colors disabled:opacity-40 ${
                   pickerOpen || contextIds.length > 0
                     ? "bg-brand-500/15 text-brand-500 hover:bg-brand-500/25"
                     : "text-content-secondary hover:text-content-primary hover:bg-surface-overlay"
@@ -428,7 +428,7 @@ export function ChatPane({
                 <Paperclip size={12} />
                 컨텍스트
                 {contextIds.length > 0 && (
-                  <span className="ml-0.5 rounded-full bg-brand-600 text-content-inverse text-[9.5px] leading-none px-1.5 py-0.5">
+                  <span className="ml-0.5 rounded-full bg-brand-600 text-content-inverse text-[0.59375em] leading-none px-1.5 py-0.5">
                     {contextIds.length}
                   </span>
                 )}
@@ -459,7 +459,7 @@ export function ChatPane({
                 type="button"
                 onClick={abort}
                 title="생성 중지"
-                className="inline-flex items-center gap-1 text-[11px] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
+                className="inline-flex items-center gap-1 text-[0.6875em] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
               >
                 <Square size={11} />
                 중지
@@ -468,7 +468,7 @@ export function ChatPane({
             <button
               type="submit"
               disabled={!prompt.trim() || isStreaming}
-              className="rounded-button bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1 text-[11px] font-medium text-content-inverse transition-colors"
+              className="rounded-button bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1 text-[0.6875em] font-medium text-content-inverse transition-colors"
             >
               {isStreaming ? "생성 중…" : "전송"}
             </button>
@@ -487,10 +487,10 @@ interface ContextChipProps {
 function ContextChip({ snap, onRemove }: ContextChipProps) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full border border-brand-500/40 bg-brand-500/10 text-content-primary pl-2 pr-1 py-0.5 text-[10.5px] max-w-[220px]"
+      className="inline-flex items-center gap-1 rounded-full border border-brand-500/40 bg-brand-500/10 text-content-primary pl-2 pr-1 py-0.5 text-[0.65625em] max-w-[220px]"
       title={`${snap.slug} · ${snap.title}`}
     >
-      <span className="font-mono text-[9.5px] text-brand-500 shrink-0">
+      <span className="font-mono text-[0.59375em] text-brand-500 shrink-0">
         {snap.slug}
       </span>
       <span className="truncate">{snap.title}</span>
@@ -523,13 +523,13 @@ function ContextPicker({
 
   return (
     <div className="absolute bottom-full left-0 mb-1 w-72 max-h-64 overflow-hidden rounded-button border border-line-heavy bg-surface-card shadow-lg z-20 flex flex-col">
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-line text-[10.5px] uppercase tracking-wider text-content-tertiary">
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-line text-[0.65625em] uppercase tracking-wider text-content-tertiary">
         <span>스냅샷 첨부</span>
         {selectedIds.length > 0 && (
           <button
             type="button"
             onClick={onClear}
-            className="text-[10.5px] normal-case tracking-normal text-content-secondary hover:text-status-danger"
+            className="text-[0.65625em] normal-case tracking-normal text-content-secondary hover:text-status-danger"
           >
             모두 해제
           </button>
@@ -538,7 +538,7 @@ function ContextPicker({
 
       <div className="flex-1 min-h-0 overflow-y-auto py-1">
         {snapshots.length === 0 && (
-          <div className="px-2 py-2 text-[11px] text-content-tertiary">
+          <div className="px-2 py-2 text-[0.6875em] text-content-tertiary">
             아직 생성된 스냅샷이 없습니다.
           </div>
         )}
@@ -574,14 +574,14 @@ function ContextPicker({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
-                  <span className="font-mono text-[9.5px] text-content-tertiary shrink-0">
+                  <span className="font-mono text-[0.59375em] text-content-tertiary shrink-0">
                     {snap.slug}
                   </span>
-                  <span className="truncate text-[11.5px] text-content-primary">
+                  <span className="truncate text-[0.71875em] text-content-primary">
                     {snap.title}
                   </span>
                 </span>
-                <span className="block text-[9.5px] text-content-tertiary">
+                <span className="block text-[0.59375em] text-content-tertiary">
                   {created.toLocaleDateString()}{" "}
                   {created.toLocaleTimeString([], {
                     hour: "2-digit",
@@ -731,7 +731,7 @@ function MessageGroups({
               type="button"
               onClick={() => toggle(g.key)}
               aria-expanded={!isCollapsed}
-              className="group/divider flex w-full items-center gap-2 py-1 text-[10px] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary transition-colors"
+              className="group/divider flex w-full items-center gap-2 py-1 text-[0.625em] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary transition-colors"
             >
               <span className="h-px flex-1 bg-line" />
               <span className="flex items-center gap-1 px-1">
@@ -818,7 +818,7 @@ function MessageBubble({
         onClick={() => canCollapse && setCollapsed((v) => !v)}
         disabled={!canCollapse}
         aria-expanded={!isCollapsed}
-        className="flex items-center gap-1 self-start text-[10px] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary disabled:hover:text-content-tertiary disabled:cursor-default transition-colors"
+        className="flex items-center gap-1 self-start text-[0.625em] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary disabled:hover:text-content-tertiary disabled:cursor-default transition-colors"
       >
         {canCollapse &&
           (isCollapsed ? (
@@ -861,14 +861,14 @@ function MessageBubble({
       {!isCollapsed && showDashboardOps && (
         <div className="mt-1 space-y-0.5">
           {okCount > 0 && (
-            <div className="text-[10.5px] text-content-tertiary font-mono">
+            <div className="text-[0.65625em] text-content-tertiary font-mono">
               {okCount} 개 조작 적용됨
             </div>
           )}
           {errorCalls.map((c) => (
             <div
               key={c.call_id}
-              className="text-[10.5px] text-status-danger font-mono"
+              className="text-[0.65625em] text-status-danger font-mono"
             >
               {c.tool}: {c.error ?? "op error"}
             </div>
@@ -879,14 +879,14 @@ function MessageBubble({
       {!isCollapsed && showStreamingDashboardOps && (
         <div className="mt-1 space-y-0.5">
           {streamingOpCount > 0 && (
-            <div className="text-[10.5px] text-content-tertiary font-mono">
+            <div className="text-[0.65625em] text-content-tertiary font-mono">
               {streamingOpCount} 개 조작 적용됨
             </div>
           )}
           {streamingOpErrors.map((e, i) => (
             <div
               key={i}
-              className="text-[10.5px] text-status-danger font-mono"
+              className="text-[0.65625em] text-status-danger font-mono"
             >
               {e}
             </div>
@@ -943,7 +943,7 @@ function UiCallCard({ call, messageId }: UiCallCardProps) {
 
   return (
     <div
-      className={`rounded-button border px-2 py-1.5 text-[11px] font-mono ${statusStyle}`}
+      className={`rounded-button border px-2 py-1.5 text-[0.6875em] font-mono ${statusStyle}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate">
@@ -969,7 +969,7 @@ function UiCallCard({ call, messageId }: UiCallCardProps) {
               <Pin size={12} />
             </button>
           )}
-          <span className="text-[9.5px] uppercase tracking-wider text-content-tertiary">
+          <span className="text-[0.59375em] uppercase tracking-wider text-content-tertiary">
             {call.status}
           </span>
         </div>
@@ -1079,7 +1079,7 @@ function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
 
   return (
     <div className="rounded-button border border-brand-500/40 bg-brand-500/5 px-2 py-1.5">
-      <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
+      <div className="flex items-center justify-between gap-2 text-[0.6875em] font-mono">
         <span className="truncate">
           <span className="text-content-tertiary">proposal ›</span>{" "}
           <span className="text-content-primary">{kindLabel}</span>
@@ -1095,7 +1095,7 @@ function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
         </span>
         {statusBadge && (
           <span
-            className={`text-[9.5px] uppercase tracking-wider ${statusBadge.cls}`}
+            className={`text-[0.59375em] uppercase tracking-wider ${statusBadge.cls}`}
           >
             {statusBadge.text}
           </span>
@@ -1107,13 +1107,13 @@ function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
           <GenUiRenderer call={previewCall} />
         </div>
       ) : (
-        <div className="mt-1 text-[10.5px] text-content-tertiary font-mono">
+        <div className="mt-1 text-[0.65625em] text-content-tertiary font-mono">
           원본 위젯을 찾을 수 없습니다.
         </div>
       )}
 
       {acceptMutation.isError && (
-        <div className="mt-1 text-[10.5px] text-status-danger font-mono">
+        <div className="mt-1 text-[0.65625em] text-status-danger font-mono">
           {(acceptMutation.error as Error).message}
         </div>
       )}
@@ -1123,7 +1123,7 @@ function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
           type="button"
           onClick={() => markProposal(proposal.proposal_id, "dismissed")}
           disabled={disabled}
-          className="inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] text-content-secondary hover:text-content-primary hover:bg-surface-overlay disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1 rounded-button px-2 py-1 text-[0.6875em] text-content-secondary hover:text-content-primary hover:bg-surface-overlay disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <X size={11} /> 취소
         </button>
@@ -1131,7 +1131,7 @@ function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
           type="button"
           onClick={() => acceptMutation.mutate()}
           disabled={disabled || (!isAdd && !existingWidget)}
-          className="inline-flex items-center gap-1 rounded-button bg-brand-600 hover:bg-brand-700 px-2 py-1 text-[11px] font-medium text-content-inverse disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1 rounded-button bg-brand-600 hover:bg-brand-700 px-2 py-1 text-[0.6875em] font-medium text-content-inverse disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Check size={11} />
           {acceptMutation.isPending ? "적용 중…" : acceptLabel}

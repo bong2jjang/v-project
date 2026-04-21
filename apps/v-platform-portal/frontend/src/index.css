@@ -150,6 +150,10 @@
     --content-max-width: 100%;
   }
 
+  /* ── 글자 크기 (rem 기반 토큰 전역 스케일) ── */
+  html.font-size-small { font-size: 15px; }
+  html.font-size-large { font-size: 17.5px; }
+
   body {
     @apply bg-surface-page text-content-primary;
     margin: 0;

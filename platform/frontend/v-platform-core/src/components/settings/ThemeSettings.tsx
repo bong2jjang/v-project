@@ -17,6 +17,8 @@ export function ThemeSettings() {
     setColorPreset,
     contentWidth,
     setContentWidth,
+    fontSize,
+    setFontSize,
     pullToRefresh,
     setPullToRefresh,
     showWideViewToggle,
@@ -109,6 +111,41 @@ export function ThemeSettings() {
             label="넓게보기"
             sublabel="화면 전체 활용"
             preview={<WideWidthPreview />}
+          />
+        </div>
+      </section>
+
+      {/* 글자 크기 */}
+      <section>
+        <h3 className="text-heading-md text-content-primary mb-1">글자 크기</h3>
+        <p className="text-body-base text-content-secondary mb-4">
+          인터페이스 전체의 기본 글자 크기를 조절합니다
+          <span className="text-content-tertiary">
+            {" "}
+            — 코드 에디터와 미리보기 영역은 가독성을 위해 고정됩니다
+          </span>
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          <FontSizeCard
+            active={fontSize === "small"}
+            onClick={() => setFontSize("small")}
+            label="작게"
+            sublabel="15px"
+            sampleScale="0.9375"
+          />
+          <FontSizeCard
+            active={fontSize === "medium"}
+            onClick={() => setFontSize("medium")}
+            label="보통"
+            sublabel="16px (기본)"
+            sampleScale="1"
+          />
+          <FontSizeCard
+            active={fontSize === "large"}
+            onClick={() => setFontSize("large")}
+            label="크게"
+            sublabel="17.5px"
+            sampleScale="1.09375"
           />
         </div>
       </section>
@@ -298,6 +335,47 @@ function ContentWidthCard({
       }`}
     >
       {preview}
+      <div className="text-center">
+        <span
+          className={`text-heading-sm block ${active ? "text-brand-600" : "text-content-primary"}`}
+        >
+          {label}
+        </span>
+        <span className="text-caption text-content-tertiary">{sublabel}</span>
+      </div>
+    </button>
+  );
+}
+
+function FontSizeCard({
+  active,
+  onClick,
+  label,
+  sublabel,
+  sampleScale,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  sublabel: string;
+  sampleScale: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-3 p-4 rounded-card border-2 transition-all duration-normal ${
+        active
+          ? "border-brand-600 bg-brand-600/5 shadow-card-hover"
+          : "border-line hover:border-line-heavy bg-surface-card hover:bg-surface-raised"
+      }`}
+    >
+      <div
+        className="w-full h-16 rounded bg-surface-page border border-line flex items-center justify-center"
+        style={{ fontSize: `${Number(sampleScale) * 16}px` }}
+      >
+        <span className="text-content-primary font-medium">Aa</span>
+      </div>
       <div className="text-center">
         <span
           className={`text-heading-sm block ${active ? "text-brand-600" : "text-content-primary"}`}

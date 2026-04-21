@@ -27,10 +27,12 @@ function presetKey(appName?: string) { return appName ? `${appName}:colorPreset`
 function contentWidthKey(appName?: string) { return appName ? `${appName}:contentWidth` : "contentWidth"; }
 function pullToRefreshKey(appName?: string) { return appName ? `${appName}:pullToRefresh` : "pullToRefresh"; }
 function wideViewToggleKey(appName?: string) { return appName ? `${appName}:showWideViewToggle` : "showWideViewToggle"; }
+function fontSizeKey(appName?: string) { return appName ? `${appName}:fontSize` : "fontSize"; }
 
 type Theme = "light" | "dark" | "system";
 export type ColorPreset = "blue" | "indigo" | "rose";
 export type ContentWidth = "default" | "wide";
+export type FontSize = "small" | "medium" | "large";
 
 export const COLOR_PRESETS: {
   id: ColorPreset;
@@ -51,6 +53,8 @@ interface ThemeContextValue {
   setColorPreset: (preset: ColorPreset) => void;
   contentWidth: ContentWidth;
   setContentWidth: (width: ContentWidth) => void;
+  fontSize: FontSize;
+  setFontSize: (size: FontSize) => void;
   pullToRefresh: boolean;
   setPullToRefresh: (enabled: boolean) => void;
   showWideViewToggle: boolean;
@@ -92,6 +96,24 @@ function resolveInitialContentWidth(appName?: string): ContentWidth {
   const stored = localStorage.getItem(contentWidthKey(appName));
   if (isValidContentWidth(stored)) return stored;
   return "default";
+}
+
+function isValidFontSize(v: string | null | undefined): v is FontSize {
+  return v === "small" || v === "medium" || v === "large";
+}
+
+function applyFontSize(size: FontSize) {
+  const root = document.documentElement;
+  root.classList.remove("font-size-small", "font-size-large");
+  if (size !== "medium") {
+    root.classList.add(`font-size-${size}`);
+  }
+}
+
+function resolveInitialFontSize(appName?: string): FontSize {
+  const stored = localStorage.getItem(fontSizeKey(appName));
+  if (isValidFontSize(stored)) return stored;
+  return "medium";
 }
 
 /** no-pull-refresh 전역 CSS를 1회 주입 (각 앱 index.css 복제 방지) */
@@ -170,6 +192,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     resolveInitialContentWidth(appName),
   );
 
+  const [fontSize, setFontSizeState] = useState<FontSize>(() =>
+    resolveInitialFontSize(appName),
+  );
+
   const [pullToRefresh, setPullToRefreshState] = useState<boolean>(() =>
     resolveInitialPullToRefresh(appName),
   );
@@ -218,6 +244,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [appName],
   );
 
+  const setFontSize = useCallback(
+    (size: FontSize) => {
+      setFontSizeState(size);
+      localStorage.setItem(fontSizeKey(appName), size);
+      applyFontSize(size);
+    },
+    [appName],
+  );
+
   const setPullToRefresh = useCallback(
     (enabled: boolean) => {
       setPullToRefreshState(enabled);
@@ -253,6 +288,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setContentWidthState(currentWidth);
       applyContentWidth(currentWidth);
 
+      const currentFontSize = resolveInitialFontSize(appName);
+      setFontSizeState(currentFontSize);
+      applyFontSize(currentFontSize);
+
       const currentPull = resolveInitialPullToRefresh(appName);
       setPullToRefreshState(currentPull);
       applyPullToRefresh(currentPull);
@@ -281,8 +320,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setIsDark(effective === "dark");
     applyColorPreset(colorPreset);
     applyContentWidth(contentWidth);
+    applyFontSize(fontSize);
     applyPullToRefresh(pullToRefresh);
-  }, [theme, colorPreset, contentWidth, pullToRefresh]);
+  }, [theme, colorPreset, contentWidth, fontSize, pullToRefresh]);
 
   const value: ThemeContextValue = {
     theme,
@@ -293,6 +333,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setColorPreset,
     contentWidth,
     setContentWidth,
+    fontSize,
+    setFontSize,
     pullToRefresh,
     setPullToRefresh,
     showWideViewToggle,
