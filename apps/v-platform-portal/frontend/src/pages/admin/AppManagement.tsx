@@ -12,21 +12,10 @@ import {
   Server,
   GripVertical,
   ExternalLink,
-  MessageSquare,
-  Ticket,
-  LayoutDashboard,
-  Settings,
-  Box,
   Globe,
-  Shield,
-  Zap,
-  Database,
-  BarChart3,
-  Users,
-  FileText,
-  Bell,
-  Mail,
+  icons,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { ContentHeader } from "../../components/layout/ContentHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -37,6 +26,7 @@ import { Textarea } from "../../components/ui/Textarea";
 import { Toggle } from "../../components/ui/Toggle";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { SkeletonCard } from "../../components/ui/Skeleton";
+import { IconPicker } from "../../components/admin/IconPicker";
 import type {
   PortalApp,
   AppCreateRequest,
@@ -51,27 +41,21 @@ import {
 import { createSsoRelay } from "@v-platform/core/api/auth";
 import { useAuthStore } from "../../store/auth";
 
-// ── Lucide 아이콘 맵 ──────────────────────────────────────────────
+// ── 아이콘 렌더러 (kebab-case / PascalCase 모두 수용) ───────────────
 
-const ICON_MAP: Record<string, React.ReactNode> = {
-  MessageSquare: <MessageSquare className="w-5 h-5" />,
-  Ticket: <Ticket className="w-5 h-5" />,
-  LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
-  Settings: <Settings className="w-5 h-5" />,
-  Server: <Server className="w-5 h-5" />,
-  Box: <Box className="w-5 h-5" />,
-  Globe: <Globe className="w-5 h-5" />,
-  Shield: <Shield className="w-5 h-5" />,
-  Zap: <Zap className="w-5 h-5" />,
-  Database: <Database className="w-5 h-5" />,
-  BarChart3: <BarChart3 className="w-5 h-5" />,
-  Users: <Users className="w-5 h-5" />,
-  FileText: <FileText className="w-5 h-5" />,
-  Bell: <Bell className="w-5 h-5" />,
-  Mail: <Mail className="w-5 h-5" />,
-};
+function toPascalCase(name: string): string {
+  return name
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+}
 
-const ICON_OPTIONS = Object.keys(ICON_MAP);
+function AppIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = name
+    ? (icons as Record<string, LucideIcon>)[toPascalCase(name)]
+    : null;
+  return Icon ? <Icon className={className} /> : <Server className={className} />;
+}
 
 // ── 초기 폼 상태 ──────────────────────────────────────────────────
 
@@ -91,7 +75,7 @@ const INITIAL_FORM: FormState = {
   app_id: "",
   display_name: "",
   description: "",
-  icon: "Box",
+  icon: "",
   frontend_url: "",
   api_url: "",
   health_endpoint: "/api/health",
@@ -167,7 +151,7 @@ export default function AppManagement() {
       app_id: app.app_id,
       display_name: app.display_name,
       description: app.description || "",
-      icon: app.icon || "Box",
+      icon: app.icon || "",
       frontend_url: app.frontend_url,
       api_url: app.api_url,
       health_endpoint: app.health_endpoint || "/api/health",
@@ -289,7 +273,7 @@ export default function AppManagement() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
-                        {ICON_MAP[app.icon] || <Server className="w-5 h-5" />}
+                        <AppIcon name={app.icon} className="w-5 h-5" />
                       </div>
                       <div>
                         <h3 className="text-body-base font-semibold text-content-primary">
@@ -449,25 +433,12 @@ export default function AppManagement() {
           {/* 아이콘 선택 */}
           <div className="space-y-1">
             <label className="block text-heading-sm text-content-primary">
-              아이콘
+              아이콘 <span className="text-content-tertiary font-normal">(선택)</span>
             </label>
-            <div className="flex flex-wrap gap-2">
-              {ICON_OPTIONS.map((iconName) => (
-                <button
-                  key={iconName}
-                  type="button"
-                  onClick={() => setField("icon", iconName)}
-                  className={`p-2 rounded-lg border transition-colors ${
-                    form.icon === iconName
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-600"
-                      : "border-line hover:border-line-heavy text-content-secondary hover:text-content-primary"
-                  }`}
-                  title={iconName}
-                >
-                  {ICON_MAP[iconName]}
-                </button>
-              ))}
-            </div>
+            <IconPicker
+              value={form.icon}
+              onChange={(v) => setField("icon", v)}
+            />
           </div>
 
           {/* 활성 토글 */}

@@ -10,9 +10,10 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Rocket, Activity, CheckCircle, XCircle, Clock,
-  ExternalLink, RefreshCw, Map, LayoutDashboard, Server,
-  MessageSquare, Ticket, Settings, ChevronRight,
+  ExternalLink, RefreshCw, Map, Server,
+  ChevronRight, icons,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useAuthStore } from "../store/auth";
 import { ContentHeader } from "../components/layout/ContentHeader";
 import { Card, CardHeader, CardTitle, CardBody } from "../components/ui/Card";
@@ -24,13 +25,20 @@ import type { PortalApp, AppHealth, SitemapEntry } from "../lib/api/portal";
 import { getApps, getAllHealth, getSitemap } from "../lib/api/portal";
 import { createSsoRelay } from "@v-platform/core/api/auth";
 
-const ICON_MAP: Record<string, React.ReactNode> = {
-  MessageSquare: <MessageSquare className="w-6 h-6" />,
-  Ticket: <Ticket className="w-6 h-6" />,
-  LayoutDashboard: <LayoutDashboard className="w-6 h-6" />,
-  Settings: <Settings className="w-6 h-6" />,
-  Server: <Server className="w-6 h-6" />,
-};
+// kebab-case / PascalCase 모두 수용 (IconPicker는 kebab-case 저장, 레거시 시드는 PascalCase)
+function toPascalCase(name: string): string {
+  return name
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+}
+
+function AppIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = name
+    ? (icons as Record<string, LucideIcon>)[toPascalCase(name)]
+    : null;
+  return Icon ? <Icon className={className} /> : <Server className={className} />;
+}
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "healthy" || status === "online") {
@@ -79,7 +87,7 @@ function AppCard({
       <CardBody>
         <div className="flex items-start justify-between mb-4">
           <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 group-hover:bg-brand-100 transition-colors">
-            {ICON_MAP[app.icon] || <Server className="w-6 h-6" />}
+            <AppIcon name={app.icon} className="w-6 h-6" />
           </div>
           <div className="flex items-center gap-2">
             {health && <StatusBadge status={health.status} />}
