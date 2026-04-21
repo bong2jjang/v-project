@@ -224,8 +224,8 @@ export function DashboardCanvas({
         y: w.grid_y,
         w: w.grid_w,
         h: w.grid_h,
-        minW: 2,
-        minH: 2,
+        minW: 1,
+        minH: 1,
       })),
     [widgets],
   );
@@ -405,11 +405,7 @@ export function DashboardCanvas({
                     selected={selectedWidgetIds.includes(w.id)}
                     inspecting={inspectedWidgetId === w.id}
                     onToggleSelect={() => toggleSelection(w.id)}
-                    onInspect={() =>
-                      setInspectedWidgetId(
-                        inspectedWidgetId === w.id ? null : w.id,
-                      )
-                    }
+                    onInspect={() => setInspectedWidgetId(w.id)}
                     onRemove={() => handleDelete(w)}
                     removing={deleteMutation.isPending}
                     readOnly={isPreview}
@@ -599,7 +595,7 @@ function WidgetTile({
             type="button"
             onClick={onInspect}
             onMouseDown={(e) => e.stopPropagation()}
-            title={inspecting ? "Inspector 닫기" : "속성 편집"}
+            title="속성 편집"
             aria-label="속성 편집"
             aria-pressed={inspecting}
             className={`widget-no-drag inline-flex items-center justify-center p-0.5 rounded-button transition-all ${

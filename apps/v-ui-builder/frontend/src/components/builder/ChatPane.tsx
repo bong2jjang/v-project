@@ -13,7 +13,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, ChevronUp, Paperclip, Pin, Square, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  ChevronsDown,
+  ChevronsUp,
+  Paperclip,
+  Pin,
+  Square,
+  X,
+} from "lucide-react";
 
 import { useBuilderStore } from "../../store/builder";
 import { useDashboardStore } from "../../store/dashboard";
@@ -40,6 +50,8 @@ interface ChatPaneProps {
   scope: ChatScope;
   projectId: string;
   onClose?: () => void;
+  /** 상위에서 탭/헤더를 이미 제공하는 경우 내부 헤더를 숨긴다. 중지 버튼은 입력 폼 쪽으로 이동. */
+  hideHeader?: boolean;
 }
 
 const snapshotsKey = (projectId: string) =>
@@ -48,7 +60,12 @@ const snapshotsKey = (projectId: string) =>
 const dashboardMessagesKey = (projectId: string) =>
   ["ui-builder", "dashboard-messages", projectId] as const;
 
-export function ChatPane({ scope, projectId, onClose }: ChatPaneProps) {
+export function ChatPane({
+  scope,
+  projectId,
+  onClose,
+  hideHeader = false,
+}: ChatPaneProps) {
   const isDashboard = scope === "dashboard";
 
   const [prompt, setPrompt] = useState("");
@@ -227,43 +244,46 @@ export function ChatPane({ scope, projectId, onClose }: ChatPaneProps) {
   return (
     <div className="h-full min-h-0 flex flex-col bg-surface-card text-content-primary">
       {/* Panel header */}
-      <div className="flex items-stretch justify-between h-9 bg-[var(--color-surface-chrome)] border-b border-[var(--color-surface-chrome-border)]">
-        <div className="flex items-center">
-          <div className="relative h-full inline-flex items-center px-3 text-[11px] uppercase tracking-wider text-content-primary font-medium">
-            <span className="absolute top-0 left-0 right-0 h-[2px] bg-brand-600" />
-            {title}
+      {!hideHeader && (
+        <div className="flex items-stretch justify-between h-9 bg-[var(--color-surface-chrome)] border-b border-[var(--color-surface-chrome-border)]">
+          <div className="flex items-center">
+            <div className="relative h-full inline-flex items-center px-3 text-[11px] uppercase tracking-wider text-content-primary font-medium">
+              <span className="absolute top-0 left-0 right-0 h-[2px] bg-brand-600" />
+              {title}
+            </div>
+          </div>
+          <div className="flex items-center pr-1">
+            {isStreaming && (
+              <button
+                type="button"
+                onClick={abort}
+                title="생성 중지"
+                className="inline-flex items-center gap-1 text-[11px] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
+              >
+                <Square size={11} />
+                중지
+              </button>
+            )}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="채팅 닫기"
+                title="채팅 닫기"
+                className="p-1 text-content-secondary hover:text-content-primary hover:bg-surface-overlay rounded-button transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex items-center pr-1">
-          {isStreaming && (
-            <button
-              type="button"
-              onClick={abort}
-              title="생성 중지"
-              className="inline-flex items-center gap-1 text-[11px] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
-            >
-              <Square size={11} />
-              중지
-            </button>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="채팅 닫기"
-              title="채팅 닫기"
-              className="p-1 text-content-secondary hover:text-content-primary hover:bg-surface-overlay rounded-button transition-colors"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Messages (self-scroll) */}
+      <div className="relative flex-1 min-h-0 flex flex-col">
       <div
         ref={listRef}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-2.5 space-y-2 text-[12.5px] leading-relaxed"
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-2.5 space-y-3 text-[12.5px] leading-relaxed"
       >
         {messages.length === 0 && !isStreaming && (
           <div className="text-[11px] text-content-tertiary font-mono">
@@ -295,6 +315,34 @@ export function ChatPane({ scope, projectId, onClose }: ChatPaneProps) {
             {error}
           </div>
         )}
+      </div>
+
+      {/* Mobile jump-to-top/bottom */}
+      <div className="md:hidden absolute right-2 bottom-2 flex flex-col gap-1.5 pointer-events-none">
+        <button
+          type="button"
+          onClick={() => listRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="맨 위로"
+          title="맨 위로"
+          className="pointer-events-auto inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-card/90 border border-line shadow-card text-content-secondary hover:text-content-primary hover:bg-surface-overlay backdrop-blur-sm"
+        >
+          <ChevronsUp size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            listRef.current?.scrollTo({
+              top: listRef.current.scrollHeight,
+              behavior: "smooth",
+            })
+          }
+          aria-label="맨 아래로"
+          title="맨 아래로"
+          className="pointer-events-auto inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-card/90 border border-line shadow-card text-content-secondary hover:text-content-primary hover:bg-surface-overlay backdrop-blur-sm"
+        >
+          <ChevronsDown size={16} />
+        </button>
+      </div>
       </div>
 
       {/* Input */}
@@ -397,13 +445,26 @@ export function ChatPane({ scope, projectId, onClose }: ChatPaneProps) {
             <span />
           )}
 
-          <button
-            type="submit"
-            disabled={!prompt.trim() || isStreaming}
-            className="rounded-button bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1 text-[11px] font-medium text-content-inverse transition-colors"
-          >
-            {isStreaming ? "생성 중…" : "전송"}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {hideHeader && isStreaming && (
+              <button
+                type="button"
+                onClick={abort}
+                title="생성 중지"
+                className="inline-flex items-center gap-1 text-[11px] text-status-danger hover:text-content-primary hover:bg-surface-overlay px-2 py-1 rounded-button transition-colors"
+              >
+                <Square size={11} />
+                중지
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={!prompt.trim() || isStreaming}
+              className="rounded-button bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1 text-[11px] font-medium text-content-inverse transition-colors"
+            >
+              {isStreaming ? "생성 중…" : "전송"}
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -651,7 +712,7 @@ function MessageGroups({
       {groups.map((g) => {
         const isCollapsed = collapsed.has(g.key);
         return (
-          <div key={g.key} className="space-y-2">
+          <div key={g.key} className="space-y-3">
             <button
               type="button"
               onClick={() => toggle(g.key)}

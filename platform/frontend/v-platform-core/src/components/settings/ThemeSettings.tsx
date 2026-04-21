@@ -9,7 +9,19 @@ import { useTheme, COLOR_PRESETS } from "../../hooks/useTheme";
 import { InfoBox } from "../ui/InfoBox";
 
 export function ThemeSettings() {
-  const { theme, isDark, setTheme, colorPreset, setColorPreset, contentWidth, setContentWidth } = useTheme();
+  const {
+    theme,
+    isDark,
+    setTheme,
+    colorPreset,
+    setColorPreset,
+    contentWidth,
+    setContentWidth,
+    pullToRefresh,
+    setPullToRefresh,
+    showWideViewToggle,
+    setShowWideViewToggle,
+  } = useTheme();
 
   return (
     <div className="space-y-8">
@@ -97,6 +109,30 @@ export function ThemeSettings() {
             label="넓게보기"
             sublabel="화면 전체 활용"
             preview={<WideWidthPreview />}
+          />
+        </div>
+      </section>
+
+      {/* 인터랙션 옵션 */}
+      <section>
+        <h3 className="text-heading-md text-content-primary mb-1">
+          인터랙션 옵션
+        </h3>
+        <p className="text-body-base text-content-secondary mb-4">
+          스크롤 및 레이아웃 전환 버튼의 동작을 설정합니다
+        </p>
+        <div className="space-y-2">
+          <ToggleRow
+            checked={pullToRefresh}
+            onChange={setPullToRefresh}
+            label="당겨서 새로고침"
+            sublabel="모바일에서 상단을 아래로 당기면 페이지를 새로고침합니다. 끄면 스크롤 사용성이 개선됩니다."
+          />
+          <ToggleRow
+            checked={showWideViewToggle}
+            onChange={setShowWideViewToggle}
+            label="넓게보기 버튼 표시"
+            sublabel="메인 콘텐츠 우측 상단의 넓게보기/기본보기 전환 버튼 노출 여부"
           />
         </div>
       </section>
@@ -206,6 +242,35 @@ function ColorPresetCard({
         </span>
       </div>
     </button>
+  );
+}
+
+function ToggleRow({
+  checked,
+  onChange,
+  label,
+  sublabel,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  sublabel: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 p-3 rounded-card border border-line bg-surface-card hover:bg-surface-raised cursor-pointer transition-colors">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-1 w-4 h-4 accent-brand-600 cursor-pointer"
+      />
+      <div className="flex-1 min-w-0">
+        <div className="text-heading-sm text-content-primary">{label}</div>
+        <div className="text-caption text-content-tertiary mt-0.5">
+          {sublabel}
+        </div>
+      </div>
+    </label>
   );
 }
 

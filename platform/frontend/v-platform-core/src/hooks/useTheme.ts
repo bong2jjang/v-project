@@ -25,6 +25,8 @@ import { usePlatformConfig } from "../providers/PlatformProvider";
 function themeKey(appName?: string) { return appName ? `${appName}:theme` : "theme"; }
 function presetKey(appName?: string) { return appName ? `${appName}:colorPreset` : "colorPreset"; }
 function contentWidthKey(appName?: string) { return appName ? `${appName}:contentWidth` : "contentWidth"; }
+function pullToRefreshKey(appName?: string) { return appName ? `${appName}:pullToRefresh` : "pullToRefresh"; }
+function wideViewToggleKey(appName?: string) { return appName ? `${appName}:showWideViewToggle` : "showWideViewToggle"; }
 
 type Theme = "light" | "dark" | "system";
 export type ColorPreset = "blue" | "indigo" | "rose";
@@ -49,6 +51,10 @@ interface ThemeContextValue {
   setColorPreset: (preset: ColorPreset) => void;
   contentWidth: ContentWidth;
   setContentWidth: (width: ContentWidth) => void;
+  pullToRefresh: boolean;
+  setPullToRefresh: (enabled: boolean) => void;
+  showWideViewToggle: boolean;
+  setShowWideViewToggle: (visible: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -86,6 +92,38 @@ function resolveInitialContentWidth(appName?: string): ContentWidth {
   const stored = localStorage.getItem(contentWidthKey(appName));
   if (isValidContentWidth(stored)) return stored;
   return "default";
+}
+
+/** no-pull-refresh 전역 CSS를 1회 주입 (각 앱 index.css 복제 방지) */
+function ensurePullToRefreshStyle() {
+  if (typeof document === "undefined") return;
+  const STYLE_ID = "platform-no-pull-refresh-style";
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent =
+    "html.no-pull-refresh, html.no-pull-refresh body { overscroll-behavior-y: contain; }";
+  document.head.appendChild(style);
+}
+
+function applyPullToRefresh(enabled: boolean) {
+  // 끄면 당겨서 새로고침 및 overscroll chaining 억제 (모바일 스크롤 UX 개선)
+  ensurePullToRefreshStyle();
+  document.documentElement.classList.toggle("no-pull-refresh", !enabled);
+}
+
+function resolveInitialPullToRefresh(appName?: string): boolean {
+  const stored = localStorage.getItem(pullToRefreshKey(appName));
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return true; // 기본값: 활성
+}
+
+function resolveInitialShowWideViewToggle(appName?: string): boolean {
+  const stored = localStorage.getItem(wideViewToggleKey(appName));
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return true; // 기본값: 표시 (하위호환)
 }
 
 function applyColorPreset(preset: ColorPreset) {
@@ -132,6 +170,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     resolveInitialContentWidth(appName),
   );
 
+  const [pullToRefresh, setPullToRefreshState] = useState<boolean>(() =>
+    resolveInitialPullToRefresh(appName),
+  );
+
+  const [showWideViewToggle, setShowWideViewToggleState] = useState<boolean>(
+    () => resolveInitialShowWideViewToggle(appName),
+  );
+
   const [isDark, setIsDark] = useState(
     () => getEffectiveTheme(theme) === "dark",
   );
@@ -172,6 +218,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [appName],
   );
 
+  const setPullToRefresh = useCallback(
+    (enabled: boolean) => {
+      setPullToRefreshState(enabled);
+      localStorage.setItem(pullToRefreshKey(appName), String(enabled));
+      applyPullToRefresh(enabled);
+    },
+    [appName],
+  );
+
+  const setShowWideViewToggle = useCallback(
+    (visible: boolean) => {
+      setShowWideViewToggleState(visible);
+      localStorage.setItem(wideViewToggleKey(appName), String(visible));
+    },
+    [appName],
+  );
+
   // 로그인 시 앱별 localStorage에서 테마 적용 (DB 사용 안 함)
   useEffect(() => {
     if (isAuthenticated) {
@@ -189,6 +252,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const currentWidth = resolveInitialContentWidth(appName);
       setContentWidthState(currentWidth);
       applyContentWidth(currentWidth);
+
+      const currentPull = resolveInitialPullToRefresh(appName);
+      setPullToRefreshState(currentPull);
+      applyPullToRefresh(currentPull);
+
+      setShowWideViewToggleState(resolveInitialShowWideViewToggle(appName));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, appName]);
@@ -212,7 +281,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setIsDark(effective === "dark");
     applyColorPreset(colorPreset);
     applyContentWidth(contentWidth);
-  }, [theme, colorPreset, contentWidth]);
+    applyPullToRefresh(pullToRefresh);
+  }, [theme, colorPreset, contentWidth, pullToRefresh]);
 
   const value: ThemeContextValue = {
     theme,
@@ -223,6 +293,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setColorPreset,
     contentWidth,
     setContentWidth,
+    pullToRefresh,
+    setPullToRefresh,
+    showWideViewToggle,
+    setShowWideViewToggle,
   };
 
   return createElement(ThemeContext.Provider, { value }, children);

@@ -7,7 +7,8 @@
  *
  * 사용법:
  *   const mainRef = useRef<HTMLElement>(null);
- *   const ptr = usePullToRefresh(mainRef);
+ *   const ptr = usePullToRefresh(mainRef);                    // 기본: 활성
+ *   const ptr = usePullToRefresh(mainRef, { enabled: false }); // 비활성
  *   // ptr.isPWA, ptr.pullDistance, ptr.isPulling, ptr.isRefreshing
  */
 
@@ -18,7 +19,17 @@ const THRESHOLD = 80; // 새로고침 트리거 최소 시각 거리 (px)
 const MAX_PULL = 140; // 최대 시각적 거리 (px)
 const DAMPING = 0.3; // 터치 거리 → 시각 거리 비율 (낮을수록 둔감)
 
-export function usePullToRefresh(scrollRef: RefObject<HTMLElement | null>) {
+interface UsePullToRefreshOptions {
+  /** 사용자 설정(테마)에 따라 런타임에 비활성화 가능. 기본 true. */
+  enabled?: boolean;
+}
+
+export function usePullToRefresh(
+  scrollRef: RefObject<HTMLElement | null>,
+  options: UsePullToRefreshOptions = {},
+) {
+  const { enabled = true } = options;
+
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -38,7 +49,7 @@ export function usePullToRefresh(scrollRef: RefObject<HTMLElement | null>) {
   const refreshingRef = useRef(false);
 
   useEffect(() => {
-    if (!isPWA) return;
+    if (!isPWA || !enabled) return;
     const el = scrollRef.current;
     if (!el) return;
 
@@ -113,7 +124,7 @@ export function usePullToRefresh(scrollRef: RefObject<HTMLElement | null>) {
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [isPWA, scrollRef]);
+  }, [isPWA, enabled, scrollRef]);
 
   return { pullDistance, isPulling, isRefreshing, isPWA, threshold: THRESHOLD };
 }

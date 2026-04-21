@@ -1,17 +1,18 @@
 /**
- * Inspector — GenUIBuilder 우측 도킹 (320px).
+ * Inspector — GenUIBuilder 우측 패널의 "속성" 탭 콘텐츠.
  *
  * - `inspectedWidgetId` 를 기준으로 현재 편집 대상 위젯을 결정.
  * - 카탈로그(`WidgetCatalogEntry`) 를 TanStack Query 로 캐시하여 스키마를 얻는다.
- * - 본문은 `<SchemaForm>` 에 위임. Inspector 는 컨테이너/헤더만 담당.
+ * - 본문은 `<SchemaForm>` 에 위임. 제목/아이콘/닫기는 상위 탭바에서 담당한다.
  */
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Loader2, Settings2, X } from "lucide-react";
+import { AlertTriangle, Loader2, Settings2 } from "lucide-react";
 
 import {
   dashboardsApi,
+  type DashboardWidget,
   type WidgetCatalogEntry,
 } from "../../../../lib/api/dashboards";
 import { useDashboardStore } from "../../../../store/dashboard";
@@ -28,9 +29,6 @@ const catalogKey = (projectId: string) =>
 export function Inspector({ projectId }: InspectorProps) {
   const inspectedWidgetId = useDashboardStore((s) => s.inspectedWidgetId);
   const dashboard = useDashboardStore((s) => s.dashboard);
-  const setInspectedWidgetId = useDashboardStore(
-    (s) => s.setInspectedWidgetId,
-  );
 
   const widget = useMemo(() => {
     if (!inspectedWidgetId || !dashboard) return null;
@@ -53,17 +51,11 @@ export function Inspector({ projectId }: InspectorProps) {
     return catalog.find((e) => e.tool === widget.tool) ?? null;
   }, [widget, catalog]);
 
-  const close = () => setInspectedWidgetId(null);
-
   return (
-    <aside className="h-full w-[320px] shrink-0 flex flex-col border-l border-line bg-surface-canvas min-h-0">
-      <Header
-        title={catalogEntry?.label ?? widget?.tool ?? "Inspector"}
-        iconName={catalogEntry?.icon ?? null}
-        subtitle={widget ? `${widget.tool} · ${widget.component}` : null}
-        onClose={close}
-      />
-
+    <aside className="h-full w-full flex flex-col bg-surface-canvas min-h-0">
+      {widget && catalogEntry && (
+        <WidgetHeader widget={widget} catalogEntry={catalogEntry} />
+      )}
       <div className="flex-1 min-h-0 flex flex-col">
         {!inspectedWidgetId ? (
           <EmptyState />
@@ -73,7 +65,6 @@ export function Inspector({ projectId }: InspectorProps) {
           <StatusBlock
             icon="warn"
             message="선택한 위젯을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다."
-            action={{ label: "닫기", onClick: close }}
           />
         ) : catalogLoading ? (
           <StatusBlock icon="loading" message="카탈로그 로딩 중…" />
@@ -103,38 +94,27 @@ export function Inspector({ projectId }: InspectorProps) {
   );
 }
 
-interface HeaderProps {
-  title: string;
-  iconName: string | null;
-  subtitle: string | null;
-  onClose: () => void;
+interface WidgetHeaderProps {
+  widget: DashboardWidget;
+  catalogEntry: WidgetCatalogEntry;
 }
 
-function Header({ title, iconName, subtitle, onClose }: HeaderProps) {
-  const Icon = resolveIcon(iconName);
+function WidgetHeader({ widget, catalogEntry }: WidgetHeaderProps) {
+  const Icon = resolveIcon(catalogEntry.icon);
   return (
-    <div className="h-9 px-3 flex items-center gap-2 border-b border-line shrink-0 bg-surface-chrome">
-      <span className="inline-flex items-center justify-center w-5 h-5 rounded-button text-content-secondary shrink-0">
-        <Icon size={13} />
+    <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-line bg-surface-chrome">
+      <span className="inline-flex items-center justify-center w-6 h-6 rounded-button bg-surface-card border border-line text-brand-500 shrink-0">
+        <Icon size={12} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[11.5px] font-semibold text-content-primary truncate">
-          {title}
+        <div className="text-[11.5px] text-content-primary truncate font-medium">
+          {catalogEntry.label}
         </div>
-        {subtitle && (
-          <div className="text-[10px] text-content-tertiary truncate font-mono">
-            {subtitle}
-          </div>
-        )}
+        <div className="text-[10px] text-content-tertiary truncate font-mono">
+          {widget.tool}
+          {widget.component ? ` · ${widget.component}` : ""}
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        className="inline-flex items-center justify-center w-6 h-6 rounded-button text-content-tertiary hover:text-content-primary hover:bg-surface-overlay shrink-0"
-        title="닫기"
-      >
-        <X size={13} />
-      </button>
     </div>
   );
 }

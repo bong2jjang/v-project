@@ -83,14 +83,15 @@ function LayoutContent({ children }: LayoutContentProps) {
   const navigate = useNavigate();
   const { startMainTour } = useTour();
   const mainRef = useRef<HTMLElement>(null);
-  const { pullDistance, isPulling, isRefreshing, isPWA, threshold } =
-    usePullToRefresh(mainRef);
 
   // 전역 키보드 단축키
   useKeyboardShortcuts();
 
   // 페이지별 임시 너비 오버라이드
-  const { contentWidth } = useTheme();
+  const { contentWidth, showWideViewToggle, pullToRefresh } = useTheme();
+
+  const { pullDistance, isPulling, isRefreshing, isPWA, threshold } =
+    usePullToRefresh(mainRef, { enabled: pullToRefresh });
   const [pageWidthOverride, setPageWidthOverride] = useState<ContentWidth | null>(null);
 
   // 모바일 프로필 메뉴 접기/펴기 (기본 접힘)
@@ -366,29 +367,31 @@ function LayoutContent({ children }: LayoutContentProps) {
           ref={mainRef}
           className="flex-1 overflow-y-auto relative"
           style={{
-            ...(isPWA ? { overscrollBehaviorY: "none" as const } : {}),
+            ...(isPWA && pullToRefresh ? { overscrollBehaviorY: "none" as const } : {}),
             ...(pageWidthOverride ? { "--content-max-width": pageWidthOverride === "wide" ? "100%" : "80rem" } as React.CSSProperties : {}),
           }}
         >
-          {/* 넓게보기 토글 — 메인 콘텐츠 우측 상단 */}
-          <button
-            type="button"
-            onClick={togglePageWidth}
-            className={`hidden md:block absolute top-2 right-3 z-10 p-1.5 rounded-button transition-colors ${
-              pageWidthOverride !== null
-                ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-50/10"
-                : "text-content-tertiary hover:text-content-secondary hover:bg-surface-raised"
-            }`}
-            title={effectiveWidth === "wide" ? "기본보기" : "넓게보기"}
-          >
-            {effectiveWidth === "wide" ? (
-              <Minimize2 className="w-4 h-4" />
-            ) : (
-              <Maximize2 className="w-4 h-4" />
-            )}
-          </button>
+          {/* 넓게보기 토글 — 메인 콘텐츠 우측 상단 (테마 설정으로 표시 여부 제어) */}
+          {showWideViewToggle && (
+            <button
+              type="button"
+              onClick={togglePageWidth}
+              className={`hidden md:block absolute top-2 right-3 z-10 p-1.5 rounded-button transition-colors ${
+                pageWidthOverride !== null
+                  ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-50/10"
+                  : "text-content-tertiary hover:text-content-secondary hover:bg-surface-raised"
+              }`}
+              title={effectiveWidth === "wide" ? "기본보기" : "넓게보기"}
+            >
+              {effectiveWidth === "wide" ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+            </button>
+          )}
           {/* PWA Pull-to-Refresh Indicator */}
-          {isPWA && pullDistance > 0 && (
+          {isPWA && pullToRefresh && pullDistance > 0 && (
             <div
               className="flex items-center justify-center pointer-events-none"
               style={{

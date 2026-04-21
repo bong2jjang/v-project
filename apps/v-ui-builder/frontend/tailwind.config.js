@@ -42,6 +42,8 @@ export default {
           card:    'var(--color-surface-card)',
           raised:  'var(--color-surface-raised)',
           overlay: 'var(--color-surface-overlay)',
+          chrome:  'var(--color-surface-chrome)',
+          canvas:  'var(--color-surface-canvas)',
         },
         line: {
           DEFAULT: 'var(--color-line)',

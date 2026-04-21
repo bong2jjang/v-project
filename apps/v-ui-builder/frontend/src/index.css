@@ -48,9 +48,11 @@
     --color-surface-card: #ffffff;
     --color-surface-raised: #e8e8e8;
     --color-surface-overlay: rgba(0, 0, 0, 0.4);
-    /* Builder 전용 chrome(탭 바/패널 헤더) — 컨텐츠보다 한 단계 어둡게 */
-    --color-surface-chrome: #d8d8d8;
-    --color-surface-chrome-border: #bfbfbf;
+    /* Builder 전용 chrome(탭 바/패널 헤더) — VS Code Light 탭바 톤, 컨텐츠와 차분히 구분 */
+    --color-surface-chrome: #ececec;
+    --color-surface-chrome-border: #d4d4d4;
+    /* Builder 전용 canvas(우측 패널 본문 배경) — page 와 동일 톤 */
+    --color-surface-canvas: #f3f3f3;
 
     /* Line */
     --color-line: #e5e5e5;
@@ -127,9 +129,11 @@
     --color-surface-card: #1e1e1e;
     --color-surface-raised: #2a2d2e;
     --color-surface-overlay: rgba(0, 0, 0, 0.5);
-    /* Builder 전용 chrome(탭 바/패널 헤더) — 컨텐츠보다 한 단계 어둡게 */
-    --color-surface-chrome: #0d0d0d;
-    --color-surface-chrome-border: #000000;
+    /* Builder 전용 chrome(탭 바/패널 헤더) — VS Code Dark+ 탭바(#252526), 에디터보다 살짝 밝게 */
+    --color-surface-chrome: #252526;
+    --color-surface-chrome-border: #3c3c3c;
+    /* Builder 전용 canvas(우측 패널 본문 배경) — page 와 동일 톤 */
+    --color-surface-canvas: #181818;
 
     /* Line — 미묘한 경계 */
     --color-line: #2b2b2b;
@@ -160,7 +164,9 @@
   body[data-route="builder-editor"] main > button[title="넓게보기"],
   body[data-route="builder-editor"] main > button[title="기본보기"],
   body[data-route="genui-builder"] main > button[title="넓게보기"],
-  body[data-route="genui-builder"] main > button[title="기본보기"] {
+  body[data-route="genui-builder"] main > button[title="기본보기"],
+  body[data-route="genui-viewer"] main > button[title="넓게보기"],
+  body[data-route="genui-viewer"] main > button[title="기본보기"] {
     display: none !important;
   }
 

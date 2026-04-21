@@ -15,6 +15,7 @@ import { History, MessageSquare } from "lucide-react";
 import { ChatPane } from "../components/builder/ChatPane";
 import { CanvasPane } from "../components/builder/CanvasPane";
 import { SnapshotsPanel } from "../components/builder/SnapshotsPanel";
+import { BuilderToolbar } from "../components/builder/BuilderToolbar";
 import { uiBuilderApi } from "../lib/api/ui-builder";
 import { useBuilderStore } from "../store/builder";
 
@@ -145,78 +146,90 @@ export default function Builder() {
     );
   }
 
+  const toolbarLeft = (
+    <button
+      type="button"
+      onClick={() => setSnapOpen((v) => !v)}
+      title={snapOpen ? "스냅샷 닫기" : "스냅샷 열기"}
+      className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] transition-colors ${
+        snapOpen
+          ? "bg-surface-overlay text-content-primary"
+          : "text-content-secondary hover:text-content-primary hover:bg-surface-overlay"
+      }`}
+    >
+      <History size={12} />
+      스냅샷
+    </button>
+  );
+
+  const toolbarRight = (
+    <button
+      type="button"
+      onClick={() => setChatOpen((v) => !v)}
+      title={chatOpen ? "채팅 닫기" : "채팅 열기"}
+      className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] transition-colors ${
+        chatOpen
+          ? "bg-surface-overlay text-content-primary"
+          : "bg-brand-600 text-content-inverse hover:bg-brand-700"
+      }`}
+    >
+      <MessageSquare size={12} />
+      채팅
+    </button>
+  );
+
   return (
-    <div className="h-full bg-surface-page flex overflow-hidden relative">
-      {snapOpen && (
-        <>
-          <div
-            className="h-full shrink-0 overflow-hidden border-r border-line max-md:absolute max-md:inset-0 max-md:z-30 max-md:!w-full max-md:border-r-0 max-md:bg-surface-page"
-            style={{ width: snapWidth }}
-          >
-            <SnapshotsPanel
-              projectId={projectId}
-              onClose={() => setSnapOpen(false)}
-            />
-          </div>
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            onMouseDown={handleSnapDragStart}
-            className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
-          />
-        </>
-      )}
+    <div className="h-full bg-surface-page flex flex-col overflow-hidden">
+      <BuilderToolbar left={toolbarLeft} right={toolbarRight} />
 
-      <div
-        className={`flex-1 min-w-0 h-full overflow-hidden ${chatOpen ? "max-md:hidden" : ""}`}
-      >
-        <CanvasPane />
+      <div className="flex-1 min-h-0 flex overflow-hidden relative">
+        {snapOpen && (
+          <>
+            <div
+              className="h-full shrink-0 overflow-hidden border-r border-line max-md:absolute max-md:inset-0 max-md:z-30 max-md:!w-full max-md:border-r-0 max-md:bg-surface-page"
+              style={{ width: snapWidth }}
+            >
+              <SnapshotsPanel
+                projectId={projectId}
+                onClose={() => setSnapOpen(false)}
+              />
+            </div>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={handleSnapDragStart}
+              className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
+            />
+          </>
+        )}
+
+        <div
+          className={`flex-1 min-w-0 h-full overflow-hidden ${chatOpen ? "max-md:hidden" : ""}`}
+        >
+          <CanvasPane />
+        </div>
+
+        {chatOpen && (
+          <>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={handleChatDragStart}
+              className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
+            />
+            <div
+              className="h-full shrink-0 overflow-hidden border-l border-line max-md:!w-full max-md:border-l-0"
+              style={{ width: chatWidth }}
+            >
+              <ChatPane
+                scope="project"
+                projectId={projectId}
+                onClose={() => setChatOpen(false)}
+              />
+            </div>
+          </>
+        )}
       </div>
-
-      {chatOpen && (
-        <>
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            onMouseDown={handleChatDragStart}
-            className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
-          />
-          <div
-            className="h-full shrink-0 overflow-hidden border-l border-line max-md:!w-full max-md:border-l-0"
-            style={{ width: chatWidth }}
-          >
-            <ChatPane
-              scope="project"
-              projectId={projectId}
-              onClose={() => setChatOpen(false)}
-            />
-          </div>
-        </>
-      )}
-
-      {!snapOpen && (
-        <button
-          type="button"
-          onClick={() => setSnapOpen(true)}
-          title="스냅샷 열기"
-          className={`absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-button bg-surface-card hover:bg-surface-overlay border border-line text-content-primary text-[11px] px-2.5 py-1 shadow-card ${chatOpen ? "max-md:hidden" : ""}`}
-        >
-          <History size={12} />
-          스냅샷
-        </button>
-      )}
-
-      {!chatOpen && (
-        <button
-          type="button"
-          onClick={() => setChatOpen(true)}
-          title="채팅 열기"
-          className="absolute top-2 right-3 z-20 inline-flex items-center gap-1.5 rounded-button bg-brand-600 hover:bg-brand-700 text-content-inverse text-[11px] px-2.5 py-1 shadow-card"
-        >
-          <MessageSquare size={12} />
-          채팅 열기
-        </button>
-      )}
     </div>
   );
 }
