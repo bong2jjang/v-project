@@ -253,7 +253,9 @@ function SnapshotRow({
       className={`rounded-button border px-2 py-1.5 transition-all shadow-sm ${
         isViewing
           ? "border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30 shadow"
-          : "border-line-heavy bg-surface-raised hover:border-brand-500/40 hover:shadow"
+          : isConfirmed
+          ? "border-status-success-border bg-status-success-light dark:border-line-heavy dark:bg-surface-raised hover:border-status-success/60 hover:shadow"
+          : "border-line-heavy bg-brand-50/60 dark:bg-surface-raised hover:border-brand-500/40 hover:bg-brand-50 dark:hover:bg-surface-raised hover:shadow"
       }`}
     >
       <div className="flex items-start gap-1">
