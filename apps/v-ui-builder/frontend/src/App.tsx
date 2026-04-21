@@ -69,6 +69,8 @@ function App() {
       appName: "v-ui-builder",
       appTitle: "AI UI Builder",
       appDescription: "대화로 UI를 만들고 즉시 미리보기",
+      appVersion: "0.1.0",
+      brandName: "VMS",
     }}>
     <ThemeProvider>
       <BrowserRouter

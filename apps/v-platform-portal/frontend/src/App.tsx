@@ -69,6 +69,8 @@ function App() {
       appName: "v-platform-portal",
       appTitle: "v-platform-portal",
       appDescription: "통합 관리 플랫폼",
+      appVersion: "1.0.0",
+      brandName: "VMS",
     }}>
     <ThemeProvider>
       <BrowserRouter

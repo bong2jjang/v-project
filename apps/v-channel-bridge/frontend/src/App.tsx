@@ -65,6 +65,8 @@ function App() {
       appName: "v-channel-bridge",
       appTitle: "channel-bridge",
       appDescription: "Slack ↔ Teams 메시지 브리지",
+      appVersion: "2.0.0",
+      brandName: "VMS",
     }}>
     <ThemeProvider>
       <BrowserRouter

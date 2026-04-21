@@ -68,6 +68,8 @@ function App() {
       appName: "v-itsm",
       appTitle: "v-itsm",
       appDescription: "업무 루프 관리 시스템 (ITSM)",
+      appVersion: "0.1.0",
+      brandName: "VMS",
     }}>
     <ThemeProvider>
       <BrowserRouter

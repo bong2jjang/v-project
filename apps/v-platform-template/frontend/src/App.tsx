@@ -68,6 +68,8 @@ function App() {
       appName: "v-platform-template",
       appTitle: "v-platform-template",
       appDescription: "플랫폼 템플릿 앱",
+      appVersion: "1.0.0",
+      brandName: "VMS",
     }}>
     <ThemeProvider>
       <BrowserRouter

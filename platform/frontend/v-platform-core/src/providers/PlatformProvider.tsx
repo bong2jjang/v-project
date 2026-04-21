@@ -33,6 +33,10 @@ export interface PlatformConfig {
   appDescription?: string;
   /** Logo icon as React node (default: built-in V icon) */
   appLogo?: React.ReactNode;
+  /** Application version string (e.g. "1.0.0"). Displayed in footer/Settings. */
+  appVersion?: string;
+  /** Brand prefix shown before app title (default: "VMS") */
+  brandName?: string;
   /** Feature toggles */
   features?: {
     sso?: boolean;
@@ -49,6 +53,7 @@ export interface PlatformConfig {
 const defaultConfig: PlatformConfig = {
   apiBaseUrl: "",
   appName: "v-platform",
+  brandName: "VMS",
   features: {
     sso: true,
     organizations: true,

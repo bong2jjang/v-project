@@ -172,7 +172,7 @@ export function SystemSettingsTab({ readOnly }: { readOnly?: boolean }) {
                   value={appTitle}
                   onChange={(e) => { setAppTitle(e.target.value); setBrandingDirty(true); }}
                   disabled={readOnly}
-                  placeholder="예: v-channel-bridge"
+                  placeholder="예: v-platform"
                   className="w-full px-3 py-2 text-sm rounded-lg border border-line bg-surface-raised text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
                 <p className="text-xs text-content-tertiary mt-1">

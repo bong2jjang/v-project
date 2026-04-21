@@ -78,7 +78,7 @@ function LayoutContent({ children }: LayoutContentProps) {
   const { user, logout } = useAuthStore();
   const { menus, isLoaded } = usePermissionStore();
   const { settings } = useSystemSettingsStore();
-  const { appTitle } = usePlatformConfig();
+  const { appName, appTitle, appVersion, brandName } = usePlatformConfig();
   const location = useLocation();
   const navigate = useNavigate();
   const { startMainTour } = useTour();
@@ -423,7 +423,11 @@ function LayoutContent({ children }: LayoutContentProps) {
         <div className="px-4 py-0.5">
           <div className="flex items-center justify-end text-caption text-content-tertiary">
             <div className="flex items-center gap-3">
-              <span>VMS Channel Bridge v1.1.0</span>
+              <span>
+                {brandName ? `${brandName} ` : ""}
+                {settings?.app_title || appTitle || appName}
+                {appVersion ? ` v${appVersion}` : ""}
+              </span>
               {/* 알림 벨 */}
               <NotificationBell />
             </div>

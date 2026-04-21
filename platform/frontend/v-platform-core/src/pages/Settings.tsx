@@ -24,6 +24,7 @@ import {
 import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";
 import { ContentHeader } from "../components/Layout";
+import { usePlatformConfig } from "../providers/PlatformProvider";
 
 const Settings = () => {
   const { user } = useAuthStore();
@@ -36,6 +37,8 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const { fetchSettings } = useSystemSettingsStore();
+  const { appVersion } = usePlatformConfig();
+  const versionLabel = appVersion ? `v${appVersion}` : "";
 
   // 초기 데이터 로딩 (모든 사용자는 systemSettings만)
   useEffect(() => {
@@ -78,12 +81,14 @@ const Settings = () => {
         description="사용자 설정 및 시스템 관리"
         actions={
           <div className="flex items-center gap-3">
-            <Badge
-              variant="info"
-              className="bg-white/15 text-white border-white/25 dark:bg-surface-card dark:text-content-secondary dark:border-line-heavy"
-            >
-              v1.1.0
-            </Badge>
+            {versionLabel && (
+              <Badge
+                variant="info"
+                className="bg-white/15 text-white border-white/25 dark:bg-surface-card dark:text-content-secondary dark:border-line-heavy"
+              >
+                {versionLabel}
+              </Badge>
+            )}
           </div>
         }
       />
@@ -301,7 +306,7 @@ const Settings = () => {
                               버전
                             </dt>
                             <dd className="text-sm font-mono text-content-primary">
-                              v1.1.0
+                              {versionLabel || "-"}
                             </dd>
                           </div>
                           <div>

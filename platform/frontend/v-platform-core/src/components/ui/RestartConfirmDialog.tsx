@@ -1,11 +1,13 @@
 /**
  * Restart 확인 다이얼로그
  *
- * Route 변경 후 v-channel-bridge 재시작 확인
+ * 설정 변경 후 앱 재시작 확인. 브랜드/앱 이름은 PlatformConfig에서 받음.
  */
 
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "./Button";
+import { usePlatformConfig } from "../../providers/PlatformProvider";
+import { useSystemSettingsStore } from "../../stores/systemSettings";
 
 interface RestartConfirmDialogProps {
   isOpen: boolean;
@@ -15,6 +17,8 @@ interface RestartConfirmDialogProps {
   title?: string;
   message?: string;
   error?: string | null;
+  /** 컨테이너/서비스 이름 (docker 가이드에 표시) — 생략 시 appName 사용 */
+  serviceName?: string;
 }
 
 export const RestartConfirmDialog = ({
@@ -22,10 +26,19 @@ export const RestartConfirmDialog = ({
   onClose,
   onConfirm,
   isRestarting = false,
-  title = "v-channel-bridge 재시작",
-  message = "Route 설정이 변경되었습니다. 변경사항을 적용하려면 v-channel-bridge를 재시작해야 합니다.",
+  title,
+  message,
   error = null,
+  serviceName,
 }: RestartConfirmDialogProps) => {
+  const { appName, appTitle } = usePlatformConfig();
+  const settings = useSystemSettingsStore((s) => s.settings);
+  const displayName = settings?.app_title || appTitle || appName;
+  const dockerName = serviceName || appName;
+  const effectiveTitle = title ?? `${displayName} 재시작`;
+  const effectiveMessage =
+    message ??
+    `설정이 변경되었습니다. 변경사항을 적용하려면 ${displayName}을(를) 재시작해야 합니다.`;
   if (!isOpen) return null;
 
   return (
@@ -49,10 +62,10 @@ export const RestartConfirmDialog = ({
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-lg font-semibold text-content-primary mb-1.5">
-                {error ? "재시작 실패" : title}
+                {error ? "재시작 실패" : effectiveTitle}
               </h3>
               <p className="text-sm text-content-secondary leading-relaxed">
-                {error ? "v-channel-bridge 재시작에 실패했습니다." : message}
+                {error ? `${displayName} 재시작에 실패했습니다.` : effectiveMessage}
               </p>
             </div>
           </div>
@@ -247,10 +260,10 @@ export const RestartConfirmDialog = ({
                           </span>
                           <div className="flex-1 pt-0.5">
                             <div className="leading-relaxed mb-1.5">
-                              v-channel-bridge 컨테이너 상태 확인:
+                              {dockerName} 컨테이너 상태 확인:
                             </div>
                             <code className="block px-2 py-1 bg-surface-elevated rounded text-xs font-mono">
-                              docker ps -a | grep v-channel-bridge
+                              {`docker ps -a | grep ${dockerName}`}
                             </code>
                           </div>
                         </li>
@@ -263,7 +276,7 @@ export const RestartConfirmDialog = ({
                               컨테이너 로그 확인:
                             </div>
                             <code className="block px-2 py-1 bg-surface-elevated rounded text-xs font-mono">
-                              docker logs vms-channel-bridge
+                              {`docker logs ${dockerName}`}
                             </code>
                           </div>
                         </li>
@@ -298,7 +311,7 @@ export const RestartConfirmDialog = ({
                         </svg>
                       </div>
                       <p className="text-sm text-content-tertiary leading-relaxed pt-0.5">
-                        설정 탭에서 v-channel-bridge 설정을 확인하거나, 대시보드에서
+                        설정 탭에서 {displayName} 설정을 확인하거나, 대시보드에서
                         상세 로그를 확인해주세요.
                       </p>
                     </div>

@@ -15,6 +15,8 @@ SETTINGS_SEED = [
     ("v-channel-bridge", "channel-bridge", "Slack ↔ Teams 메시지 브리지"),
     ("v-platform-portal", "v-platform-portal", "통합 관리 플랫폼"),
     ("v-platform-template", "v-platform-template", "플랫폼 템플릿 앱"),
+    ("v-ui-builder", "AI UI Builder", "대화로 UI를 만들고 즉시 미리보기"),
+    ("v-itsm", "v-itsm", "업무 루프 관리 시스템 (ITSM)"),
 ]
 
 
