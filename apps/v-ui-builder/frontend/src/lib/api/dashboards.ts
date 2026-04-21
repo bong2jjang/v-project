@@ -167,5 +167,46 @@ export type DashboardOpSseEvent =
   | "dashboard_widget_added"
   | "dashboard_widget_updated"
   | "dashboard_widget_removed"
+  | "dashboard_widget_proposed"
   | "dashboard_layout_changed"
   | "dashboard_op_error";
+
+/**
+ * 위젯 추가/수정 프리뷰 제안.
+ *
+ * 백엔드 `dashboard_add_widget` / `dashboard_update_widget` 도구가 DB 반영 대신
+ * 이 스펙을 SSE `dashboard_widget_proposed` 로 흘려준다. ChatPane 은 프리뷰 카드로
+ * 렌더하고, 사용자가 "캔버스에 추가/반영" 버튼을 눌러야 실제로 `pinWidget` /
+ * `updateWidget` 이 호출돼 대시보드에 반영된다.
+ */
+export interface WidgetProposalAdd {
+  proposal_id: string;
+  kind: "add";
+  call_id: string;
+  tool: string;
+  component: string;
+  props: Record<string, unknown>;
+  grid: {
+    x: number | null;
+    y: number | null;
+    w: number | null;
+    h: number | null;
+  };
+}
+
+export interface WidgetProposalUpdate {
+  proposal_id: string;
+  kind: "update";
+  widget_id: string;
+  tool: string;
+  component: string | null;
+  next_props: Record<string, unknown> | null;
+  next_grid: {
+    x: number | null;
+    y: number | null;
+    w: number | null;
+    h: number | null;
+  } | null;
+}
+
+export type WidgetProposal = WidgetProposalAdd | WidgetProposalUpdate;

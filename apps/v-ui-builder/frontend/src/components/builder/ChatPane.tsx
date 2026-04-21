@@ -11,9 +11,10 @@
  * 두 모드가 공유하여 UX 개선이 동시에 반영되도록 한다.
  */
 
-import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -39,6 +40,7 @@ import {
   dashboardsApi,
   PIN_DRAG_MIME,
   type PinDragPayload,
+  type WidgetProposal,
 } from "../../lib/api/dashboards";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { GenUiRenderer } from "./gen-ui/GenUiRenderer";
@@ -132,6 +134,9 @@ export function ChatPane({
     : 0;
   const streamingOpErrors = isDashboard
     ? (dashboardChat.streaming?.opErrors ?? [])
+    : [];
+  const streamingProposals = isDashboard
+    ? (dashboardChat.streaming?.proposals ?? [])
     : [];
   const abort = isDashboard ? dashboardChat.abort : projectChat.abort;
 
@@ -294,6 +299,7 @@ export function ChatPane({
 
         <MessageGroups
           scope={scope}
+          projectId={projectId}
           messages={messages}
           uiCallsByMessageId={uiCallsByMessageId}
         />
@@ -301,11 +307,13 @@ export function ChatPane({
         {isStreaming && (
           <MessageBubble
             scope={scope}
+            projectId={projectId}
             role="assistant"
             content={streamingContent || "…"}
             uiCalls={isDashboard ? [] : streamingUiCalls}
             streamingOpCount={streamingOpCount}
             streamingOpErrors={streamingOpErrors}
+            streamingProposals={streamingProposals}
             streaming
           />
         )}
@@ -591,6 +599,8 @@ function ContextPicker({
 
 interface MessageBubbleProps {
   scope: ChatScope;
+  /** 대시보드 모드에서 프리뷰 수락 API 호출에 필요한 프로젝트 id. */
+  projectId?: string;
   role: "user" | "assistant" | "system";
   content: string;
   streaming?: boolean;
@@ -601,6 +611,8 @@ interface MessageBubbleProps {
   /** 대시보드 스트리밍 중 op 진행 요약. */
   streamingOpCount?: number;
   streamingOpErrors?: string[];
+  /** 스트리밍 버블에서만 사용: 이번 턴에 수신한 위젯 프리뷰 제안. */
+  streamingProposals?: WidgetProposal[];
 }
 
 function startOfDay(d: Date): Date {
@@ -686,12 +698,14 @@ function groupMessagesByDate(messages: Message[]): MessageGroup[] {
 
 interface MessageGroupsProps {
   scope: ChatScope;
+  projectId: string;
   messages: Message[];
   uiCallsByMessageId: Record<string, UiCallRecord[]>;
 }
 
 function MessageGroups({
   scope,
+  projectId,
   messages,
   uiCallsByMessageId,
 }: MessageGroupsProps) {
@@ -738,6 +752,7 @@ function MessageGroups({
                 <MessageBubble
                   key={m.id}
                   scope={scope}
+                  projectId={projectId}
                   role={m.role}
                   content={m.content}
                   timestamp={m.created_at}
@@ -754,6 +769,7 @@ function MessageGroups({
 
 function MessageBubble({
   scope,
+  projectId,
   role,
   content,
   streaming,
@@ -762,6 +778,7 @@ function MessageBubble({
   messageId,
   streamingOpCount = 0,
   streamingOpErrors = [],
+  streamingProposals = [],
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const isDashboard = scope === "dashboard";
@@ -783,6 +800,16 @@ function MessageBubble({
     !isUser &&
     streaming &&
     (streamingOpCount > 0 || streamingOpErrors.length > 0);
+
+  // 위젯 프리뷰 제안: 스트리밍 버블은 훅이 내려준 배열, 영속 버블은 ui_calls 에 평탄화된 proposal 을 수집.
+  const proposals: WidgetProposal[] = useMemo(() => {
+    if (!isDashboard || isUser) return [];
+    if (streaming) return streamingProposals;
+    return calls
+      .map((c) => c.proposal)
+      .filter((p): p is WidgetProposal => Boolean(p && p.proposal_id));
+  }, [isDashboard, isUser, streaming, streamingProposals, calls]);
+  const showProposals = proposals.length > 0 && Boolean(projectId);
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -863,6 +890,18 @@ function MessageBubble({
             >
               {e}
             </div>
+          ))}
+        </div>
+      )}
+
+      {!isCollapsed && showProposals && projectId && (
+        <div className="mt-1.5 flex flex-col gap-1.5">
+          {proposals.map((p) => (
+            <WidgetProposalCard
+              key={p.proposal_id}
+              proposal={p}
+              projectId={projectId}
+            />
           ))}
         </div>
       )}
@@ -951,6 +990,153 @@ function UiCallCard({ call, messageId }: UiCallCardProps) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface WidgetProposalCardProps {
+  proposal: WidgetProposal;
+  projectId: string;
+}
+
+const dashboardQueryKey = (projectId: string) =>
+  ["ui-builder", "dashboard", projectId] as const;
+
+function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
+  const queryClient = useQueryClient();
+  const status = useDashboardStore(
+    (s) => s.proposalStatus[proposal.proposal_id] ?? "pending",
+  );
+  const markProposal = useDashboardStore((s) => s.markProposal);
+  const widgets = useDashboardStore((s) => s.dashboard?.widgets ?? []);
+  const existingWidget =
+    proposal.kind === "update"
+      ? widgets.find((w) => w.id === proposal.widget_id)
+      : undefined;
+
+  const acceptMutation = useMutation({
+    mutationFn: async () => {
+      if (proposal.kind === "add") {
+        return dashboardsApi.pinWidget(projectId, {
+          call_id: proposal.call_id,
+          tool: proposal.tool,
+          component: proposal.component,
+          props: proposal.props,
+          grid_x: proposal.grid.x ?? undefined,
+          grid_y: proposal.grid.y ?? undefined,
+          grid_w: proposal.grid.w ?? undefined,
+          grid_h: proposal.grid.h ?? undefined,
+        });
+      }
+      return dashboardsApi.updateWidget(projectId, proposal.widget_id, {
+        props: proposal.next_props,
+        grid_x: proposal.next_grid?.x ?? null,
+        grid_y: proposal.next_grid?.y ?? null,
+        grid_w: proposal.next_grid?.w ?? null,
+        grid_h: proposal.next_grid?.h ?? null,
+      });
+    },
+    onSuccess: () => {
+      markProposal(proposal.proposal_id, "accepted");
+      void queryClient.invalidateQueries({
+        queryKey: dashboardQueryKey(projectId),
+      });
+    },
+  });
+
+  const previewCall: UiCallRecord | null =
+    proposal.kind === "add"
+      ? {
+          call_id: proposal.call_id,
+          tool: proposal.tool,
+          status: "ok",
+          component: proposal.component,
+          props: proposal.props,
+        }
+      : existingWidget
+        ? {
+            call_id: `preview-${proposal.proposal_id}`,
+            tool: proposal.tool,
+            status: "ok",
+            component: proposal.component ?? existingWidget.component,
+            props: {
+              ...(existingWidget.props as Record<string, unknown>),
+              ...((proposal.next_props ?? {}) as Record<string, unknown>),
+            },
+          }
+        : null;
+
+  const isAdd = proposal.kind === "add";
+  const acceptLabel = isAdd ? "캔버스에 추가" : "캔버스에 반영";
+  const kindLabel = isAdd ? "위젯 추가 제안" : "위젯 수정 제안";
+  const disabled = status !== "pending" || acceptMutation.isPending;
+  const statusBadge =
+    status === "accepted"
+      ? { text: "적용됨", cls: "text-status-success" }
+      : status === "dismissed"
+        ? { text: "취소됨", cls: "text-content-tertiary" }
+        : null;
+
+  return (
+    <div className="rounded-button border border-brand-500/40 bg-brand-500/5 px-2 py-1.5">
+      <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
+        <span className="truncate">
+          <span className="text-content-tertiary">proposal ›</span>{" "}
+          <span className="text-content-primary">{kindLabel}</span>
+          {(proposal.component ?? existingWidget?.component) && (
+            <span className="text-content-tertiary">
+              {" "}
+              ·{" "}
+              <span className="text-content-secondary">
+                {proposal.component ?? existingWidget?.component}
+              </span>
+            </span>
+          )}
+        </span>
+        {statusBadge && (
+          <span
+            className={`text-[9.5px] uppercase tracking-wider ${statusBadge.cls}`}
+          >
+            {statusBadge.text}
+          </span>
+        )}
+      </div>
+
+      {previewCall ? (
+        <div className="mt-2">
+          <GenUiRenderer call={previewCall} />
+        </div>
+      ) : (
+        <div className="mt-1 text-[10.5px] text-content-tertiary font-mono">
+          원본 위젯을 찾을 수 없습니다.
+        </div>
+      )}
+
+      {acceptMutation.isError && (
+        <div className="mt-1 text-[10.5px] text-status-danger font-mono">
+          {(acceptMutation.error as Error).message}
+        </div>
+      )}
+
+      <div className="mt-1.5 flex items-center justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={() => markProposal(proposal.proposal_id, "dismissed")}
+          disabled={disabled}
+          className="inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] text-content-secondary hover:text-content-primary hover:bg-surface-overlay disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <X size={11} /> 취소
+        </button>
+        <button
+          type="button"
+          onClick={() => acceptMutation.mutate()}
+          disabled={disabled || (!isAdd && !existingWidget)}
+          className="inline-flex items-center gap-1 rounded-button bg-brand-600 hover:bg-brand-700 px-2 py-1 text-[11px] font-medium text-content-inverse disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Check size={11} />
+          {acceptMutation.isPending ? "적용 중…" : acceptLabel}
+        </button>
+      </div>
     </div>
   );
 }

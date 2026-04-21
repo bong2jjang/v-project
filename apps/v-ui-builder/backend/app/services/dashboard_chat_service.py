@@ -33,6 +33,7 @@ from app.ui_tools.dashboard_ops import (
     DashboardOpsContext,
     dashboard_ops_registry,
 )
+from app.ui_tools.errors import format_tool_error
 
 from .dashboard_service import DashboardService
 from .project_service import ProjectService
@@ -49,8 +50,11 @@ SYSTEM_PROMPT = """당신은 대시보드 캔버스를 직접 편집하는 도�
    이름(stock, weather, data_table 등)을 지정하고 `args` 로 해당 도구의 render 인자를
    전달합니다.
 3. 위젯 수정 시 `widget_id` 는 현재 레이아웃 JSON 의 위젯 id 를 그대로 사용하세요.
-4. 코드를 작성하거나 파일 펜스를 쓰지 마세요. 설명은 1~2줄 이내로 제한.
-5. 사용자의 의도를 도구 호출로 옮길 수 없으면 도구를 호출하지 말고 짧게 되물어
+4. `dashboard_add_widget` 와 `dashboard_update_widget` 는 **프리뷰 제안 모드** 입니다.
+   도구 호출 결과는 채팅창 프리뷰 카드로만 표시되며 사용자가 "캔버스에 추가/반영"
+   버튼을 눌러야 실제 대시보드에 반영됩니다. 같은 턴에 같은 위젯을 다시 제안하지 마세요.
+5. 코드를 작성하거나 파일 펜스를 쓰지 마세요. 설명은 1~2줄 이내로 제한.
+6. 사용자의 의도를 도구 호출로 옮길 수 없으면 도구를 호출하지 말고 짧게 되물어
    주세요.
 
 사용 가능한 재사용 UI 도구:
@@ -70,21 +74,29 @@ _OP_LABEL: dict[str, str] = {
 }
 
 
-def _summarize_dashboard_results(records: list[dict[str, Any]]) -> str:
+def _summarize_dashboard_errors(records: list[dict[str, Any]]) -> str:
+    """에러 기록만 한 줄씩 요약 — LLM 응답 유무와 무관하게 항상 노출."""
     lines: list[str] = []
     for r in records:
+        if r.get("status") != "error":
+            continue
         tool_name = r.get("tool") or "dashboard_op"
         label = _OP_LABEL.get(tool_name, tool_name)
-        status = r.get("status")
-        if status == "error":
-            err = r.get("error") or "알 수 없는 오류"
-            lines.append(f"⚠️ {label} 실패: {err}")
+        err = r.get("error") or "알 수 없는 오류"
+        lines.append(f"⚠️ {label} 실패: {err}")
+    return "\n".join(lines)
+
+
+def _summarize_dashboard_successes(records: list[dict[str, Any]]) -> str:
+    """성공 기록만 한 줄씩 요약 — LLM 이 content 를 비운 턴의 빈 버블 방지용."""
+    lines: list[str] = []
+    for r in records:
+        if r.get("status") != "ok":
             continue
-        if status != "ok":
-            continue
-        events = r.get("events") or []
+        tool_name = r.get("tool") or "dashboard_op"
+        label = _OP_LABEL.get(tool_name, tool_name)
         detail: str = ""
-        for ev in events:
+        for ev in r.get("events") or []:
             name = ev.get("event") or ""
             data = ev.get("data") or {}
             if name in ("dashboard_widget_added", "dashboard.widget_added"):
@@ -96,6 +108,13 @@ def _summarize_dashboard_results(records: list[dict[str, Any]]) -> str:
                 w = data.get("widget") or {}
                 comp = w.get("component") or w.get("tool") or "위젯"
                 detail = f"`{comp}` 갱신"
+                break
+            if name in ("dashboard_widget_proposed", "dashboard.widget_proposed"):
+                p = data.get("proposal") or {}
+                comp = p.get("component") or p.get("tool") or "위젯"
+                kind = p.get("kind") or ""
+                action = "추가" if kind == "add" else "수정"
+                detail = f"`{comp}` {action} 제안"
                 break
             if name in ("dashboard_widget_removed", "dashboard.widget_removed"):
                 wid = data.get("widget_id") or "?"
@@ -219,7 +238,7 @@ class DashboardChatService:
 
         if not dashboard_ops_registry.has(tool_name):
             record["status"] = "error"
-            record["error"] = f"unknown dashboard tool: {tool_name}"
+            record["error"] = f"등록되지 않은 대시보드 도구 `{tool_name}`"
             ui_calls_accum.append(record)
             yield _to_sse(
                 "dashboard_op_error",
@@ -235,19 +254,28 @@ class DashboardChatService:
                 record["events"].append({"event": event, "data": data})
                 if event == "dashboard_op_error" or event == "dashboard.op_error":
                     record["status"] = "error"
-                    record["error"] = data.get("error")
+                    record["error"] = format_tool_error(data.get("error"))
+                    data = {**data, "error": record["error"]}
                 else:
                     record["status"] = "ok"
+                # 프리뷰 제안은 레코드에도 평탄화해 프론트가 재구성 쉽게 하도록.
+                if event in (
+                    "dashboard.widget_proposed",
+                    "dashboard_widget_proposed",
+                ):
+                    proposal = data.get("proposal")
+                    if isinstance(proposal, dict):
+                        record["proposal"] = proposal
                 # SSE event name 은 underscore 형태로 통일
                 sse_name = event.replace(".", "_")
                 yield _to_sse(sse_name, data)
         except Exception as exc:  # noqa: BLE001
             logger.exception("dashboard op %s failed", tool_name)
             record["status"] = "error"
-            record["error"] = str(exc)
+            record["error"] = format_tool_error(exc)
             yield _to_sse(
                 "dashboard_op_error",
-                {"op": tool_name, "error": str(exc)},
+                {"op": tool_name, "error": record["error"]},
             )
 
         ui_calls_accum.append(record)
@@ -318,12 +346,19 @@ class DashboardChatService:
             yield _to_sse("error", {"message": str(exc)})
             return
 
-        # LLM 이 도구만 호출하고 텍스트를 생략한 경우, 빈 메시지 대신 간단 요약을 덧붙인다.
+        # 에러는 LLM 이 텍스트를 생성했든 아니든 사용자에게 항상 원인을 알려준다.
+        error_text = _summarize_dashboard_errors(ui_calls_accum)
+        if error_text:
+            prefix = "\n\n" if "".join(assistant_buf).strip() else ""
+            yield _to_sse("content", {"delta": prefix + error_text})
+            assistant_buf.append(prefix + error_text)
+
+        # 성공 호출만 있고 LLM 이 content 를 비운 경우에만 보조 요약을 덧붙인다.
         if ui_calls_accum and not "".join(assistant_buf).strip():
-            fallback = _summarize_dashboard_results(ui_calls_accum)
-            if fallback:
-                yield _to_sse("content", {"delta": fallback})
-                assistant_buf.append(fallback)
+            success_text = _summarize_dashboard_successes(ui_calls_accum)
+            if success_text:
+                yield _to_sse("content", {"delta": success_text})
+                assistant_buf.append(success_text)
 
         assistant_content = "".join(assistant_buf)
         assistant_msg = UIBuilderMessage(

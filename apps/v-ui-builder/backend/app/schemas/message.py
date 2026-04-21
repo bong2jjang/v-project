@@ -26,6 +26,9 @@ class UiCallRecord(BaseModel):
     props: dict[str, Any] | None = None
     error: str | None = None
     created_at: datetime | None = None
+    # 대시보드 add/update 프리뷰 제안이 평탄화되어 들어오는 필드. 프론트가 이 값으로
+    # `WidgetProposalCard` 를 복원한다. 일반 Generative UI 호출에는 null.
+    proposal: dict[str, Any] | None = None
 
 
 class MessageResponse(BaseModel):

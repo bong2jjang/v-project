@@ -27,6 +27,15 @@ interface DashboardState {
   /** EmptyState suggestion chip 클릭 시 ChatPane(scope="dashboard") 이 자동 전송할 프롬프트. */
   pendingChatPrompt: string | null;
 
+  /** 최근 삭제된 위젯 스택(LIFO). Ctrl+Z / 툴바 Undo 버튼이 pop 후 복원 mutation 호출. */
+  undoStack: DashboardWidget[];
+
+  /**
+   * 프리뷰 제안별 수락/거절 상태. ChatPane 이 같은 메시지의 프리뷰 카드 버튼
+   * 비활성화용으로 참조. 기본값은 "pending" (없으면 UI 가 pending 으로 간주).
+   */
+  proposalStatus: Record<string, "pending" | "accepted" | "dismissed">;
+
   setProjectId: (projectId: string | null) => void;
   setDashboard: (dashboard: DashboardDetail | null) => void;
   setLoading: (value: boolean) => void;
@@ -44,10 +53,21 @@ interface DashboardState {
 
   setPendingChatPrompt: (prompt: string | null) => void;
 
+  pushDeletedWidget: (widget: DashboardWidget) => void;
+  popDeletedWidget: () => DashboardWidget | null;
+  clearUndoStack: () => void;
+
+  markProposal: (
+    proposalId: string,
+    status: "pending" | "accepted" | "dismissed",
+  ) => void;
+
   reset: () => void;
 }
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+const UNDO_STACK_MAX = 20;
+
+export const useDashboardStore = create<DashboardState>((set, get) => ({
   projectId: null,
   dashboard: null,
   isLoading: false,
@@ -55,6 +75,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   selectedWidgetIds: [],
   inspectedWidgetId: null,
   pendingChatPrompt: null,
+  undoStack: [],
+  proposalStatus: {},
 
   setProjectId: (projectId) => set({ projectId }),
   setDashboard: (dashboard) => set({ dashboard, error: null }),
@@ -93,6 +115,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       return {
         dashboard: next,
         selectedWidgetIds: s.selectedWidgetIds.filter((id) => alive.has(id)),
+        inspectedWidgetId:
+          s.inspectedWidgetId && !alive.has(s.inspectedWidgetId)
+            ? null
+            : s.inspectedWidgetId,
       };
     }),
 
@@ -113,6 +139,28 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   setPendingChatPrompt: (prompt) => set({ pendingChatPrompt: prompt }),
 
+  pushDeletedWidget: (widget) =>
+    set((s) => {
+      const next = [...s.undoStack, widget];
+      if (next.length > UNDO_STACK_MAX) next.splice(0, next.length - UNDO_STACK_MAX);
+      return { undoStack: next };
+    }),
+
+  popDeletedWidget: () => {
+    const { undoStack } = get();
+    if (undoStack.length === 0) return null;
+    const last = undoStack[undoStack.length - 1];
+    set({ undoStack: undoStack.slice(0, -1) });
+    return last;
+  },
+
+  clearUndoStack: () => set({ undoStack: [] }),
+
+  markProposal: (proposalId, status) =>
+    set((s) => ({
+      proposalStatus: { ...s.proposalStatus, [proposalId]: status },
+    })),
+
   reset: () =>
     set({
       projectId: null,
@@ -122,5 +170,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       selectedWidgetIds: [],
       inspectedWidgetId: null,
       pendingChatPrompt: null,
+      undoStack: [],
+      proposalStatus: {},
     }),
 }));

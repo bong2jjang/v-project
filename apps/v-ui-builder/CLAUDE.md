@@ -37,6 +37,11 @@
   - Generative UI — `POST /api/ui-builder/projects/{id}/dashboard/chat` (scope=dashboard)
 - Docker profile: `ui-builder`
 
+**대시보드 위젯 프리뷰 플로우 (add/update 공통)**: `dashboard_add_widget` / `dashboard_update_widget` 도구는 DB 에 직접 쓰지 않고 **프리뷰 제안**을 SSE `dashboard_widget_proposed` 로 흘려보낸다. 프론트 `ChatPane > WidgetProposalCard` 가 `GenUiRenderer` 로 미리보기를 렌더하고, 사용자가 `캔버스에 추가` / `캔버스에 반영` 버튼을 누르면 기존 `dashboardsApi.pinWidget` (add) 또는 `updateWidget` PATCH (update) 를 호출해 실제 반영한다. `취소` 는 로컬 상태(`useDashboardStore.proposalStatus`) 만 업데이트.
+- 페이로드 스펙: `lib/api/dashboards.ts` 의 `WidgetProposalAdd` / `WidgetProposalUpdate`
+- 영속 메시지에서 제안 복원: `UiCallRecord.proposal` 필드(백엔드 `_dispatch_tool_call` 이 평탄화)
+- 스모크 테스트: (1) "애플 주가 카드 추가" → 채팅에 프리뷰 카드 + 미리보기 표시 → `캔버스에 추가` → 캔버스 반영 / (2) 캔버스 위젯 선택 후 "제목을 X 로 바꿔줘" → 수정 프리뷰 카드 → `캔버스에 반영` → 기존 위젯 갱신
+
 ### 프론트엔드 라우트 (메뉴 분리 후)
 
 | 경로 | 페이지 | 메뉴 (permission_key) | 아이콘 |
@@ -191,5 +196,5 @@ OPENAI_MODEL=gpt-4o-mini
 
 ---
 
-**문서 버전**: 0.5 (GenUIBuilder 우측 패널 탭화[채팅·속성] + 모바일 팔레트 오버레이 드로어)
-**최종 업데이트**: 2026-04-20
+**문서 버전**: 0.6 (대시보드 위젯 add/update 프리뷰 플로우: `dashboard_widget_proposed` SSE + `WidgetProposalCard` 수락 UI)
+**최종 업데이트**: 2026-04-21

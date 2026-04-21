@@ -20,7 +20,7 @@ import { createParser, type ParsedEvent } from "eventsource-parser";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useDashboardStore } from "../store/dashboard";
-import type { DashboardWidget } from "../lib/api/dashboards";
+import type { DashboardWidget, WidgetProposal } from "../lib/api/dashboards";
 
 function getCsrfToken(): string | null {
   const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
@@ -29,6 +29,9 @@ function getCsrfToken(): string | null {
 
 const dashboardQueryKey = (projectId: string) =>
   ["ui-builder", "dashboard", projectId] as const;
+
+const dashboardMessagesKey = (projectId: string) =>
+  ["ui-builder", "dashboard-messages", projectId] as const;
 
 export interface DashboardChatSendOptions {
   model?: string;
@@ -39,6 +42,8 @@ export interface DashboardAssistantTurn {
   content: string;
   opErrors: string[];
   opCount: number;
+  /** LLM 이 이번 턴에 제안한 위젯 프리뷰들. ChatPane 이 카드로 렌더. */
+  proposals: WidgetProposal[];
 }
 
 export interface DashboardChatHandle {
@@ -83,6 +88,7 @@ export function useDashboardChat({
         content: "",
         opErrors: [],
         opCount: 0,
+        proposals: [],
       };
       setStreaming(turn);
 
@@ -146,6 +152,14 @@ export function useDashboardChat({
                 setStreaming({ ...turn });
                 break;
               }
+              case "dashboard_widget_proposed": {
+                const p = payload.proposal as WidgetProposal | undefined;
+                if (!p || typeof p !== "object" || !p.proposal_id) return;
+                turn.proposals = [...turn.proposals, p];
+                turn.opCount += 1;
+                setStreaming({ ...turn });
+                break;
+              }
               case "dashboard_widget_removed": {
                 const id = String(payload.widget_id ?? "");
                 if (!id) return;
@@ -173,6 +187,9 @@ export function useDashboardChat({
               case "done": {
                 queryClient.invalidateQueries({
                   queryKey: dashboardQueryKey(projectId),
+                });
+                queryClient.invalidateQueries({
+                  queryKey: dashboardMessagesKey(projectId),
                 });
                 setStreaming(null);
                 break;

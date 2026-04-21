@@ -6,13 +6,14 @@
 - 오직 대시보드 채팅(`/api/projects/{id}/dashboard/chat`) 에서만 노출된다.
 
 네 가지 오퍼레이션 (OpenAI function name 규칙 — dot 불가 → underscore):
-- `dashboard_add_widget`    — 새 위젯 추가 (내부에서 기존 ui tool render 재사용)
-- `dashboard_update_widget` — 기존 위젯 props / grid 갱신
-- `dashboard_remove_widget` — 위젯 삭제
-- `dashboard_reflow`        — 전체 레이아웃 재배치(프리셋)
+- `dashboard_add_widget`    — 새 위젯 프리뷰 제안 (승인 전까지 DB 미반영)
+- `dashboard_update_widget` — 기존 위젯 수정 프리뷰 제안 (승인 전까지 DB 미반영)
+- `dashboard_remove_widget` — 위젯 삭제 (즉시 반영, Undo 스택으로 되돌릴 수 있음)
+- `dashboard_reflow`        — 전체 레이아웃 재배치(프리셋, 즉시 반영)
 
-각 도구의 `execute()` 는 `{event, data}` dict 를 yield 한다. 서비스 레이어는
-그대로 SSE `dashboard.widget_added/updated/removed/layout_changed` 로 흘려보낸다.
+Add/Update 는 DB 에 쓰지 않고 `dashboard.widget_proposed` 이벤트만 흘린다.
+사용자가 ChatPane 프리뷰 카드의 "캔버스에 추가" 버튼을 눌러야 실제 API 호출
+(pinWidget/updateWidget) 로 반영된다.
 """
 
 from __future__ import annotations
@@ -24,17 +25,16 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
-from sqlalchemy.orm.attributes import flag_modified
 
 from app.models import UIBuilderDashboardWidget
-from app.schemas.dashboard import WidgetCreate, WidgetRead
+from app.schemas.dashboard import WidgetRead
 from app.services.dashboard_service import (
     DEFAULT_GRID_H,
-    DEFAULT_GRID_W,
     DashboardService,
 )
 
 from .base import ToolSchema, UiChunk, UiContext
+from .errors import format_tool_error
 from .registry import registry as ui_tool_registry
 
 
@@ -142,7 +142,7 @@ async def _render_ui_tool_props(
                 elif chunk.kind == "error":
                     error = chunk.error or "tool error"
     except Exception as exc:  # noqa: BLE001
-        error = str(exc)
+        error = format_tool_error(exc)
     return component, props, error
 
 
@@ -171,8 +171,9 @@ class AddWidgetParams(BaseModel):
 class AddWidgetTool(BaseDashboardOpsTool):
     name = "dashboard_add_widget"
     description = (
-        "대시보드에 새 위젯을 추가한다. tool(재사용할 UI 도구 이름)과 그 args 를 "
-        "받아 카드를 렌더한 뒤 위젯으로 고정한다."
+        "대시보드에 새 위젯 추가를 제안한다. tool(재사용할 UI 도구 이름)과 그 args 를 "
+        "받아 카드를 렌더한 뒤 프리뷰 카드로 채팅창에 먼저 보여준다. "
+        "사용자가 '캔버스에 추가' 버튼을 눌러야 실제 반영된다."
     )
     Params = AddWidgetParams
 
@@ -196,21 +197,23 @@ class AddWidgetTool(BaseDashboardOpsTool):
             return
 
         grid = params.grid or _Grid()
-        create = WidgetCreate(
-            call_id=call_id,
-            tool=params.tool,
-            component=component,
-            props=props,
-            grid_x=grid.x,
-            grid_y=grid.y,
-            grid_w=grid.w,
-            grid_h=grid.h,
-        )
-        svc = DashboardService(ctx.db)
-        widget = svc.create_widget(ctx.dashboard_id, ctx.user_id, create)
+        proposal = {
+            "proposal_id": f"prop_{uuid4().hex[:12]}",
+            "kind": "add",
+            "call_id": call_id,
+            "tool": params.tool,
+            "component": component,
+            "props": props,
+            "grid": {
+                "x": grid.x,
+                "y": grid.y,
+                "w": grid.w,
+                "h": grid.h,
+            },
+        }
         yield {
-            "event": "dashboard.widget_added",
-            "data": {"widget": _widget_to_dict(widget)},
+            "event": "dashboard.widget_proposed",
+            "data": {"proposal": proposal},
         }
 
 
@@ -231,8 +234,9 @@ class UpdateWidgetParams(BaseModel):
 class UpdateWidgetTool(BaseDashboardOpsTool):
     name = "dashboard_update_widget"
     description = (
-        "기존 위젯의 props 또는 위치를 수정한다. action 을 주면 해당 도구의 "
-        "invoke_action 을 호출해 props 를 갱신하고, grid 를 주면 좌표를 갱신."
+        "기존 위젯의 props 또는 위치 수정을 제안한다. action 을 주면 해당 도구의 "
+        "invoke_action 을 호출해 갱신된 props 를 계산하고, grid 를 주면 좌표 변경을 "
+        "제안한다. 사용자가 '캔버스에 반영' 버튼을 눌러야 실제 DB 에 기록된다."
     )
     Params = UpdateWidgetParams
 
@@ -255,6 +259,7 @@ class UpdateWidgetTool(BaseDashboardOpsTool):
             }
             return
 
+        next_props: dict[str, Any] | None = None
         if params.action:
             if not ui_tool_registry.has(widget.tool):
                 yield {
@@ -296,25 +301,25 @@ class UpdateWidgetTool(BaseDashboardOpsTool):
                     "data": {"op": self.name, "error": str(exc)},
                 }
                 return
-            widget.props = merged
-            flag_modified(widget, "props")
+            next_props = merged
 
+        next_grid: dict[str, int | None] | None = None
         if params.grid is not None:
             g = params.grid
-            if g.x is not None:
-                widget.grid_x = g.x
-            if g.y is not None:
-                widget.grid_y = g.y
-            if g.w is not None:
-                widget.grid_w = g.w
-            if g.h is not None:
-                widget.grid_h = g.h
+            next_grid = {"x": g.x, "y": g.y, "w": g.w, "h": g.h}
 
-        ctx.db.commit()
-        ctx.db.refresh(widget)
+        proposal = {
+            "proposal_id": f"prop_{uuid4().hex[:12]}",
+            "kind": "update",
+            "widget_id": str(widget.id),
+            "tool": widget.tool,
+            "component": widget.component,
+            "next_props": next_props,
+            "next_grid": next_grid,
+        }
         yield {
-            "event": "dashboard.widget_updated",
-            "data": {"widget": _widget_to_dict(widget)},
+            "event": "dashboard.widget_proposed",
+            "data": {"proposal": proposal},
         }
 
 

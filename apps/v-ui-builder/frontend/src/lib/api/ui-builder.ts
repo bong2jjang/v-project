@@ -7,6 +7,8 @@
 
 import { apiClient, get, post, put, del } from "@v-platform/core/api/client";
 
+import type { WidgetProposal } from "./dashboards";
+
 export type Template = "react-ts" | "vue" | "vanilla-ts";
 export type LLMProvider = "openai" | "anthropic" | "gemini";
 export type MessageRole = "user" | "assistant" | "system";
@@ -65,6 +67,8 @@ export interface UiCallRecord {
   props?: Record<string, unknown> | null;
   error?: string | null;
   created_at?: string | null;
+  /** dashboard_add_widget / dashboard_update_widget 프리뷰 제안 스펙 (서버에서 평탄화). */
+  proposal?: WidgetProposal | null;
 }
 
 export interface Message {
