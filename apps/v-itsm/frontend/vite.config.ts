@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173,
     host: true,
     hmr: {
-      clientPort: 5174,
+      clientPort: 5182,
     },
     fs: {
       allow: [
@@ -41,14 +41,14 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://template-backend:8000',
+        target: 'http://itsm-backend:8000',
         changeOrigin: true,
         ws: true,
         configure: (proxy, _options) => {
           proxy.on('proxyRes', (proxyRes, _req, _res) => {
             const location = proxyRes.headers['location'];
             if (location && location.includes('backend:8000')) {
-              proxyRes.headers['location'] = location.replace('http://template-backend:8000', '');
+              proxyRes.headers['location'] = location.replace('http://itsm-backend:8000', '');
             }
           });
         },
