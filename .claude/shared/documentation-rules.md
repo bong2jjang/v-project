@@ -2,7 +2,7 @@
 
 v-project의 모든 문서는 Docusaurus 기반으로 관리합니다. 스코프별 `CLAUDE.md` 규약은 섹션 8 참조.
 
-> **최종 업데이트**: 2026-04-18 · **버전**: 4.2 (Commands 서브폴더 네임스페이스 지원 실측 반영 — 중첩 배치는 현 세션 cwd 제약으로 불채택)
+> **최종 업데이트**: 2026-04-21 · **버전**: 4.3 (v-ui-builder 앱 문서 스코프 분리 — `docs/apps/v-ui-builder/` 하위로 설계 문서 5건 이관)
 
 ## 기본 원칙
 
@@ -25,12 +25,19 @@ docusaurus/
 │   │   ├── admin-guide/             #   관리자 가이드
 │   │   ├── developer-guide/         #   개발자 가이드
 │   │   └── design/                  #   플랫폼 설계 문서
-│   ├── apps/                        # 앱별 문서
+│   ├── apps/                        # 앱별 문서 (각 앱은 apps/{app}/ 하위 고정)
 │   │   ├── v-channel-bridge/        #   채널 브리지 앱
 │   │   │   ├── admin-guide/
 │   │   │   ├── developer-guide/
 │   │   │   └── design/
-│   │   └── v-platform-template/     #   템플릿 앱
+│   │   ├── v-platform-portal/       #   통합 포탈 앱
+│   │   │   ├── admin-guide/
+│   │   │   ├── user-guide/
+│   │   │   └── getting-started.md
+│   │   ├── v-platform-template/     #   템플릿 앱
+│   │   │   └── getting-started.md
+│   │   └── v-ui-builder/            #   AI UI Builder 앱
+│   │       └── design/              #     (admin-guide/developer-guide 는 필요 시 추가)
 │   ├── design/                      # 공유 설계 문서
 │   ├── api/                         # API 레퍼런스
 │   ├── user-guide/                  # 사용자 가이드
@@ -100,8 +107,10 @@ tags: [{태그1}, {태그2}, ...]
 | 범위 | 위치 |
 |------|------|
 | 플랫폼 공통 | `docusaurus/docs/platform/design/` |
-| 앱 전용 (v-channel-bridge) | `docusaurus/docs/apps/v-channel-bridge/design/` |
+| 앱 전용 | `docusaurus/docs/apps/{app}/design/` (예: `v-channel-bridge`, `v-ui-builder`) |
 | 공유/크로스커팅 | `docusaurus/docs/design/` |
+
+> **배치 규칙**: 특정 앱 하나에만 적용되는 설계 문서는 반드시 해당 앱 폴더 아래 `design/` 에 둡니다. 신규 앱이 생기면 `docs/apps/{app}/design/` 폴더와 `_category_.json` (`{"label": "설계 문서", "position": 1}`) 을 먼저 만들고, `docusaurus/sidebars.ts` 에 앱 섹션을 추가합니다. **공유 설계 (`docs/design/`) 에는 앱 전용 문서를 두지 않습니다.**
 
 **용도**: 기능 설계, 개선 계획, 기술 검토, 아키텍처 결정
 
@@ -137,6 +146,13 @@ apps/v-channel-bridge/design/  # 앱 설계 (9개)
 ├── MONITORING_IMPROVEMENT.md
 ├── PHASE1_PROVIDER_UI_PLAN.md
 └── REMAINING_TASKS_ROADMAP.md
+
+apps/v-ui-builder/design/      # 앱 설계 (5개)
+├── V_UI_BUILDER_DESIGN.md                     # P1.x 베이스 설계
+├── V_UI_BUILDER_EDITOR_AND_UI_KIT_DESIGN.md   # 에디터/UI Kit 전략 (방안 C)
+├── V_UI_BUILDER_GENERATIVE_UI_DESIGN.md       # Generative UI (P2.x)
+├── V_UI_BUILDER_DASHBOARD_CANVAS_DESIGN.md    # 대시보드 캔버스 v0.2
+└── V_UI_BUILDER_MANUAL_WIDGETS_DESIGN.md      # 수동 위젯 v0.2
 
 design/                        # 공유 설계 (5개)
 ├── PNPM_WORKSPACE_MIGRATION_PLAN.md
@@ -438,3 +454,4 @@ apps/v-channel-bridge/.claude/
 | 2026-04-08 | 2.0 | 실제 구조 기준 전면 갱신: tech-portfolio 추가, 파일 목록 현행화, 마이그레이션 섹션 제거, 태그 가이드 확장 |
 | 2026-04-13 | 3.0 | 멀티앱 구조 반영: platform/, apps/ 분리된 디렉토리 구조 갱신, 전체 파일 목록 현행화 |
 | 2026-04-17 | 4.0 | 섹션 8 추가 — 스코프별 CLAUDE.md 유지보수 규약 (스코프 마커, 8섹션 템플릿, 새 앱 생성 체크리스트, 앱별 .claude/ 디렉터리 구조) |
+| 2026-04-21 | 4.3 | 디렉터리 트리에 `v-platform-portal`·`v-ui-builder` 반영, "앱 전용 문서는 `docs/apps/{app}/` 고정" 규칙 명시, `apps/v-ui-builder/design/` 파일 목록 추가 |

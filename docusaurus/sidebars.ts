@@ -139,6 +139,29 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: '앱: v-ui-builder',
+      link: {
+        type: 'generated-index',
+        title: 'v-ui-builder',
+        description: 'AI UI Builder — 대화로 UI를 만들고 Sandpack 으로 즉시 미리보기',
+      },
+      items: [
+        {
+          type: 'category',
+          label: '설계 문서',
+          collapsed: true,
+          items: [
+            'apps/v-ui-builder/design/V_UI_BUILDER_DESIGN',
+            'apps/v-ui-builder/design/V_UI_BUILDER_EDITOR_AND_UI_KIT_DESIGN',
+            'apps/v-ui-builder/design/V_UI_BUILDER_GENERATIVE_UI_DESIGN',
+            'apps/v-ui-builder/design/V_UI_BUILDER_DASHBOARD_CANVAS_DESIGN',
+            'apps/v-ui-builder/design/V_UI_BUILDER_MANUAL_WIDGETS_DESIGN',
+          ],
+        },
+      ],
+    },
+    {
+      type: 'category',
       label: '공통 설계',
       collapsed: true,
       link: {
