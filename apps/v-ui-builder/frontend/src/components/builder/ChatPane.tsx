@@ -319,7 +319,7 @@ export function ChatPane({
         )}
 
         {error && (
-          <div className="text-[0.6875em] text-status-danger bg-status-danger-light border border-status-danger-border rounded-button px-2 py-1.5 font-mono">
+          <div className="text-[0.875em] text-status-danger bg-status-danger-light border border-status-danger-border rounded-button px-2 py-1.5 font-mono">
             {error}
           </div>
         )}
@@ -731,7 +731,7 @@ function MessageGroups({
               type="button"
               onClick={() => toggle(g.key)}
               aria-expanded={!isCollapsed}
-              className="group/divider flex w-full items-center gap-2 py-1 text-[0.625em] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary transition-colors"
+              className="group/divider flex w-full items-center gap-2 py-1 text-[0.875em] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary transition-colors"
             >
               <span className="h-px flex-1 bg-line" />
               <span className="flex items-center gap-1 px-1">
@@ -818,7 +818,7 @@ function MessageBubble({
         onClick={() => canCollapse && setCollapsed((v) => !v)}
         disabled={!canCollapse}
         aria-expanded={!isCollapsed}
-        className="flex items-center gap-1 self-start text-[0.625em] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary disabled:hover:text-content-tertiary disabled:cursor-default transition-colors"
+        className="flex items-center gap-1 self-start text-[0.875em] uppercase tracking-wider font-mono text-content-tertiary hover:text-content-secondary disabled:hover:text-content-tertiary disabled:cursor-default transition-colors"
       >
         {canCollapse &&
           (isCollapsed ? (
@@ -868,7 +868,7 @@ function MessageBubble({
           {errorCalls.map((c) => (
             <div
               key={c.call_id}
-              className="text-[0.65625em] text-status-danger font-mono"
+              className="text-[0.875em] text-status-danger font-mono"
             >
               {c.tool}: {c.error ?? "op error"}
             </div>
@@ -886,7 +886,7 @@ function MessageBubble({
           {streamingOpErrors.map((e, i) => (
             <div
               key={i}
-              className="text-[0.65625em] text-status-danger font-mono"
+              className="text-[0.875em] text-status-danger font-mono"
             >
               {e}
             </div>
@@ -1113,7 +1113,7 @@ function WidgetProposalCard({ proposal, projectId }: WidgetProposalCardProps) {
       )}
 
       {acceptMutation.isError && (
-        <div className="mt-1 text-[0.65625em] text-status-danger font-mono">
+        <div className="mt-1 text-[0.875em] text-status-danger font-mono">
           {(acceptMutation.error as Error).message}
         </div>
       )}
