@@ -40,8 +40,18 @@ import { useSystemSettingsStore } from "./store/systemSettings";
 import { useNotifications } from "./hooks/useNotifications";
 
 // 앱 전용 페이지
-import Dashboard from "./pages/Dashboard";
 import Help from "./pages/Help";
+import Customers from "./pages/admin/Customers";
+import Products from "./pages/admin/Products";
+import SlaTiers from "./pages/admin/SlaTiers";
+import Contracts from "./pages/admin/Contracts";
+import ScopeGrants from "./pages/admin/ScopeGrants";
+import TicketsIndex from "./pages/tickets/Index";
+import TicketNew from "./pages/tickets/New";
+import TicketDetail from "./pages/tickets/Detail";
+import Kanban from "./pages/Kanban";
+import SlaMonitor from "./pages/SlaMonitor";
+import Kpi from "./pages/Kpi";
 
 function App() {
   const { loadUserFromStorage, isAuthenticated, isInitialized } =
@@ -84,12 +94,8 @@ function App() {
           <Route path="/forbidden" element={<ForbiddenPage />} />
           <Route path="/sso/callback" element={<SSOCallbackPage />} />
 
-          {/* 대시보드 (앱 전용) */}
-          <Route path="/" element={
-            <ProtectedRoute permissionKey="dashboard">
-              <Layout><Dashboard /></Layout>
-            </ProtectedRoute>
-          } />
+          {/* 기본 진입점: Loop 칸반으로 리다이렉트 */}
+          <Route path="/" element={<Navigate to="/kanban" replace />} />
 
           {/* 플랫폼 공통 페이지 */}
           <Route path="/settings" element={<ProtectedRoute permissionKey="settings"><Layout><SettingsPage /></Layout></ProtectedRoute>} />
@@ -105,8 +111,21 @@ function App() {
           <Route path="/custom/*" element={<ProtectedRoute><Layout><CustomIframePage /></Layout></ProtectedRoute>} />
 
           {/* 앱 전용 라우트 (여기에 추가) */}
+          <Route path="/admin/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
+          <Route path="/admin/products" element={<ProtectedRoute><Layout><Products /></Layout></ProtectedRoute>} />
+          <Route path="/admin/sla-tiers" element={<ProtectedRoute><Layout><SlaTiers /></Layout></ProtectedRoute>} />
+          <Route path="/admin/contracts" element={<ProtectedRoute><Layout><Contracts /></Layout></ProtectedRoute>} />
+          <Route path="/admin/scope-grants" element={<ProtectedRoute><Layout><ScopeGrants /></Layout></ProtectedRoute>} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 운영 화면 */}
+          <Route path="/tickets" element={<ProtectedRoute permissionKey="itsm_tickets"><Layout><TicketsIndex /></Layout></ProtectedRoute>} />
+          <Route path="/tickets/new" element={<ProtectedRoute permissionKey="itsm_tickets"><Layout><TicketNew /></Layout></ProtectedRoute>} />
+          <Route path="/tickets/:id" element={<ProtectedRoute permissionKey="itsm_tickets"><Layout><TicketDetail /></Layout></ProtectedRoute>} />
+          <Route path="/kanban" element={<ProtectedRoute permissionKey="itsm_kanban"><Layout><Kanban /></Layout></ProtectedRoute>} />
+          <Route path="/sla" element={<ProtectedRoute permissionKey="itsm_sla_monitor"><Layout><SlaMonitor /></Layout></ProtectedRoute>} />
+          <Route path="/kpi" element={<ProtectedRoute permissionKey="itsm_kpi"><Layout><Kpi /></Layout></ProtectedRoute>} />
+
+          <Route path="*" element={<Navigate to="/kanban" replace />} />
         </Routes>
         <TokenExpiryManager />
       </BrowserRouter>

@@ -32,9 +32,11 @@ import v_platform.services.event_broadcaster as broadcaster_module
 
 from app.api import contracts as contracts_router
 from app.api import customers as customers_router
+from app.api import kpi as kpi_router
 from app.api import products as products_router
 from app.api import scope_grants as scope_grants_router
 from app.api import sla_tiers as sla_tiers_router
+from app.api import sla_timers as sla_timers_router
 from app.api import tickets as tickets_router
 from app.services import sla_timer
 
@@ -89,7 +91,9 @@ platform.register_app_routers(
     products_router.router,
     contracts_router.router,
     sla_tiers_router.router,
+    sla_timers_router.router,
     scope_grants_router.router,
+    kpi_router.router,
 )
 
 # ── ASGI app ──
