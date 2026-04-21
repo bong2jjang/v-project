@@ -36,15 +36,6 @@ interface PermissionState {
   reset: () => void;
 }
 
-/** 관리자 전용 메뉴 permission_key 목록 */
-const ADMIN_MENU_KEYS = new Set([
-  "users",
-  "audit_logs",
-  "monitoring",
-  "menu_management",
-  "permission_management",
-]);
-
 export const usePermissionStore = create<PermissionState>((set, get) => ({
   menus: [],
   permissions: {},
@@ -88,7 +79,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
     const admin: MenuItemResponse[] = [];
 
     for (const menu of menus) {
-      if (ADMIN_MENU_KEYS.has(menu.permission_key)) {
+      if (menu.section === "admin") {
         admin.push(menu);
       } else {
         main.push(menu);

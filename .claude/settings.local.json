@@ -6,7 +6,9 @@
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
       "Bash(mkdir -p .claude/skills/backup-config .claude/skills/sync-docs)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(mkdir -p ~/.claude/scripts)",
+      "Read(//c/Users/bong-gram/.claude/**)"
     ]
   }
 }
