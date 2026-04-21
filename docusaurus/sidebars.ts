@@ -162,6 +162,25 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: '앱: v-itsm',
+      link: {
+        type: 'generated-index',
+        title: 'v-itsm',
+        description: '업무 루프 관리 시스템 — 접수·분석·실행·검증·답변 5단계 루프 + ITSM 표준 프로세스',
+      },
+      items: [
+        {
+          type: 'category',
+          label: '설계 문서',
+          collapsed: true,
+          items: [
+            'apps/v-itsm/design/V_ITSM_DESIGN',
+          ],
+        },
+      ],
+    },
+    {
+      type: 'category',
       label: '공통 설계',
       collapsed: true,
       link: {

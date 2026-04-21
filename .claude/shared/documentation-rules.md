@@ -2,7 +2,7 @@
 
 v-project의 모든 문서는 Docusaurus 기반으로 관리합니다. 스코프별 `CLAUDE.md` 규약은 섹션 8 참조.
 
-> **최종 업데이트**: 2026-04-21 · **버전**: 4.3 (v-ui-builder 앱 문서 스코프 분리 — `docs/apps/v-ui-builder/` 하위로 설계 문서 5건 이관)
+> **최종 업데이트**: 2026-04-21 · **버전**: 4.4 (v-itsm 앱 추가 — `docs/apps/v-itsm/design/` 및 설계 초안 V_ITSM_DESIGN.md 편입)
 
 ## 기본 원칙
 
@@ -36,7 +36,9 @@ docusaurus/
 │   │   │   └── getting-started.md
 │   │   ├── v-platform-template/     #   템플릿 앱
 │   │   │   └── getting-started.md
-│   │   └── v-ui-builder/            #   AI UI Builder 앱
+│   │   ├── v-ui-builder/            #   AI UI Builder 앱
+│   │   │   └── design/              #     (admin-guide/developer-guide 는 필요 시 추가)
+│   │   └── v-itsm/                  #   업무 루프 관리 (ITSM) 앱
 │   │       └── design/              #     (admin-guide/developer-guide 는 필요 시 추가)
 │   ├── design/                      # 공유 설계 문서
 │   ├── api/                         # API 레퍼런스
@@ -107,7 +109,7 @@ tags: [{태그1}, {태그2}, ...]
 | 범위 | 위치 |
 |------|------|
 | 플랫폼 공통 | `docusaurus/docs/platform/design/` |
-| 앱 전용 | `docusaurus/docs/apps/{app}/design/` (예: `v-channel-bridge`, `v-ui-builder`) |
+| 앱 전용 | `docusaurus/docs/apps/{app}/design/` (예: `v-channel-bridge`, `v-ui-builder`, `v-itsm`) |
 | 공유/크로스커팅 | `docusaurus/docs/design/` |
 
 > **배치 규칙**: 특정 앱 하나에만 적용되는 설계 문서는 반드시 해당 앱 폴더 아래 `design/` 에 둡니다. 신규 앱이 생기면 `docs/apps/{app}/design/` 폴더와 `_category_.json` (`{"label": "설계 문서", "position": 1}`) 을 먼저 만들고, `docusaurus/sidebars.ts` 에 앱 섹션을 추가합니다. **공유 설계 (`docs/design/`) 에는 앱 전용 문서를 두지 않습니다.**
@@ -153,6 +155,9 @@ apps/v-ui-builder/design/      # 앱 설계 (5개)
 ├── V_UI_BUILDER_GENERATIVE_UI_DESIGN.md       # Generative UI (P2.x)
 ├── V_UI_BUILDER_DASHBOARD_CANVAS_DESIGN.md    # 대시보드 캔버스 v0.2
 └── V_UI_BUILDER_MANUAL_WIDGETS_DESIGN.md      # 수동 위젯 v0.2
+
+apps/v-itsm/design/            # 앱 설계 (1개, 초안)
+└── V_ITSM_DESIGN.md                           # 업무 루프 관리 시스템 v0.1
 
 design/                        # 공유 설계 (5개)
 ├── PNPM_WORKSPACE_MIGRATION_PLAN.md
@@ -455,3 +460,4 @@ apps/v-channel-bridge/.claude/
 | 2026-04-13 | 3.0 | 멀티앱 구조 반영: platform/, apps/ 분리된 디렉토리 구조 갱신, 전체 파일 목록 현행화 |
 | 2026-04-17 | 4.0 | 섹션 8 추가 — 스코프별 CLAUDE.md 유지보수 규약 (스코프 마커, 8섹션 템플릿, 새 앱 생성 체크리스트, 앱별 .claude/ 디렉터리 구조) |
 | 2026-04-21 | 4.3 | 디렉터리 트리에 `v-platform-portal`·`v-ui-builder` 반영, "앱 전용 문서는 `docs/apps/{app}/` 고정" 규칙 명시, `apps/v-ui-builder/design/` 파일 목록 추가 |
+| 2026-04-21 | 4.4 | v-itsm 앱 추가(업무 루프 관리) — 디렉터리 트리/앱 스코프 경로/설계 파일 목록 반영, 알림 채널은 Slack+Teams 채택(Jandi 대체) |

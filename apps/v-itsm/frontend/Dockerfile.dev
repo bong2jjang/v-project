@@ -1,0 +1,22 @@
+# pnpm Workspace Development Environment
+FROM node:18-alpine
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apk add --no-cache wget
+
+WORKDIR /workspace
+
+# Workspace config
+COPY .npmrc pnpm-workspace.yaml package.json ./
+COPY platform/frontend/v-platform-core/package.json ./platform/frontend/v-platform-core/
+COPY apps/v-itsm/frontend/package.json ./apps/v-itsm/frontend/
+COPY pnpm-lock.yaml* ./
+
+# Install dependencies (workspace-aware)
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --filter v-itsm-frontend... --no-frozen-lockfile --prefer-offline
+
+WORKDIR /workspace/apps/v-itsm/frontend
+
+EXPOSE 5173
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0"]
