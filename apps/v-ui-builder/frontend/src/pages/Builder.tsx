@@ -38,43 +38,52 @@ export default function Builder() {
   const [snapOpen, setSnapOpen] = useState(false);
   const [snapWidth, setSnapWidth] = useState(DEFAULT_SNAP_WIDTH);
 
-  const dragStateRef = useRef<{
-    startX: number;
-    startWidth: number;
-    apply: (next: number) => void;
-    min: number;
-    max: number;
-    direction: "left" | "right";
-  } | null>(null);
+  // 드래그 중에는 DOM width 만 직접 조작하고, mouseup 시점에 한 번만 setState 로
+  // commit 한다. rAF 로 coalesce 하여 프레임당 최대 1회만 레이아웃을 갱신.
+  const chatPaneRef = useRef<HTMLDivElement | null>(null);
+  const snapPaneRef = useRef<HTMLDivElement | null>(null);
 
   const startDrag = useCallback(
     (
       e: React.MouseEvent,
       opts: {
         startWidth: number;
-        apply: (next: number) => void;
+        commit: (next: number) => void;
+        getPane: () => HTMLDivElement | null;
         min: number;
         max: number;
         direction: "left" | "right";
       },
     ) => {
       e.preventDefault();
-      dragStateRef.current = { startX: e.clientX, ...opts };
+      const { startWidth, commit, getPane, min, max, direction } = opts;
+      const startX = e.clientX;
+      let currentWidth = startWidth;
+      let rafId = 0;
+      let pending = false;
+
+      const flush = () => {
+        pending = false;
+        const pane = getPane();
+        if (pane) pane.style.width = `${currentWidth}px`;
+      };
 
       const onMove = (ev: MouseEvent) => {
-        if (!dragStateRef.current) return;
-        const { startX, startWidth, apply, min, max, direction } =
-          dragStateRef.current;
         const dx = ev.clientX - startX;
         const next = direction === "right" ? startWidth + dx : startWidth - dx;
-        apply(Math.max(min, Math.min(max, next)));
+        currentWidth = Math.max(min, Math.min(max, next));
+        if (!pending) {
+          pending = true;
+          rafId = requestAnimationFrame(flush);
+        }
       };
       const onUp = () => {
-        dragStateRef.current = null;
+        if (rafId) cancelAnimationFrame(rafId);
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
+        commit(currentWidth);
       };
 
       document.body.style.cursor = "col-resize";
@@ -89,7 +98,8 @@ export default function Builder() {
     (e: React.MouseEvent) =>
       startDrag(e, {
         startWidth: chatWidth,
-        apply: setChatWidth,
+        commit: setChatWidth,
+        getPane: () => chatPaneRef.current,
         min: MIN_CHAT_WIDTH,
         max: MAX_CHAT_WIDTH,
         direction: "left",
@@ -101,7 +111,8 @@ export default function Builder() {
     (e: React.MouseEvent) =>
       startDrag(e, {
         startWidth: snapWidth,
-        apply: setSnapWidth,
+        commit: setSnapWidth,
+        getPane: () => snapPaneRef.current,
         min: MIN_SNAP_WIDTH,
         max: MAX_SNAP_WIDTH,
         direction: "right",
@@ -186,6 +197,7 @@ export default function Builder() {
         {snapOpen && (
           <>
             <div
+              ref={snapPaneRef}
               className="h-full shrink-0 overflow-hidden border-r border-line max-md:absolute max-md:inset-0 max-md:z-30 max-md:!w-full max-md:border-r-0 max-md:bg-surface-page"
               style={{ width: snapWidth }}
             >
@@ -218,6 +230,7 @@ export default function Builder() {
               className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
             />
             <div
+              ref={chatPaneRef}
               className="h-full shrink-0 overflow-hidden border-l border-line max-md:!w-full max-md:border-l-0"
               style={{ width: chatWidth }}
             >

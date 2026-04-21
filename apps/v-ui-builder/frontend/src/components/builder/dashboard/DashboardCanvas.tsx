@@ -8,10 +8,11 @@
  * - 삭제: 각 위젯 헤더의 휴지통 버튼(`cancel` 대상) → deleteWidget.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import {
+  AlertTriangle,
   Columns2,
   Columns3,
   Loader2,
@@ -20,6 +21,7 @@ import {
   Settings2,
   Trash2,
   Undo2,
+  X,
 } from "lucide-react";
 
 import "react-grid-layout/css/styles.css";
@@ -41,7 +43,7 @@ import { UiActionScopeProvider } from "../gen-ui/UiActionScope";
 
 type ReflowStrategy = "stack" | "2col" | "3col";
 const RESET_H = 4;
-const DELETE_UNDO_MS = 6000;
+const DELETE_UNDO_MS = 30000;
 
 interface DashboardCanvasProps {
   projectId: string;
@@ -55,7 +57,7 @@ const ResponsiveGrid = WidthProvider(GridLayout);
 const DRAG_CANCEL_SELECTOR = ".widget-no-drag";
 const LAYOUT_SAVE_DEBOUNCE_MS = 300;
 
-export function DashboardCanvas({
+function DashboardCanvasImpl({
   projectId,
   mode = "edit",
 }: DashboardCanvasProps) {
@@ -70,15 +72,18 @@ export function DashboardCanvas({
   const setInspectedWidgetId = useDashboardStore(
     (s) => s.setInspectedWidgetId,
   );
+  const pushDeletedWidget = useDashboardStore((s) => s.pushDeletedWidget);
+  const popDeletedWidget = useDashboardStore((s) => s.popDeletedWidget);
+  const undoStackLen = useDashboardStore((s) => s.undoStack.length);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropError, setDropError] = useState<string | null>(null);
-  const [pendingUndo, setPendingUndo] = useState<DashboardWidget | null>(null);
+  const [toastWidget, setToastWidget] = useState<DashboardWidget | null>(null);
 
   const queryClient = useQueryClient();
   const saveTimerRef = useRef<number | null>(null);
   const pendingLayoutRef = useRef<WidgetLayoutItem[] | null>(null);
-  const undoTimerRef = useRef<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: dashboardKey(projectId),
@@ -113,16 +118,40 @@ export function DashboardCanvas({
   const deleteMutation = useMutation({
     mutationFn: (widgetId: string) =>
       dashboardsApi.deleteWidget(projectId, widgetId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKey(projectId) });
+    onMutate: async (widgetId) => {
+      await queryClient.cancelQueries({ queryKey: dashboardKey(projectId) });
+      const previous = queryClient.getQueryData<DashboardDetail>(
+        dashboardKey(projectId),
+      );
+      if (previous) {
+        const next: DashboardDetail = {
+          ...previous,
+          widgets: previous.widgets.filter((w) => w.id !== widgetId),
+        };
+        queryClient.setQueryData(dashboardKey(projectId), next);
+        replaceWidgets(next.widgets);
+      }
+      return { previous };
+    },
+    onError: (err, _widgetId, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(dashboardKey(projectId), ctx.previous);
+        replaceWidgets(ctx.previous.widgets);
+      }
+      setDropError(
+        err instanceof Error ? err.message : "위젯 삭제에 실패했습니다.",
+      );
     },
   });
 
   const restoreMutation = useMutation({
     mutationFn: (body: WidgetCreateRequest) =>
       dashboardsApi.pinWidget(projectId, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKey(projectId) });
+    onSuccess: (widget) => {
+      queryClient.setQueryData<DashboardDetail>(
+        dashboardKey(projectId),
+        (old) => (old ? { ...old, widgets: [...old.widgets, widget] } : old),
+      );
     },
     onError: (err) => {
       setDropError(
@@ -131,33 +160,38 @@ export function DashboardCanvas({
     },
   });
 
-  const scheduleUndoClear = useCallback(() => {
-    if (undoTimerRef.current !== null) {
-      window.clearTimeout(undoTimerRef.current);
+  const clearToast = useCallback(() => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
     }
-    undoTimerRef.current = window.setTimeout(() => {
-      undoTimerRef.current = null;
-      setPendingUndo(null);
+    setToastWidget(null);
+  }, []);
+
+  const scheduleToastClear = useCallback(() => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      toastTimerRef.current = null;
+      setToastWidget(null);
     }, DELETE_UNDO_MS);
   }, []);
 
   const handleDelete = useCallback(
     (widget: DashboardWidget) => {
-      setPendingUndo(widget);
-      scheduleUndoClear();
+      pushDeletedWidget(widget);
+      setToastWidget(widget);
+      scheduleToastClear();
       deleteMutation.mutate(widget.id);
     },
-    [deleteMutation, scheduleUndoClear],
+    [deleteMutation, pushDeletedWidget, scheduleToastClear],
   );
 
   const handleUndoDelete = useCallback(() => {
-    const w = pendingUndo;
+    const w = popDeletedWidget();
     if (!w) return;
-    setPendingUndo(null);
-    if (undoTimerRef.current !== null) {
-      window.clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
-    }
+    clearToast();
     restoreMutation.mutate({
       call_id: w.call_id,
       tool: w.tool,
@@ -170,7 +204,7 @@ export function DashboardCanvas({
       grid_w: w.grid_w,
       grid_h: w.grid_h,
     });
-  }, [pendingUndo, restoreMutation]);
+  }, [popDeletedWidget, clearToast, restoreMutation]);
 
   const layoutMutation = useMutation({
     mutationFn: (items: WidgetLayoutItem[]) =>
@@ -297,11 +331,35 @@ export function DashboardCanvas({
       if (saveTimerRef.current !== null) {
         window.clearTimeout(saveTimerRef.current);
       }
-      if (undoTimerRef.current !== null) {
-        window.clearTimeout(undoTimerRef.current);
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (isPreview) return;
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod || e.key.toLowerCase() !== "z" || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t) {
+        const tag = t.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          t.isContentEditable
+        ) {
+          return;
+        }
+      }
+      if (undoStackLen === 0) return;
+      e.preventDefault();
+      handleUndoDelete();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isPreview, undoStackLen, handleUndoDelete]);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     if (isPreview) return;
@@ -423,7 +481,7 @@ export function DashboardCanvas({
           </div>
         )}
 
-        {pendingUndo && (
+        {toastWidget && !isPreview && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 rounded-button bg-surface-chrome border border-line px-3 py-1.5 text-[12px] text-content-primary shadow-card">
             <span>위젯이 삭제되었습니다.</span>
             <button
@@ -431,8 +489,18 @@ export function DashboardCanvas({
               onClick={handleUndoDelete}
               disabled={restoreMutation.isPending}
               className="inline-flex items-center gap-1 rounded-button bg-brand-500 text-white px-2 py-0.5 text-[11px] hover:opacity-90 disabled:opacity-50"
+              title="Ctrl+Z"
             >
               <Undo2 size={11} /> 실행 취소
+              <span className="ml-1 opacity-70 font-mono text-[10px]">⌃Z</span>
+            </button>
+            <button
+              type="button"
+              onClick={clearToast}
+              aria-label="알림 닫기"
+              className="inline-flex items-center justify-center w-5 h-5 rounded-button text-content-tertiary hover:text-content-primary hover:bg-surface-overlay"
+            >
+              <X size={11} />
             </button>
           </div>
         )}
@@ -440,6 +508,8 @@ export function DashboardCanvas({
     </div>
   );
 }
+
+export const DashboardCanvas = memo(DashboardCanvasImpl);
 
 interface ReflowToolbarProps {
   onApply: (strategy: ReflowStrategy) => void;
@@ -565,6 +635,45 @@ function WidgetTile({
   removing,
   readOnly = false,
 }: WidgetTileProps) {
+  const [confirming, setConfirming] = useState(false);
+  const confirmTimerRef = useRef<number | null>(null);
+
+  const scheduleConfirmClear = useCallback(() => {
+    if (confirmTimerRef.current !== null) {
+      window.clearTimeout(confirmTimerRef.current);
+    }
+    confirmTimerRef.current = window.setTimeout(() => {
+      confirmTimerRef.current = null;
+      setConfirming(false);
+    }, 4000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current !== null) {
+        window.clearTimeout(confirmTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleTrashClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.shiftKey) {
+        setConfirming(false);
+        onRemove();
+        return;
+      }
+      if (confirming) {
+        setConfirming(false);
+        onRemove();
+        return;
+      }
+      setConfirming(true);
+      scheduleConfirmClear();
+    },
+    [confirming, onRemove, scheduleConfirmClear],
+  );
+
   if (readOnly) {
     return (
       <div className="h-full w-full rounded-input border border-line bg-surface-card shadow-card overflow-hidden flex flex-col">
@@ -623,17 +732,54 @@ function WidgetTile({
           </button>
           <button
             type="button"
-            onClick={onRemove}
+            onClick={handleTrashClick}
             onMouseDown={(e) => e.stopPropagation()}
             disabled={removing}
-            title="고정 해제"
-            aria-label="고정 해제"
-            className="widget-no-drag opacity-0 group-hover:opacity-100 inline-flex items-center justify-center p-0.5 rounded-button text-content-tertiary hover:text-status-danger hover:bg-surface-overlay transition-all disabled:opacity-40"
+            title={
+              confirming
+                ? "한 번 더 눌러 삭제 (Shift+Click: 즉시)"
+                : "삭제 (Shift+Click: 확인 없이 즉시)"
+            }
+            aria-label="삭제"
+            className={`widget-no-drag inline-flex items-center justify-center p-0.5 rounded-button transition-all disabled:opacity-40 ${
+              confirming
+                ? "text-status-danger bg-status-danger-light opacity-100"
+                : "opacity-0 group-hover:opacity-100 text-content-tertiary hover:text-status-danger hover:bg-surface-overlay"
+            }`}
           >
             <Trash2 size={12} />
           </button>
         </div>
       </div>
+      {confirming && (
+        <div className="widget-no-drag absolute top-7 right-1 z-10 flex items-center gap-1 rounded-button border border-status-danger-border bg-surface-card px-1.5 py-1 shadow-card-elevated text-[11px]">
+          <AlertTriangle size={11} className="text-status-danger shrink-0" />
+          <span className="text-content-primary">삭제할까요?</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+              onRemove();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="inline-flex items-center rounded-button bg-status-danger text-white px-1.5 py-0.5 text-[10.5px] hover:opacity-90"
+          >
+            삭제
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="inline-flex items-center rounded-button border border-line px-1.5 py-0.5 text-[10.5px] text-content-secondary hover:text-content-primary"
+          >
+            취소
+          </button>
+        </div>
+      )}
       <div className="widget-no-drag flex-1 min-h-0 overflow-auto p-2">
         <GenUiRenderer call={widget.call} />
       </div>

@@ -6,7 +6,7 @@
  * Monaco 의 path-based model cache 를 활용해 파일별 undo/redo 가 보존된다.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type * as MonacoT from "monaco-editor";
 import Editor, {
   type BeforeMount,
@@ -242,7 +242,7 @@ function EditorToolbar({
   );
 }
 
-export function CodePane() {
+function CodePaneImpl() {
   const project = useBuilderStore((s) => s.project);
   const fileMap = useBuilderStore((s) => s.fileMap);
   const activeFile = useBuilderStore((s) => s.activeFile);
@@ -368,3 +368,5 @@ export function CodePane() {
     </div>
   );
 }
+
+export const CodePane = memo(CodePaneImpl);

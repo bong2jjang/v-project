@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import {
   Eye,
@@ -20,6 +21,7 @@ import {
   PanelLeftOpen,
   ExternalLink,
   Settings2,
+  Undo2,
   X,
 } from "lucide-react";
 
@@ -28,6 +30,11 @@ import { Inspector } from "../components/builder/dashboard/inspector/Inspector";
 import { WidgetPalette } from "../components/builder/dashboard/WidgetPalette";
 import { ChatPane } from "../components/builder/ChatPane";
 import { BuilderToolbar } from "../components/builder/BuilderToolbar";
+import {
+  dashboardsApi,
+  type DashboardDetail,
+  type WidgetCreateRequest,
+} from "../lib/api/dashboards";
 import { useDashboardStore } from "../store/dashboard";
 
 const MIN_CHAT_WIDTH = 280;
@@ -50,30 +57,79 @@ export default function GenUIBuilder() {
   const setInspectedWidgetId = useDashboardStore(
     (s) => s.setInspectedWidgetId,
   );
+  const undoStackLen = useDashboardStore((s) => s.undoStack.length);
+  const popDeletedWidget = useDashboardStore((s) => s.popDeletedWidget);
 
-  const dragStateRef = useRef<{
-    startX: number;
-    startWidth: number;
-  } | null>(null);
+  const queryClient = useQueryClient();
+  const undoRestoreMutation = useMutation({
+    mutationFn: (body: WidgetCreateRequest) =>
+      projectId
+        ? dashboardsApi.pinWidget(projectId, body)
+        : Promise.reject(new Error("projectId 없음")),
+    onSuccess: (widget) => {
+      if (!projectId) return;
+      queryClient.setQueryData<DashboardDetail>(
+        ["ui-builder", "dashboard", projectId],
+        (old) => (old ? { ...old, widgets: [...old.widgets, widget] } : old),
+      );
+    },
+  });
+
+  const handleToolbarUndo = useCallback(() => {
+    const w = popDeletedWidget();
+    if (!w) return;
+    undoRestoreMutation.mutate({
+      call_id: w.call_id,
+      tool: w.tool,
+      component: w.component,
+      props: w.props,
+      source_message_id: w.source_message_id ?? null,
+      source_call_id: w.source_call_id ?? null,
+      grid_x: w.grid_x,
+      grid_y: w.grid_y,
+      grid_w: w.grid_w,
+      grid_h: w.grid_h,
+    });
+  }, [popDeletedWidget, undoRestoreMutation]);
+
+  // 드래그 중에는 DOM width 만 직접 조작하고, mouseup 시점에 한 번만 setState 로
+  // commit 한다. rAF 로 coalesce 하여 프레임당 최대 1회만 레이아웃을 갱신.
+  const chatPaneRef = useRef<HTMLDivElement | null>(null);
 
   const handleChatDragStart = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      dragStateRef.current = { startX: e.clientX, startWidth: chatWidth };
+      const startX = e.clientX;
+      const startWidth = chatWidth;
+      let currentWidth = startWidth;
+      let rafId = 0;
+      let pending = false;
+
+      const flush = () => {
+        pending = false;
+        const pane = chatPaneRef.current;
+        if (pane) pane.style.width = `${currentWidth}px`;
+      };
 
       const onMove = (ev: MouseEvent) => {
-        if (!dragStateRef.current) return;
-        const { startX, startWidth } = dragStateRef.current;
         const dx = ev.clientX - startX;
         const next = startWidth - dx;
-        setChatWidth(Math.max(MIN_CHAT_WIDTH, Math.min(MAX_CHAT_WIDTH, next)));
+        currentWidth = Math.max(
+          MIN_CHAT_WIDTH,
+          Math.min(MAX_CHAT_WIDTH, next),
+        );
+        if (!pending) {
+          pending = true;
+          rafId = requestAnimationFrame(flush);
+        }
       };
       const onUp = () => {
-        dragStateRef.current = null;
+        if (rafId) cancelAnimationFrame(rafId);
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
+        setChatWidth(currentWidth);
       };
 
       document.body.style.cursor = "col-resize";
@@ -113,19 +169,41 @@ export default function GenUIBuilder() {
   }
 
   const toolbarLeft = !previewMode ? (
-    <button
-      type="button"
-      onClick={() => setPaletteOpen((v) => !v)}
-      title={paletteOpen ? "팔레트 닫기" : "팔레트 열기"}
-      className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] transition-colors ${
-        paletteOpen
-          ? "bg-surface-overlay text-content-primary"
-          : "text-content-secondary hover:text-content-primary hover:bg-surface-overlay"
-      }`}
-    >
-      {paletteOpen ? <PanelLeftClose size={12} /> : <PanelLeftOpen size={12} />}
-      팔레트
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen((v) => !v)}
+        title={paletteOpen ? "팔레트 닫기" : "팔레트 열기"}
+        className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] transition-colors ${
+          paletteOpen
+            ? "bg-surface-overlay text-content-primary"
+            : "text-content-secondary hover:text-content-primary hover:bg-surface-overlay"
+        }`}
+      >
+        {paletteOpen ? <PanelLeftClose size={12} /> : <PanelLeftOpen size={12} />}
+        팔레트
+      </button>
+      <span className="w-px h-4 bg-line mx-0.5" />
+      <button
+        type="button"
+        onClick={handleToolbarUndo}
+        disabled={undoStackLen === 0 || undoRestoreMutation.isPending}
+        title={
+          undoStackLen === 0
+            ? "되돌릴 삭제 없음"
+            : `삭제 취소 (Ctrl+Z) — ${undoStackLen}개 대기`
+        }
+        className="inline-flex items-center gap-1 rounded-button px-2 py-1 text-[11px] text-content-secondary hover:text-content-primary hover:bg-surface-overlay disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-content-secondary transition-colors"
+      >
+        <Undo2 size={12} />
+        되돌리기
+        {undoStackLen > 0 && (
+          <span className="ml-0.5 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-mono">
+            {undoStackLen}
+          </span>
+        )}
+      </button>
+    </>
   ) : null;
 
   const toolbarCenter = (
@@ -231,6 +309,7 @@ export default function GenUIBuilder() {
               className="hidden md:block w-[3px] shrink-0 cursor-col-resize bg-surface-page hover:bg-brand-600 transition-colors"
             />
             <div
+              ref={chatPaneRef}
               className="h-full shrink-0 overflow-hidden border-l border-line bg-surface-canvas flex flex-col max-md:!w-full max-md:absolute max-md:inset-0 max-md:z-40 max-md:border-l-0"
               style={{ width: chatWidth }}
             >

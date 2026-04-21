@@ -9,14 +9,14 @@
  * 콘텐츠 영역은 자체 스크롤만 가지며 외부 스크롤을 만들지 않는다.
  */
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Eye, FileCode2 } from "lucide-react";
 
 import { CodePane } from "./CodePane";
 import { PreviewPane } from "./PreviewPane";
 import { useBuilderStore } from "../../store/builder";
 
-export function CanvasPane() {
+function CanvasPaneImpl() {
   const fileMap = useBuilderStore((s) => s.fileMap);
   const activeFile = useBuilderStore((s) => s.activeFile);
   const setActiveFile = useBuilderStore((s) => s.setActiveFile);
@@ -87,6 +87,8 @@ export function CanvasPane() {
     </div>
   );
 }
+
+export const CanvasPane = memo(CanvasPaneImpl);
 
 interface VsTabProps {
   active: boolean;

@@ -7,6 +7,7 @@
  * Sandpack 샌드박스 안에서도 Tailwind 클래스가 동작하도록 한다.
  */
 
+import { memo, useMemo } from "react";
 import {
   SandpackProvider,
   SandpackLayout,
@@ -82,10 +83,35 @@ function SkeletonPreview({ hint }: { hint: string }) {
   );
 }
 
-export function PreviewPane() {
+// Sandpack props 는 참조 동일성이 중요하다. 드래그·스트리밍 중 새 객체가 들어오면
+// SandpackProvider 내부 diff 가 매번 돌며 iframe 재번들 트리거가 된다.
+const SANDPACK_OPTIONS = { recompileMode: "delayed", recompileDelay: 400 } as const;
+const SANDPACK_DEPENDENCIES: Record<string, string> = {
+  react: "^18.2.0",
+  "react-dom": "^18.2.0",
+  recharts: "^2.12.0",
+  "lucide-react": "^0.460.0",
+  clsx: "^2.1.0",
+  "framer-motion": "^11.0.0",
+  "date-fns": "^3.6.0",
+  ...presetDependencies,
+};
+const SANDPACK_CUSTOM_SETUP = { dependencies: SANDPACK_DEPENDENCIES } as const;
+const SANDPACK_LAYOUT_STYLE = { height: "100%", border: "none", borderRadius: 0 } as const;
+const SANDPACK_PREVIEW_STYLE = { height: "100%", flex: 1 } as const;
+
+function PreviewPaneImpl() {
   const project = useBuilderStore((s) => s.project);
   const fileMap = useBuilderStore((s) => s.fileMap);
   const isStreaming = useBuilderStore((s) => s.isStreaming);
+
+  const files = useMemo(() => {
+    const userFiles = normalize(fileMap);
+    const merged: Record<string, string> = { ...presetFiles, ...userFiles };
+    if (!merged["/App.tsx"]) merged["/App.tsx"] = DEFAULT_APP;
+    if (!merged["/public/index.html"]) merged["/public/index.html"] = TAILWIND_INDEX_HTML;
+    return merged;
+  }, [fileMap]);
 
   if (!project) {
     return <SkeletonPreview hint="프로젝트 불러오는 중…" />;
@@ -94,42 +120,20 @@ export function PreviewPane() {
     return <SkeletonPreview hint="프리뷰 생성 중…" />;
   }
 
-  const userFiles = normalize(fileMap);
-  // preset 을 먼저 깔고 그 위에 사용자 파일을 덮어씌운다 — 사용자가 같은 경로를
-  // 수정하면 그 수정본이 우선, 아니면 preset 이 그대로 노출된다.
-  const files: Record<string, string> = { ...presetFiles, ...userFiles };
-  if (!files["/App.tsx"]) {
-    files["/App.tsx"] = DEFAULT_APP;
-  }
-  if (!files["/public/index.html"]) {
-    files["/public/index.html"] = TAILWIND_INDEX_HTML;
-  }
-
   return (
     <div className="h-full min-h-0 bg-surface-page p-3">
       <div className="ui-builder-sandpack h-full min-h-0 rounded-card border border-line overflow-hidden shadow-card bg-surface-card">
         <SandpackProvider
           template="react-ts"
           files={files}
-          options={{ recompileMode: "delayed", recompileDelay: 400 }}
-          customSetup={{
-            dependencies: {
-              react: "^18.2.0",
-              "react-dom": "^18.2.0",
-              recharts: "^2.12.0",
-              "lucide-react": "^0.460.0",
-              clsx: "^2.1.0",
-              "framer-motion": "^11.0.0",
-              "date-fns": "^3.6.0",
-              ...presetDependencies,
-            },
-          }}
+          options={SANDPACK_OPTIONS}
+          customSetup={SANDPACK_CUSTOM_SETUP}
         >
-          <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
+          <SandpackLayout style={SANDPACK_LAYOUT_STYLE}>
             <SandpackPreview
               showOpenInCodeSandbox={false}
               showRefreshButton
-              style={{ height: "100%", flex: 1 }}
+              style={SANDPACK_PREVIEW_STYLE}
             />
           </SandpackLayout>
         </SandpackProvider>
@@ -137,3 +141,5 @@ export function PreviewPane() {
     </div>
   );
 }
+
+export const PreviewPane = memo(PreviewPaneImpl);

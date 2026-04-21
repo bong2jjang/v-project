@@ -6,7 +6,7 @@
  * - 본문은 `<SchemaForm>` 에 위임. 제목/아이콘/닫기는 상위 탭바에서 담당한다.
  */
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Settings2 } from "lucide-react";
 
@@ -26,7 +26,7 @@ interface InspectorProps {
 const catalogKey = (projectId: string) =>
   ["ui-builder", "dashboard", "catalog", projectId] as const;
 
-export function Inspector({ projectId }: InspectorProps) {
+function InspectorImpl({ projectId }: InspectorProps) {
   const inspectedWidgetId = useDashboardStore((s) => s.inspectedWidgetId);
   const dashboard = useDashboardStore((s) => s.dashboard);
 
@@ -93,6 +93,8 @@ export function Inspector({ projectId }: InspectorProps) {
     </aside>
   );
 }
+
+export const Inspector = memo(InspectorImpl);
 
 interface WidgetHeaderProps {
   widget: DashboardWidget;
