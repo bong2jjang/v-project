@@ -28,9 +28,10 @@ function contentWidthKey(appName?: string) { return appName ? `${appName}:conten
 function pullToRefreshKey(appName?: string) { return appName ? `${appName}:pullToRefresh` : "pullToRefresh"; }
 function wideViewToggleKey(appName?: string) { return appName ? `${appName}:showWideViewToggle` : "showWideViewToggle"; }
 function fontSizeKey(appName?: string) { return appName ? `${appName}:fontSize` : "fontSize"; }
+function sidebarTintKey(appName?: string) { return appName ? `${appName}:tintedSidebar` : "tintedSidebar"; }
 
 type Theme = "light" | "dark" | "system";
-export type ColorPreset = "blue" | "indigo" | "rose";
+export type ColorPreset = "blue" | "indigo" | "rose" | "aubergine";
 export type ContentWidth = "default" | "wide";
 export type FontSize = "small" | "medium" | "large";
 
@@ -42,6 +43,7 @@ export const COLOR_PRESETS: {
   { id: "blue", label: "Blue", color: "#0078d4" },
   { id: "indigo", label: "Indigo", color: "#4f46e5" },
   { id: "rose", label: "Rose", color: "#e11d48" },
+  { id: "aubergine", label: "Aubergine", color: "#4a154b" },
 ];
 
 interface ThemeContextValue {
@@ -59,6 +61,8 @@ interface ThemeContextValue {
   setPullToRefresh: (enabled: boolean) => void;
   showWideViewToggle: boolean;
   setShowWideViewToggle: (visible: boolean) => void;
+  tintedSidebar: boolean;
+  setTintedSidebar: (enabled: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -68,7 +72,7 @@ function isValidTheme(v: string | null | undefined): v is Theme {
 }
 
 function isValidPreset(v: string | null | undefined): v is ColorPreset {
-  return v === "blue" || v === "indigo" || v === "rose";
+  return v === "blue" || v === "indigo" || v === "rose" || v === "aubergine";
 }
 
 function getEffectiveTheme(theme: Theme): "light" | "dark" {
@@ -148,10 +152,102 @@ function resolveInitialShowWideViewToggle(appName?: string): boolean {
   return true; // 기본값: 표시 (하위호환)
 }
 
+/** 사이드바 테마색 적용 CSS 주입 (1회) — html.sidebar-tinted 셀렉터 기반 */
+function ensureSidebarTintStyle() {
+  if (typeof document === "undefined") return;
+  const STYLE_ID = "platform-sidebar-tint-style";
+  const existing = document.getElementById(STYLE_ID);
+  if (existing) existing.remove();
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+html.sidebar-tinted aside[data-tour="sidebar"] {
+  background-color: var(--color-brand-600);
+  border-right-color: transparent;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .border-line,
+html.sidebar-tinted aside[data-tour="sidebar"] .border-t {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .text-content-primary,
+html.sidebar-tinted aside[data-tour="sidebar"] .text-content-secondary,
+html.sidebar-tinted aside[data-tour="sidebar"] .text-content-tertiary {
+  color: rgba(255, 255, 255, 0.92);
+}
+html.sidebar-tinted aside[data-tour="sidebar"] a:hover,
+html.sidebar-tinted aside[data-tour="sidebar"] button:hover {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-raised {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-gradient-to-t {
+  background-image: linear-gradient(to top, var(--color-brand-600), transparent) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] [data-active="true"] {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.95);
+}
+html.sidebar-tinted aside[data-tour="sidebar"] [data-active="true"]:hover {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] [data-active="true"] svg {
+  color: #ffffff !important;
+}
+/* UserMenu 드롭다운 등 bg-surface-card 내부는 틴트 예외 처리 (흰 배경 위 흰 글씨 방지) */
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card {
+  background-color: var(--color-surface-card) !important;
+  color: var(--color-content-primary) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-primary {
+  color: var(--color-content-primary) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-secondary {
+  color: var(--color-content-secondary) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-tertiary {
+  color: var(--color-content-tertiary) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-status-danger {
+  color: var(--color-status-danger) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .border-line,
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .border-t {
+  border-color: var(--color-line) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card a:hover,
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card button:hover {
+  background-color: var(--color-surface-raised) !important;
+  color: var(--color-content-primary) !important;
+}
+html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card button.text-status-danger:hover {
+  background-color: var(--color-status-danger-light) !important;
+  color: var(--color-status-danger) !important;
+}
+`;
+  document.head.appendChild(style);
+}
+
+function applySidebarTint(enabled: boolean) {
+  ensureSidebarTintStyle();
+  document.documentElement.classList.toggle("sidebar-tinted", enabled);
+}
+
+function resolveInitialSidebarTint(appName?: string): boolean {
+  const stored = localStorage.getItem(sidebarTintKey(appName));
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return false; // 기본값: 비활성 (현재 동작 유지)
+}
+
 function applyColorPreset(preset: ColorPreset) {
   const root = document.documentElement;
   // 이전 프리셋 클래스 제거
-  root.classList.remove("theme-indigo", "theme-rose");
+  root.classList.remove("theme-indigo", "theme-rose", "theme-aubergine");
   // blue는 기본값이라 클래스 불필요
   if (preset !== "blue") {
     root.classList.add(`theme-${preset}`);
@@ -202,6 +298,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const [showWideViewToggle, setShowWideViewToggleState] = useState<boolean>(
     () => resolveInitialShowWideViewToggle(appName),
+  );
+
+  const [tintedSidebar, setTintedSidebarState] = useState<boolean>(() =>
+    resolveInitialSidebarTint(appName),
   );
 
   const [isDark, setIsDark] = useState(
@@ -270,6 +370,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [appName],
   );
 
+  const setTintedSidebar = useCallback(
+    (enabled: boolean) => {
+      setTintedSidebarState(enabled);
+      localStorage.setItem(sidebarTintKey(appName), String(enabled));
+      applySidebarTint(enabled);
+    },
+    [appName],
+  );
+
   // 로그인 시 앱별 localStorage에서 테마 적용 (DB 사용 안 함)
   useEffect(() => {
     if (isAuthenticated) {
@@ -297,6 +406,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyPullToRefresh(currentPull);
 
       setShowWideViewToggleState(resolveInitialShowWideViewToggle(appName));
+
+      const currentTint = resolveInitialSidebarTint(appName);
+      setTintedSidebarState(currentTint);
+      applySidebarTint(currentTint);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, appName]);
@@ -322,7 +435,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyContentWidth(contentWidth);
     applyFontSize(fontSize);
     applyPullToRefresh(pullToRefresh);
-  }, [theme, colorPreset, contentWidth, fontSize, pullToRefresh]);
+    applySidebarTint(tintedSidebar);
+  }, [theme, colorPreset, contentWidth, fontSize, pullToRefresh, tintedSidebar]);
 
   const value: ThemeContextValue = {
     theme,
@@ -339,6 +453,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setPullToRefresh,
     showWideViewToggle,
     setShowWideViewToggle,
+    tintedSidebar,
+    setTintedSidebar,
   };
 
   return createElement(ThemeContext.Provider, { value }, children);

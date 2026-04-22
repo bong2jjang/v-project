@@ -46,6 +46,8 @@ export {
 
 // Overlay
 export { Modal, ModalFooter } from "./Modal";
+export { Drawer, DrawerFooter } from "./Drawer";
+export type { DrawerSide, DrawerSize } from "./Drawer";
 
 // Form
 export { Input } from "./Input";

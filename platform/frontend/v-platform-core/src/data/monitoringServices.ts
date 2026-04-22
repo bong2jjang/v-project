@@ -2,7 +2,7 @@
  * 모니터링 서비스 정의
  */
 
-import type { MonitoringService, UsageGuide } from "@/types/monitoring";
+import type { MonitoringService, UsageGuide } from "../types/monitoring";
 
 export const monitoringServices: MonitoringService[] = [
   {

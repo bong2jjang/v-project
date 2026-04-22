@@ -20,6 +20,7 @@ import {
   PasswordChangePage,
   UserManagementPage,
   AuditLogsPage,
+  MonitoringPage,
   SettingsPage,
   CustomIframePage,
   MenuManagementPage,
@@ -46,6 +47,12 @@ import Products from "./pages/admin/Products";
 import SlaTiers from "./pages/admin/SlaTiers";
 import Contracts from "./pages/admin/Contracts";
 import ScopeGrants from "./pages/admin/ScopeGrants";
+import SlaPolicies from "./pages/admin/SlaPolicies";
+import SlaNotificationPolicies from "./pages/admin/SlaNotificationPolicies";
+import Scheduler from "./pages/admin/Scheduler";
+import Integrations from "./pages/admin/Integrations";
+import NotificationLogs from "./pages/admin/NotificationLogs";
+import MyNotificationPref from "./pages/me/MyNotificationPref";
 import TicketsIndex from "./pages/tickets/Index";
 import TicketNew from "./pages/tickets/New";
 import TicketDetail from "./pages/tickets/Detail";
@@ -104,6 +111,7 @@ function App() {
           <Route path="/password-change" element={<ProtectedRoute><Layout><PasswordChangePage /></Layout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute permissionKey="users"><Layout><UserManagementPage /></Layout></ProtectedRoute>} />
           <Route path="/audit-logs" element={<ProtectedRoute permissionKey="audit_logs"><Layout><AuditLogsPage /></Layout></ProtectedRoute>} />
+          <Route path="/monitoring" element={<ProtectedRoute permissionKey="monitoring"><Layout><MonitoringPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/menus" element={<ProtectedRoute permissionKey="menu_management"><Layout><MenuManagementPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/permissions" element={<ProtectedRoute permissionKey="permission_management"><Layout><PermissionMatrixPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/permission-groups" element={<ProtectedRoute permissionKey="permission_groups"><Layout><PermissionGroupsPage /></Layout></ProtectedRoute>} />
@@ -116,6 +124,12 @@ function App() {
           <Route path="/admin/sla-tiers" element={<ProtectedRoute><Layout><SlaTiers /></Layout></ProtectedRoute>} />
           <Route path="/admin/contracts" element={<ProtectedRoute><Layout><Contracts /></Layout></ProtectedRoute>} />
           <Route path="/admin/scope-grants" element={<ProtectedRoute><Layout><ScopeGrants /></Layout></ProtectedRoute>} />
+          <Route path="/admin/sla-policies" element={<ProtectedRoute><Layout><SlaPolicies /></Layout></ProtectedRoute>} />
+          <Route path="/admin/sla-notification-policies" element={<ProtectedRoute><Layout><SlaNotificationPolicies /></Layout></ProtectedRoute>} />
+          <Route path="/admin/scheduler" element={<ProtectedRoute><Layout><Scheduler /></Layout></ProtectedRoute>} />
+          <Route path="/admin/integrations" element={<ProtectedRoute><Layout><Integrations /></Layout></ProtectedRoute>} />
+          <Route path="/admin/notification-logs" element={<ProtectedRoute><Layout><NotificationLogs /></Layout></ProtectedRoute>} />
+          <Route path="/me/notification-pref" element={<ProtectedRoute><Layout><MyNotificationPref /></Layout></ProtectedRoute>} />
 
           {/* 운영 화면 */}
           <Route path="/tickets" element={<ProtectedRoute permissionKey="itsm_tickets"><Layout><TicketsIndex /></Layout></ProtectedRoute>} />

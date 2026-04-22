@@ -11,7 +11,7 @@ import Profile from "./pages/Profile";
 import PasswordChange from "./pages/PasswordChange";
 import UserManagement from "./pages/UserManagement";
 import AuditLogs from "./pages/AuditLogs";
-import Monitoring from "./pages/Monitoring";
+import { MonitoringPage as Monitoring } from "@v-platform/core";
 import MenuManagement from "./pages/admin/MenuManagement";
 import PermissionMatrix from "./pages/admin/PermissionMatrix";
 import PermissionGroups from "./pages/admin/PermissionGroups";

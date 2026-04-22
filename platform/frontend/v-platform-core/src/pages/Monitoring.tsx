@@ -4,12 +4,12 @@
 
 import { useState } from "react";
 import { RefreshCw, Filter, CheckCircle2, Clock } from "lucide-react";
-import { ContentHeader } from "@/components/layout/ContentHeader";
-import { MonitoringServiceCard } from "@/components/monitoring/MonitoringServiceCard";
-import { Modal } from "@/components/ui/Modal";
-import { useMonitoringHealth } from "@/hooks/useMonitoringHealth";
-import { usageGuides } from "@/data/monitoringServices";
-import type { ServiceCategory, ServiceStatus } from "@/types/monitoring";
+import { ContentHeader } from "../components/layout/ContentHeader";
+import { MonitoringServiceCard } from "../components/monitoring/MonitoringServiceCard";
+import { Modal } from "../components/ui/Modal";
+import { useMonitoringHealth } from "../hooks/useMonitoringHealth";
+import { usageGuides } from "../data/monitoringServices";
+import type { ServiceCategory, ServiceStatus } from "../types/monitoring";
 
 export default function Monitoring() {
   const {
@@ -29,7 +29,6 @@ export default function Monitoring() {
   const [selectedGuideId, setSelectedGuideId] = useState<string | null>(null);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
-  // 필터링된 서비스
   const filteredServices = services.filter((service) => {
     if (categoryFilter !== "all" && service.category !== categoryFilter)
       return false;
@@ -37,7 +36,6 @@ export default function Monitoring() {
     return true;
   });
 
-  // 전체 체크 현황
   const totalCount = services.length;
   const doneCount = totalCount - checkingIds.size;
   const healthyCount = services.filter((s) => s.status === "healthy").length;
@@ -74,17 +72,14 @@ export default function Monitoring() {
       />
 
       <div className="page-container space-y-section-gap">
-        {/* 에러 표시 */}
         {error && (
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
           </div>
         )}
 
-        {/* 필터 및 새로고침 */}
         <div className="bg-surface-card border border-stroke-default rounded-lg p-4 space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* 카테고리 필터 */}
             <div className="flex-1">
               <label className="flex items-center gap-2 text-sm font-medium text-content-primary mb-2">
                 <Filter className="w-4 h-4" />
@@ -105,7 +100,6 @@ export default function Monitoring() {
               </select>
             </div>
 
-            {/* 상태 필터 */}
             <div className="flex-1">
               <label className="flex items-center gap-2 text-sm font-medium text-content-primary mb-2">
                 <Filter className="w-4 h-4" />
@@ -126,7 +120,6 @@ export default function Monitoring() {
               </select>
             </div>
 
-            {/* 새로고침 버튼 */}
             <div className="flex items-end w-full md:w-auto">
               <button
                 onClick={refreshHealth}
@@ -141,17 +134,14 @@ export default function Monitoring() {
             </div>
           </div>
 
-          {/* 체크 진행 현황 바 */}
           {isLoading && (
             <div className="space-y-2">
-              {/* 진행 바 */}
               <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-brand-500 h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${(doneCount / totalCount) * 100}%` }}
                 />
               </div>
-              {/* 서비스별 현황 칩 */}
               <div className="flex flex-wrap gap-2">
                 {services.map((service) => {
                   const checking = checkingIds.has(service.id);
@@ -184,7 +174,6 @@ export default function Monitoring() {
             </div>
           )}
 
-          {/* 결과 요약 (체크 완료 후) */}
           {!isLoading && (
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-4 text-sm">
@@ -213,7 +202,6 @@ export default function Monitoring() {
           )}
         </div>
 
-        {/* 서비스 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredServices.map((service) => (
             <MonitoringServiceCard
@@ -225,7 +213,6 @@ export default function Monitoring() {
           ))}
         </div>
 
-        {/* 빈 결과 */}
         {filteredServices.length === 0 && !isLoading && (
           <div className="text-center py-12 bg-surface-card border border-stroke-default rounded-lg">
             <p className="text-content-secondary">
@@ -234,7 +221,6 @@ export default function Monitoring() {
           </div>
         )}
 
-        {/* 사용 가이드 모달 */}
         <Modal
           isOpen={isGuideModalOpen}
           onClose={handleCloseGuide}

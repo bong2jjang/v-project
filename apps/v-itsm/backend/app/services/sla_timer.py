@@ -6,8 +6,9 @@ Phase 1 MVP 범위:
   * APScheduler 가 1분 주기로 `scan_due_timers()` 를 호출해 80% 경고 / 100% 위반
     을 감지하고 `warning_sent_at` / `breached_at` 를 기록한다(멱등).
   * 임박 티켓(due_at - now < 30분)은 Redis ZSET `itsm:sla:timers` 에 캐시한다.
-  * 실제 알림(Slack/Teams)은 v-channel-bridge 연동을 별도 작업에서 연결한다.
-    현 시점에는 구조화 로그만 기록한다 (hook point: `_notify_*`).
+  * 알림은 `app/services/notification_service.py` → `app/providers/` (v-itsm 내장
+    Slack/Teams outbound provider) 로 직접 전송한다. v-channel-bridge 에 HTTP
+    의존하지 않는다. 실패는 fail-open (WARN 로그만, FSM/스케줄 차단 없음).
 
 영업시간/공휴일 반영(§6.2)은 Phase 1 Scope-out. 전 구간 24/7 계산.
 """
@@ -18,7 +19,6 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import structlog
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from redis import Redis
 from redis.exceptions import RedisError
 from sqlalchemy import and_, or_, select
@@ -31,6 +31,8 @@ from app.models.enums import Priority, SLAKind
 from app.models.sla import SLAPolicy, SLATimer
 from app.models.sla_tier import SLATier
 from app.models.ticket import Ticket
+from app.services import notification_service
+from app.services.scheduler_registry import JobSpec, scheduler_registry
 
 logger = structlog.get_logger(__name__)
 
@@ -221,6 +223,81 @@ def scan_due_timers(db: Session) -> dict[str, int]:
     return {"warnings": warnings_sent, "breaches": breaches_recorded}
 
 
+def recalculate_active_timers(
+    db: Session,
+    *,
+    only_policy_id: str | None = None,
+    only_tier_id: str | None = None,
+) -> dict[str, int]:
+    """정책/티어 변경 후 활성 타이머의 due_at 을 재산출 — 설계 §6.1.
+
+    breached / satisfied 타이머는 건드리지 않는다(과거 이벤트는 사실로 유지).
+    only_policy_id / only_tier_id 가 주어지면 해당 정책·티어를 사용하는 티켓만 대상.
+    """
+    tickets_scanned = 0
+    timers_updated = 0
+    skipped_breached = 0
+    skipped_satisfied = 0
+
+    ticket_stmt = select(Ticket)
+    if only_tier_id is not None:
+        ticket_stmt = ticket_stmt.join(
+            Contract, Contract.id == Ticket.contract_id
+        ).where(Contract.sla_tier_id == only_tier_id)
+    elif only_policy_id is not None:
+        ticket_stmt = ticket_stmt.where(Ticket.sla_policy_id == only_policy_id)
+
+    tickets = list(db.execute(ticket_stmt).scalars().all())
+    for ticket in tickets:
+        tickets_scanned += 1
+        priority = Priority(ticket.priority)
+        response_min, resolution_min, policy_id = _resolve_policy(
+            db, priority, ticket.category_l1, contract_id=ticket.contract_id
+        )
+        ticket.sla_policy_id = policy_id
+
+        minutes_by_kind = {
+            SLAKind.RESPONSE.value: response_min,
+            SLAKind.RESOLUTION.value: resolution_min,
+        }
+        timers = db.execute(
+            select(SLATimer).where(SLATimer.ticket_id == ticket.id)
+        ).scalars().all()
+        for timer in timers:
+            if timer.breached_at is not None:
+                skipped_breached += 1
+                continue
+            if timer.satisfied_at is not None:
+                skipped_satisfied += 1
+                continue
+            minutes = minutes_by_kind.get(timer.kind)
+            if minutes is None:
+                continue
+            new_due = timer.created_at + timedelta(minutes=minutes)
+            if new_due != timer.due_at:
+                timer.due_at = new_due
+                timers_updated += 1
+
+    if timers_updated or tickets_scanned:
+        db.commit()
+
+    logger.info(
+        "sla_timer.recalculate_done",
+        tickets_scanned=tickets_scanned,
+        timers_updated=timers_updated,
+        skipped_breached=skipped_breached,
+        skipped_satisfied=skipped_satisfied,
+        only_policy_id=only_policy_id,
+        only_tier_id=only_tier_id,
+    )
+    return {
+        "tickets_scanned": tickets_scanned,
+        "timers_updated": timers_updated,
+        "skipped_breached": skipped_breached,
+        "skipped_satisfied": skipped_satisfied,
+    }
+
+
 def mark_satisfied(db: Session, ticket_id: str, kind: SLAKind) -> None:
     """담당자 첫 응답 / 해결 완료 시 해당 타이머를 만족 상태로."""
     stmt = select(SLATimer).where(
@@ -235,7 +312,7 @@ def mark_satisfied(db: Session, ticket_id: str, kind: SLAKind) -> None:
     db.commit()
 
 
-# ─── Notification hooks (bridge 연동 자리) ─────────────────────
+# ─── Notification hooks (embedded provider, notification_service) ─────────────────────
 def _notify_warning(timer: SLATimer) -> None:
     logger.info(
         "sla_timer.warning",
@@ -243,6 +320,7 @@ def _notify_warning(timer: SLATimer) -> None:
         kind=timer.kind,
         due_at=timer.due_at.isoformat(),
     )
+    notification_service.notify_sla_warning(timer)
 
 
 def _notify_breach(timer: SLATimer) -> None:
@@ -252,10 +330,13 @@ def _notify_breach(timer: SLATimer) -> None:
         kind=timer.kind,
         due_at=timer.due_at.isoformat(),
     )
+    notification_service.notify_sla_breach(timer)
 
 
-# ─── Scheduler 생명주기 ───────────────────────────────────────
-_scheduler: AsyncIOScheduler | None = None
+# ─── Scheduler 연결 ───────────────────────────────────────────
+# 실제 AsyncIOScheduler 인스턴스는 scheduler_registry 가 소유한다.
+# 여기서는 JobSpec 만 선언하고 레지스트리에 등록한다.
+SLA_SCAN_JOB_ID = "itsm_sla_scan"
 
 
 def _scan_job() -> None:
@@ -270,28 +351,13 @@ def _scan_job() -> None:
         db.close()
 
 
-def start_scheduler() -> AsyncIOScheduler:
-    global _scheduler
-    if _scheduler is not None:
-        return _scheduler
-    sched = AsyncIOScheduler(timezone="UTC")
-    sched.add_job(
-        _scan_job,
-        "interval",
-        seconds=SCAN_INTERVAL_SECONDS,
-        id="itsm_sla_scan",
-        replace_existing=True,
+scheduler_registry.register(
+    JobSpec(
+        job_id=SLA_SCAN_JOB_ID,
+        func=_scan_job,
+        default_interval_seconds=SCAN_INTERVAL_SECONDS,
+        min_interval_seconds=15,
+        max_interval_seconds=15 * 60,
+        description="SLA 타이머 주기 스캔 (경고/위반 감지)",
     )
-    sched.start()
-    _scheduler = sched
-    logger.info("sla_timer.scheduler_started", interval=SCAN_INTERVAL_SECONDS)
-    return sched
-
-
-def stop_scheduler() -> None:
-    global _scheduler
-    if _scheduler is None:
-        return
-    _scheduler.shutdown(wait=False)
-    _scheduler = None
-    logger.info("sla_timer.scheduler_stopped")
+)

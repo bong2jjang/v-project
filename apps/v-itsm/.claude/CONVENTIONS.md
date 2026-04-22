@@ -122,51 +122,111 @@ itsm:sla:warn_sent:{ticket}:{kind}  → "1" (80% 경고 1회 발송 플래그, T
 - [ ] 응답 타이머: 최초 담당자 액션(assign + comment) 시점에 중단 (`SLATimer.stop(kind="response")`)
 - [ ] 해결 타이머: `ANSWER` 진입 시 중단, `REOPEN` 시 재계산하여 재등록
 - [ ] APScheduler 가 10초 간격으로 `ZRANGEBYSCORE 0 now()` 호출 → 80% 경고·100% 위반 처리
-- [ ] 위반 이벤트는 v-channel-bridge 를 통해 담당 부서 채널에 알림 + `itsm_kpi_snapshot` 반영
+- [ ] 위반 이벤트는 **v-itsm 내장 provider** (`app/providers/`) 로 담당 부서 채널에 알림 + `itsm_kpi_snapshot` 반영
 - [ ] 영업시간 정책은 `business_hours_mode=business_hours` 일 때 공휴일/근무시간 테이블(`itsm_sla_calendar`)을 참조
 
-## 알림 (v-channel-bridge 위임)
+## 알림 (v-itsm 내장 outbound provider)
 
-직접 Slack/Teams/Email SDK 를 호출하지 말고, v-channel-bridge 를 얇은 HTTP 어댑터로 사용하세요.
+Slack/Teams 알림은 **v-itsm 자체 provider** (`app/providers/slack_provider.py`, `teams_provider.py`) 로 Slack Web API / MS Graph 에 **직접 호출**합니다. v-channel-bridge 에 HTTP 의존하지 않습니다 — bridge 가 꺼져도 동작해야 합니다.
+
+설계 배경: `docusaurus/docs/apps/v-itsm/design/V_ITSM_DESIGN.md` §7.3 (v0.5 — embedded provider).
+
+### 구조
+
+```
+app/
+├── providers/
+│   ├── base.py            # BaseOutboundProvider (추상) — bridge 에서 포팅
+│   ├── slack_provider.py  # SlackOutboundProvider (AsyncWebClient chat_postMessage)
+│   ├── teams_provider.py  # TeamsOutboundProvider (Graph client_credentials + webhook fallback)
+│   ├── registry.py        # provider_registry (platform → provider 매핑)
+│   └── __init__.py        # init_providers_from_env / shutdown_providers
+├── schemas/
+│   └── common_message.py  # CommonMessage / Platform / MessageType (bridge 에서 포팅)
+└── services/
+    └── notification_service.py   # 동기 공개 API + _fire_and_forget 브리지
+```
+
+### 공개 API (동기)
+
+`notification_service` 는 동기 시그니처만 노출해 FSM/SLA 호출부에 async 가 새로 퍼지지 않게 합니다.
 
 ```python
-# apps/v-itsm/backend/app/services/notifier.py
-import httpx
+# apps/v-itsm/backend/app/services/notification_service.py
+import asyncio
+import threading
 import structlog
-from v_platform.core.settings import settings
+
+from app.providers.registry import provider_registry
+from app.schemas.common_message import CommonMessage
 
 logger = structlog.get_logger()
 
-class BridgeNotifier:
-    """v-channel-bridge 로 채널 알림을 위임.
 
-    bridge 자체는 수정하지 않으며, 공개 REST 계약만 사용한다.
+def notify_assignment(ticket, assignee_id: int | None) -> None:
+    """배정 변경 알림. 티켓 커밋 후 호출. 실패는 fail-open (로그만)."""
+    _fire_and_forget(_dispatch_assignment(ticket, assignee_id))
+
+
+def notify_transition(ticket, from_stage: str, to_stage: str, actor_id: int) -> None:
+    """Loop 전이 알림. post-commit 에서 호출."""
+    _fire_and_forget(_dispatch_transition(ticket, from_stage, to_stage, actor_id))
+
+
+def _fire_and_forget(coro) -> None:
+    """실행 컨텍스트에 따라 분기.
+
+    - FastAPI 요청 경로(async loop 활성): create_task
+    - APScheduler job(sync thread): daemon thread + asyncio.run
     """
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(coro)
+    except RuntimeError:
+        threading.Thread(target=asyncio.run, args=(coro,), daemon=True).start()
 
-    def __init__(self, base_url: str):
-        self.base_url = base_url.rstrip("/")
 
-    async def send(self, channel: str, target: str, payload: dict) -> bool:
-        url = f"{self.base_url}/api/notifications/send"
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            try:
-                resp = await client.post(url, json={
-                    "channel": channel,   # "slack" | "teams" | "email"
-                    "target":  target,    # channel_id or email
-                    "payload": payload,
-                })
-                resp.raise_for_status()
-                return True
-            except httpx.HTTPError as exc:
-                logger.error("itsm.notify.failed",
-                             channel=channel, target=target, error=str(exc))
-                return False
+async def _dispatch_all(message: CommonMessage) -> None:
+    for target in _resolve_targets():
+        provider = provider_registry.get(target.platform)
+        if provider is None:
+            continue
+        try:
+            await provider.send_message(target.channel_id, message)
+        except Exception as exc:
+            logger.warning("itsm.notify.failed",
+                           platform=target.platform, error=str(exc))
 ```
 
-**체크리스트**:
-- [ ] `apps/v-channel-bridge/**` 를 import 하지 않는다 (HTTP 경계 유지)
-- [ ] 알림 실패는 티켓 처리 실패로 이어지지 않게 격리
-- [ ] 개인정보·민감 토큰은 payload 에 포함 금지
+### 훅 지점 3곳
+
+| 호출부 | 함수 | 타이밍 |
+|---|---|---|
+| `ticket_service.update()` | `notify_assignment` | owner 변경 후 (post-commit) |
+| `ticket_service.transition()` | `notify_transition` | 전이 후 (post-commit) |
+| `sla_timer._notify_warning/_notify_breach` | `notify_sla_*` | SLA 80% / 100% 감지 시 |
+
+### Provider 라이프사이클
+
+```python
+# app/main.py lifespan
+from app.providers import init_providers_from_env, shutdown_providers
+
+async def lifespan(app):
+    await init_providers_from_env()   # env 누락은 silently skip
+    yield
+    await shutdown_providers()
+```
+
+### 체크리스트
+
+- [ ] `apps/v-channel-bridge/**` 를 **import 하지 않는다** (copy-not-import)
+- [ ] v-channel-bridge 에 **HTTP 호출도 하지 않는다** (bridge 가 꺼져도 동작)
+- [ ] v-channel-bridge 코드·스키마를 수정하지 않는다 (원본은 bridge 에 그대로 유지)
+- [ ] 알림 실패는 FSM 전이 / 티켓 처리를 막지 않는다 (fail-open, WARN 로그만)
+- [ ] 알림 훅은 **DB 커밋 후** 배치 (예외가 트랜잭션을 롤백시키지 않도록)
+- [ ] 개인정보·민감 토큰은 메시지 payload 에 포함 금지
+- [ ] 공용 env(`TEAMS_TENANT_ID/APP_ID/APP_PASSWORD`) 는 루트 `.env`, 앱 고유(`SLACK_BOT_TOKEN`, `TEAMS_TEAM_ID`, `TEAMS_NOTIFICATION_URL`, `ITSM_DEFAULT_NOTIFY_CHANNELS`) 는 `apps/v-itsm/.env`
 
 ## AI 기능 (v-ui-builder 의 BaseLLMProvider 재사용)
 
@@ -239,6 +299,6 @@ async def test_advance_intake_to_analyze(db_session, ticket_factory):
 **체크리스트**:
 - [ ] FSM 전이 케이스별 단위 테스트(허용/거부/권한)
 - [ ] SLA 타이머: 경고/위반 경계 케이스(80%, 100%, 영업시간 롤오버)
-- [ ] 알림 어댑터는 `httpx_mock` 으로 bridge API 모킹
+- [ ] 알림 provider 는 `AsyncMock` 으로 `SlackOutboundProvider.send_message` / `TeamsOutboundProvider.send_message` 스터빙
 - [ ] AI Suggester 는 fake LLM (`async generator`) 으로 결정론적 결과 검증
 - [ ] 플랫폼 인증/권한은 `v_platform.testing` fixture 재사용

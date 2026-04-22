@@ -5,8 +5,10 @@
 import { apiClient, get, post } from "./client";
 import type {
   AllowedActions,
+  ListTransitionsOptions,
   LoopStage,
   LoopTransition,
+  LoopTransitionDetail,
   RequestServiceType,
   Ticket,
   TicketIntakeInput,
@@ -64,8 +66,15 @@ export async function transitionTicket(
   return post<LoopTransition>(`/api/tickets/${id}/transition`, data);
 }
 
-export async function listTransitions(id: string): Promise<LoopTransition[]> {
-  return get<LoopTransition[]>(`/api/tickets/${id}/transitions`);
+export async function listTransitions(
+  id: string,
+  options: ListTransitionsOptions = {},
+): Promise<LoopTransitionDetail[]> {
+  const qs = toQuery({
+    include_deleted: options.include_deleted ? "true" : undefined,
+    with_latest_revision: options.with_latest_revision ? "true" : undefined,
+  });
+  return get<LoopTransitionDetail[]>(`/api/tickets/${id}/transitions${qs}`);
 }
 
 export async function getAllowedActions(id: string): Promise<AllowedActions> {

@@ -283,7 +283,8 @@ export type LoopAction =
   | "on_hold"
   | "resume"
   | "rollback"
-  | "reopen";
+  | "reopen"
+  | "note";
 
 export type Priority = "critical" | "high" | "normal" | "low";
 
@@ -305,6 +306,7 @@ export const LOOP_ACTION_LABELS: Record<LoopAction, string> = {
   resume: "재개",
   rollback: "롤백",
   reopen: "재오픈",
+  note: "처리 내용",
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
@@ -401,6 +403,75 @@ export interface LoopTransition {
   transitioned_at: string;
 }
 
+export type LoopTransitionRevisionOperation =
+  | "create"
+  | "edit"
+  | "delete"
+  | "restore"
+  | "revert";
+
+export const LOOP_TRANSITION_REVISION_OPERATION_LABELS: Record<
+  LoopTransitionRevisionOperation,
+  string
+> = {
+  create: "생성",
+  edit: "편집",
+  delete: "삭제",
+  restore: "복원",
+  revert: "되돌리기",
+};
+
+export interface LoopTransitionRevision {
+  id: string;
+  transition_id: string;
+  revision_no: number;
+  operation: LoopTransitionRevisionOperation | string;
+  actor_id: number | null;
+  reason: string | null;
+  snapshot_note: string | null;
+  snapshot_artifacts: Record<string, unknown> | null;
+  snapshot_from_stage: string | null;
+  snapshot_to_stage: string | null;
+  snapshot_action: string | null;
+  created_at: string;
+}
+
+export interface LoopTransitionDetail extends LoopTransition {
+  deleted_at: string | null;
+  deleted_by: number | null;
+  last_edited_at: string | null;
+  last_edited_by: number | null;
+  edit_count: number;
+  head_revision_id: string | null;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_restore: boolean;
+  latest_revision: LoopTransitionRevision | null;
+}
+
+export interface TransitionEditInput {
+  note?: string | null;
+  artifacts?: Record<string, unknown> | null;
+  reason?: string | null;
+}
+
+export interface TransitionDeleteInput {
+  reason?: string | null;
+}
+
+export interface TransitionRestoreInput {
+  reason?: string | null;
+}
+
+export interface TransitionRevertInput {
+  reason?: string | null;
+}
+
+export interface ListTransitionsOptions {
+  include_deleted?: boolean;
+  with_latest_revision?: boolean;
+}
+
 export interface AllowedActions {
   current_stage: LoopStage;
   allowed: LoopAction[];
@@ -495,4 +566,269 @@ export interface KpiSummary {
   by_stage: StageCount[];
   by_priority: PriorityCount[];
   by_service_type: ServiceTypeCount[];
+}
+
+// ── SLA Policy ────────────────────────────────────────────
+export interface SlaPolicy {
+  id: string;
+  name: string;
+  priority: Priority;
+  category: string | null;
+  response_minutes: number;
+  resolution_minutes: number;
+  business_hours: Record<string, unknown> | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SlaPolicyCreateInput {
+  name: string;
+  priority: Priority;
+  category?: string | null;
+  response_minutes: number;
+  resolution_minutes: number;
+  business_hours?: Record<string, unknown> | null;
+  active?: boolean;
+}
+
+export interface SlaPolicyUpdateInput {
+  name?: string;
+  priority?: Priority;
+  category?: string | null;
+  response_minutes?: number;
+  resolution_minutes?: number;
+  business_hours?: Record<string, unknown> | null;
+  active?: boolean;
+}
+
+export interface SlaPolicyListResponse {
+  items: SlaPolicy[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface SlaRecalcResult {
+  tickets_scanned: number;
+  timers_updated: number;
+  skipped_breached: number;
+  skipped_satisfied: number;
+}
+
+// ── SLA Notification Policy ───────────────────────────────
+export type TriggerEvent = "warning" | "breach";
+
+export const TRIGGER_EVENT_LABELS: Record<TriggerEvent, string> = {
+  warning: "경고(80%)",
+  breach: "위반(100%)",
+};
+
+export interface SlaNotificationPolicy {
+  id: string;
+  name: string;
+  trigger_event: TriggerEvent;
+  applies_priority: Priority | null;
+  applies_service_type: RequestServiceType | null;
+  notify_channels: string[];
+  notify_assignee: boolean;
+  notify_assignee_manager: boolean;
+  notify_custom_user_ids: number[] | null;
+  notify_custom_addresses: string[] | null;
+  template_key: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SlaNotificationPolicyCreateInput {
+  name: string;
+  trigger_event: TriggerEvent;
+  applies_priority?: Priority | null;
+  applies_service_type?: RequestServiceType | null;
+  notify_channels: string[];
+  notify_assignee?: boolean;
+  notify_assignee_manager?: boolean;
+  notify_custom_user_ids?: number[] | null;
+  notify_custom_addresses?: string[] | null;
+  template_key?: string | null;
+  active?: boolean;
+}
+
+export interface SlaNotificationPolicyUpdateInput {
+  name?: string;
+  trigger_event?: TriggerEvent;
+  applies_priority?: Priority | null;
+  applies_service_type?: RequestServiceType | null;
+  notify_channels?: string[];
+  notify_assignee?: boolean;
+  notify_assignee_manager?: boolean;
+  notify_custom_user_ids?: number[] | null;
+  notify_custom_addresses?: string[] | null;
+  template_key?: string | null;
+  active?: boolean;
+}
+
+export interface SlaNotificationPolicyListResponse {
+  items: SlaNotificationPolicy[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+// ── Scheduler ─────────────────────────────────────────────
+export interface SchedulerJob {
+  job_id: string;
+  description: string;
+  interval_seconds: number;
+  default_interval_seconds: number;
+  min_interval_seconds: number;
+  max_interval_seconds: number;
+  paused: boolean;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  override_updated_at: string | null;
+  override_updated_by: number | null;
+}
+
+export interface SchedulerJobListResponse {
+  items: SchedulerJob[];
+}
+
+export interface SchedulerRescheduleInput {
+  interval_seconds?: number;
+  paused?: boolean;
+}
+
+// ── Integration Settings ──────────────────────────────────
+export interface IntegrationTestResult {
+  ok: boolean;
+  message: string;
+  tested_at: string;
+}
+
+export interface IntegrationSettings {
+  slack_bot_token_set: boolean;
+  slack_app_token_set: boolean;
+  slack_signing_secret_set: boolean;
+  slack_default_channel: string | null;
+  slack_last_test: IntegrationTestResult | null;
+
+  teams_tenant_id: string | null;
+  teams_app_id: string | null;
+  teams_app_password_set: boolean;
+  teams_team_id: string | null;
+  teams_webhook_url_set: boolean;
+  teams_default_channel_id: string | null;
+  teams_last_test: IntegrationTestResult | null;
+
+  email_smtp_host: string | null;
+  email_smtp_port: number | null;
+  email_from: string | null;
+  email_smtp_user: string | null;
+  email_smtp_password_set: boolean;
+  email_last_test: IntegrationTestResult | null;
+
+  updated_at: string | null;
+  updated_by: number | null;
+}
+
+export interface IntegrationSettingsUpdateInput {
+  slack_bot_token?: string | null;
+  slack_app_token?: string | null;
+  slack_signing_secret?: string | null;
+  slack_default_channel?: string | null;
+
+  teams_tenant_id?: string | null;
+  teams_app_id?: string | null;
+  teams_app_password?: string | null;
+  teams_team_id?: string | null;
+  teams_webhook_url?: string | null;
+  teams_default_channel_id?: string | null;
+
+  email_smtp_host?: string | null;
+  email_smtp_port?: number | null;
+  email_from?: string | null;
+  email_smtp_user?: string | null;
+  email_smtp_password?: string | null;
+}
+
+export type IntegrationChannel = "slack" | "teams" | "email";
+
+// ── Notification Log ──────────────────────────────────────
+export type NotificationLogStatus = "pending" | "success" | "failure";
+
+export const NOTIFICATION_LOG_STATUS_LABELS: Record<NotificationLogStatus, string> = {
+  pending: "대기",
+  success: "성공",
+  failure: "실패",
+};
+
+export interface NotificationLog {
+  id: string;
+  ticket_id: string | null;
+  event_type: string;
+  channel: string;
+  target_user_id: number | null;
+  target_address: string | null;
+  status: NotificationLogStatus;
+  error: string | null;
+  is_retry: boolean;
+  retry_of_id: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  sent_at: string | null;
+  updated_at: string;
+}
+
+export interface NotificationLogFilter {
+  status?: NotificationLogStatus;
+  channel?: string;
+  event_type?: string;
+  ticket_id?: string;
+  target_user_id?: number;
+  since?: string;
+  until?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface NotificationLogListResponse {
+  items: NotificationLog[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface NotificationLogRetryResult {
+  ok: boolean;
+  message: string;
+  log: NotificationLog;
+}
+
+// ── User Notification Preference (self) ───────────────────
+export interface UserNotificationPref {
+  user_id: number;
+  slack_user_id: string | null;
+  teams_user_id: string | null;
+  teams_channel_override: string | null;
+  email_override: string | null;
+  channels: string[] | null;
+  event_overrides: Record<string, unknown> | null;
+  enabled: boolean;
+  quiet_hours: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserNotificationPrefUpdateInput {
+  slack_user_id?: string | null;
+  teams_user_id?: string | null;
+  teams_channel_override?: string | null;
+  email_override?: string | null;
+  channels?: string[] | null;
+  event_overrides?: Record<string, unknown> | null;
+  enabled?: boolean;
+  quiet_hours?: Record<string, unknown> | null;
 }

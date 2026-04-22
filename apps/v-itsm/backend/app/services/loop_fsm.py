@@ -22,28 +22,33 @@ ALLOWED: dict[LoopStage, dict[LoopAction, LoopStage]] = {
     LoopStage.INTAKE: {
         LoopAction.ADVANCE: LoopStage.ANALYZE,
         LoopAction.REJECT: LoopStage.CLOSED,
+        LoopAction.NOTE: LoopStage.INTAKE,
     },
     LoopStage.ANALYZE: {
         LoopAction.ADVANCE: LoopStage.EXECUTE,
         LoopAction.REJECT: LoopStage.CLOSED,
         LoopAction.ON_HOLD: LoopStage.ANALYZE,
         LoopAction.RESUME: LoopStage.ANALYZE,
+        LoopAction.NOTE: LoopStage.ANALYZE,
     },
     LoopStage.EXECUTE: {
         LoopAction.ADVANCE: LoopStage.VERIFY,
         LoopAction.ROLLBACK: LoopStage.ANALYZE,
         LoopAction.ON_HOLD: LoopStage.EXECUTE,
         LoopAction.RESUME: LoopStage.EXECUTE,
+        LoopAction.NOTE: LoopStage.EXECUTE,
     },
     LoopStage.VERIFY: {
         LoopAction.ADVANCE: LoopStage.ANSWER,
         LoopAction.ROLLBACK: LoopStage.EXECUTE,
         LoopAction.ON_HOLD: LoopStage.VERIFY,
         LoopAction.RESUME: LoopStage.VERIFY,
+        LoopAction.NOTE: LoopStage.VERIFY,
     },
     LoopStage.ANSWER: {
         LoopAction.ADVANCE: LoopStage.CLOSED,
         LoopAction.REOPEN: LoopStage.ANALYZE,
+        LoopAction.NOTE: LoopStage.ANSWER,
     },
     LoopStage.CLOSED: {
         LoopAction.REOPEN: LoopStage.ANALYZE,

@@ -1,0 +1,431 @@
+/* ══════════════════════════════════════════════════════
+   @v-platform/core — 공유 테마 스타일
+
+   이 파일은 모든 v-project 앱이 공유하는 디자인 토큰·레이어·컴포넌트
+   스타일을 담는다. 각 앱의 src/index.css 에서 다음 패턴으로 import 한다:
+
+     @tailwind base;
+     @tailwind components;
+     @tailwind utilities;
+
+     @import "@v-platform/core/styles/theme.css";
+
+   app 고유 CSS 는 이 import 아래에 추가한다.
+   ══════════════════════════════════════════════════════ */
+
+@layer base {
+  /* ── Light Theme ── */
+  :root {
+    color-scheme: light;
+
+    /* Layout — 콘텐츠 최대 너비 */
+    --content-max-width: 80rem;
+
+    /* Brand — VS Code Blue (깨끗한 블루 액센트) */
+    --color-brand-50: #e6f2ff;
+    --color-brand-100: #cce4ff;
+    --color-brand-200: #99c9ff;
+    --color-brand-300: #5cadff;
+    --color-brand-400: #2b93f5;
+    --color-brand-500: #0078d4;
+    --color-brand-600: #0066b8;
+    --color-brand-700: #005499;
+    --color-brand-800: #00427a;
+    --color-brand-900: #003060;
+
+    /* Status */
+    --color-status-success: #16825d;
+    --color-status-success-light: #e8f5ef;
+    --color-status-success-border: #b4dfc8;
+    --color-status-danger: #c72e2e;
+    --color-status-danger-light: #fce8e8;
+    --color-status-danger-border: #f0bcbc;
+    --color-status-warning: #bf8700;
+    --color-status-warning-light: #fdf6e3;
+    --color-status-warning-border: #e8d48a;
+    --color-status-info: #0078d4;
+    --color-status-info-light: #e6f2ff;
+    --color-status-info-border: #99c9ff;
+
+    /* Surface — VS Code Light 기반 (깨끗한 중성 회색) */
+    --color-surface-page: #f3f3f3;
+    --color-surface-card: #ffffff;
+    --color-surface-raised: #e8e8e8;
+    --color-surface-overlay: rgba(0, 0, 0, 0.4);
+
+    /* Line */
+    --color-line: #e5e5e5;
+    --color-line-light: #f0f0f0;
+    --color-line-heavy: #cccccc;
+
+    /* Content */
+    --color-content-primary: #333333;
+    --color-content-secondary: #616161;
+    --color-content-tertiary: #a0a0a0;
+    --color-content-inverse: #ffffff;
+    --color-content-link: #0078d4;
+
+    /* Shadows — 중성 그림자 */
+    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.08);
+    --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.12);
+    --shadow-card-elevated: 0 8px 24px rgb(0 0 0 / 0.14);
+    --shadow-modal: 0 16px 48px -8px rgb(0 0 0 / 0.2);
+    --shadow-nav: 0 1px 0 rgb(0 0 0 / 0.06);
+
+    /* Typography */
+    font-family:
+      "Pretendard Variable",
+      Pretendard,
+      Inter,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+    line-height: 1.6;
+    font-weight: 400;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "ss02", "cv01";
+  }
+
+  /* ── Dark Theme — VS Code Dark+ 기반 ── */
+  .dark {
+    color-scheme: dark;
+
+    /* Brand — 다크에서 밝기 조정 */
+    --color-brand-50: #0d2240;
+    --color-brand-100: #0f2d50;
+    --color-brand-200: #264f78;
+    --color-brand-300: #0078d4;
+    --color-brand-400: #2b93f5;
+    --color-brand-500: #4da6ff;
+    --color-brand-600: #2b93f5;
+    --color-brand-700: #4da6ff;
+    --color-brand-800: #80c4ff;
+    --color-brand-900: #b3daff;
+
+    /* Status — 다크 배경에서 선명한 톤 */
+    --color-status-success: #4ec970;
+    --color-status-success-light: rgba(78, 201, 112, 0.1);
+    --color-status-success-border: rgba(78, 201, 112, 0.25);
+    --color-status-danger: #f14c4c;
+    --color-status-danger-light: rgba(241, 76, 76, 0.1);
+    --color-status-danger-border: rgba(241, 76, 76, 0.25);
+    --color-status-warning: #cca700;
+    --color-status-warning-light: rgba(204, 167, 0, 0.1);
+    --color-status-warning-border: rgba(204, 167, 0, 0.25);
+    --color-status-info: #4da6ff;
+    --color-status-info-light: rgba(77, 166, 255, 0.1);
+    --color-status-info-border: rgba(77, 166, 255, 0.25);
+
+    /* Surface — VS Code Dark+ (#1e1e1e 기반) */
+    --color-surface-page: #181818;
+    --color-surface-card: #1e1e1e;
+    --color-surface-raised: #2a2d2e;
+    --color-surface-overlay: rgba(0, 0, 0, 0.5);
+
+    /* Line — 미묘한 경계 */
+    --color-line: #2b2b2b;
+    --color-line-light: #222222;
+    --color-line-heavy: #3e3e3e;
+
+    /* Content — WCAG AA 대비 확보 (card #1e1e1e 기준) */
+    --color-content-primary: #cccccc;
+    --color-content-secondary: #9d9d9d;
+    --color-content-tertiary: #6e6e6e;
+    --color-content-inverse: #1e1e1e;
+    --color-content-link: #4da6ff;
+
+    /* Shadows */
+    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.5);
+    --shadow-card-elevated: 0 8px 24px rgb(0 0 0 / 0.55);
+    --shadow-modal: 0 16px 48px -8px rgb(0 0 0 / 0.65);
+    --shadow-nav: 0 1px 0 rgb(0 0 0 / 0.3);
+  }
+
+  /* ── 넓게보기 레이아웃 ── */
+  .layout-wide {
+    --content-max-width: 100%;
+  }
+
+  /* ── 글자 크기 (rem 기반 토큰 전역 스케일) ── */
+  html.font-size-small { font-size: 15px; }
+  html.font-size-large { font-size: 17.5px; }
+
+  body {
+    @apply bg-surface-page text-content-primary;
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  #root {
+    @apply w-full min-h-screen;
+  }
+
+  /* 텍스트 선택 */
+  ::selection {
+    background: var(--color-brand-200);
+    color: var(--color-brand-900);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     Color Presets — brand 변수만 오버라이드
+     ══════════════════════════════════════════════════════ */
+
+  /* ── Indigo (보라빛 청색) ── */
+  .theme-indigo {
+    --color-brand-50: #eef2ff;
+    --color-brand-100: #e0e7ff;
+    --color-brand-200: #c7d2fe;
+    --color-brand-300: #a5b4fc;
+    --color-brand-400: #818cf8;
+    --color-brand-500: #6366f1;
+    --color-brand-600: #4f46e5;
+    --color-brand-700: #4338ca;
+    --color-brand-800: #3730a3;
+    --color-brand-900: #312e81;
+    --color-status-info: #4f46e5;
+    --color-status-info-light: #eef2ff;
+    --color-status-info-border: #c7d2fe;
+    --color-content-link: #4f46e5;
+  }
+  .dark.theme-indigo {
+    --color-brand-50: #1a1635;
+    --color-brand-100: #231e4a;
+    --color-brand-200: #312b6b;
+    --color-brand-300: #4f46e5;
+    --color-brand-400: #6366f1;
+    --color-brand-500: #818cf8;
+    --color-brand-600: #6366f1;
+    --color-brand-700: #818cf8;
+    --color-brand-800: #a5b4fc;
+    --color-brand-900: #c7d2fe;
+    --color-status-info: #818cf8;
+    --color-status-info-light: #231e4a;
+    --color-status-info-border: #312b6b;
+    --color-content-link: #a5b4fc;
+  }
+
+  /* ── Rose (세련된 로즈 핑크) ── */
+  .theme-rose {
+    --color-brand-50: #fff1f2;
+    --color-brand-100: #ffe4e6;
+    --color-brand-200: #fecdd3;
+    --color-brand-300: #fda4af;
+    --color-brand-400: #fb7185;
+    --color-brand-500: #f43f5e;
+    --color-brand-600: #e11d48;
+    --color-brand-700: #be123c;
+    --color-brand-800: #9f1239;
+    --color-brand-900: #881337;
+    --color-status-info: #e11d48;
+    --color-status-info-light: #fff1f2;
+    --color-status-info-border: #fecdd3;
+    --color-content-link: #e11d48;
+  }
+  .dark.theme-rose {
+    --color-brand-50: #2a0f18;
+    --color-brand-100: #3d1525;
+    --color-brand-200: #5c1d38;
+    --color-brand-300: #e11d48;
+    --color-brand-400: #f43f5e;
+    --color-brand-500: #fb7185;
+    --color-brand-600: #f43f5e;
+    --color-brand-700: #fb7185;
+    --color-brand-800: #fda4af;
+    --color-brand-900: #fecdd3;
+    --color-status-info: #fb7185;
+    --color-status-info-light: #3d1525;
+    --color-status-info-border: #5c1d38;
+    --color-content-link: #fda4af;
+  }
+
+  /* ── Aubergine (가지색 보라 #4A154B) ── */
+  .theme-aubergine {
+    --color-brand-50: #faf5fa;
+    --color-brand-100: #f2e6f3;
+    --color-brand-200: #e3c8e5;
+    --color-brand-300: #cc9ed0;
+    --color-brand-400: #a86aad;
+    --color-brand-500: #7d3d83;
+    --color-brand-600: #4a154b;
+    --color-brand-700: #3a0f3c;
+    --color-brand-800: #2a0a2d;
+    --color-brand-900: #1c061e;
+    --color-status-info: #4a154b;
+    --color-status-info-light: #f2e6f3;
+    --color-status-info-border: #e3c8e5;
+    --color-content-link: #4a154b;
+  }
+  .dark.theme-aubergine {
+    --color-brand-50: #1c061e;
+    --color-brand-100: #2a0a2d;
+    --color-brand-200: #3a0f3c;
+    --color-brand-300: #4a154b;
+    --color-brand-400: #7d3d83;
+    --color-brand-500: #a86aad;
+    --color-brand-600: #7d3d83;
+    --color-brand-700: #a86aad;
+    --color-brand-800: #cc9ed0;
+    --color-brand-900: #e3c8e5;
+    --color-status-info: #a86aad;
+    --color-status-info-light: #2a0a2d;
+    --color-status-info-border: #3a0f3c;
+    --color-content-link: #cc9ed0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   Component Layer
+   ══════════════════════════════════════════════════════ */
+
+@layer components {
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    --tw-ring-color: var(--color-brand-500);
+    --tw-ring-opacity: 0.5;
+    --tw-ring-offset-color: var(--color-surface-card);
+  }
+
+  .page-container {
+    @apply max-w-content mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-5 sm:pt-section-gap sm:pb-page-y;
+  }
+
+  .card-base {
+    @apply bg-surface-card rounded-card border border-line shadow-card;
+  }
+
+  .card-interactive {
+    @apply card-base hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-normal;
+  }
+
+  .glass {
+    @apply bg-surface-card/80 backdrop-blur-lg;
+  }
+
+  .text-truncate {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Button Styles ── */
+  /* Note: driver.js 버튼은 제외 (.driver-popover 내부 버튼은 영향 받지 않음) */
+  .btn:not(.driver-popover-prev-btn):not(.driver-popover-next-btn):not(
+      .driver-popover-close-btn
+    ) {
+    @apply inline-flex items-center justify-center rounded-button font-medium transition-colors duration-normal;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-body-base;
+  }
+
+  .btn-sm:not(.driver-popover-prev-btn):not(.driver-popover-next-btn) {
+    @apply px-3 py-1.5 text-body-sm;
+  }
+
+  .btn-lg:not(.driver-popover-prev-btn):not(.driver-popover-next-btn) {
+    @apply px-5 py-2.5 text-body-base font-semibold;
+  }
+
+  .btn-primary:not(.driver-popover-next-btn) {
+    @apply bg-brand-600 text-content-inverse hover:bg-brand-700;
+  }
+
+  .btn-secondary:not(.driver-popover-prev-btn) {
+    @apply bg-surface-raised text-content-primary border border-line hover:bg-line;
+  }
+
+  .btn-danger {
+    @apply bg-status-danger text-content-inverse hover:bg-status-danger/90;
+  }
+
+  /* ── Input Styles ── */
+  .input {
+    @apply w-full px-3 py-2 rounded-input border border-line bg-surface-card text-content-primary;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+    @apply placeholder:text-content-tertiary;
+    @apply transition-colors duration-normal;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   Utility Layer
+   ══════════════════════════════════════════════════════ */
+
+@layer utilities {
+  /* Touch Target - 최소 44x44px (WCAG 2.1 AAA) */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px];
+  }
+
+  /* Screen Reader Only - 스크린 리더 전용 텍스트 */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Focus Visible - 키보드 포커스만 표시 */
+  .focus-visible:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+  }
+
+  /* Skip to Main - 키보드 사용자를 위한 스킵 링크 */
+  .skip-to-main {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--color-brand-600);
+    color: var(--color-content-inverse);
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    z-index: 100;
+  }
+
+  .skip-to-main:focus {
+    top: 0;
+  }
+
+  /* High Contrast Mode Support */
+  @media (prefers-contrast: high) {
+    .focus-ring,
+    .focus-visible:focus-visible {
+      outline-width: 3px;
+      outline-offset: 3px;
+    }
+  }
+
+  /* Reduced Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

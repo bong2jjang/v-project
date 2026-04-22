@@ -163,17 +163,44 @@ itsm_ticket (
 );
 -- v0.2 인덱스: ix_itsm_ticket_service_type, ix_itsm_ticket_customer, ix_itsm_ticket_product
 
--- 4.1.2 단계 이력 (루프 투명성)
+-- 4.1.2 단계 이력 (루프 투명성) — v0.3: 편집/삭제/복원 + 리비전
 itsm_loop_transition (
-  id            ULID PK,
-  ticket_id     ULID FK,
-  from_stage    VARCHAR,
-  to_stage      VARCHAR,
-  actor_id      ULID,
-  note          TEXT,
-  artifacts     JSONB,                 -- 단계 산출물 링크/요약
-  transitioned_at TIMESTAMPTZ
+  id                ULID PK,
+  ticket_id         ULID FK,
+  from_stage        VARCHAR,
+  to_stage          VARCHAR,
+  action            VARCHAR,            -- advance | reject | on_hold | rollback | reopen | note
+  actor_id          INTEGER FK,         -- v-platform users(id) (작성자/소유자)
+  note              TEXT,
+  artifacts         JSONB,              -- 단계 산출물 링크/요약
+  transitioned_at   TIMESTAMPTZ,
+  -- v0.3: 편집·삭제·리비전 메타
+  deleted_at        TIMESTAMPTZ NULL,   -- soft-delete 시각
+  deleted_by        INTEGER FK NULL,    -- users(id)
+  last_edited_at    TIMESTAMPTZ NULL,
+  last_edited_by    INTEGER FK NULL,    -- users(id)
+  edit_count        INTEGER NOT NULL DEFAULT 0,
+  head_revision_id  VARCHAR(26) NULL    -- 현재 head 리비전 참조 (되돌리기 시 사용)
 );
+-- v0.3 인덱스: ix_itsm_loop_transition_actor(actor_id),
+--              ix_itsm_loop_transition_deleted(deleted_at) WHERE deleted_at IS NOT NULL
+
+-- 4.1.2.1 전이 리비전 스냅샷 (v0.3 신규)
+-- append-only; 각 편집/삭제/복원/되돌리기는 "직전 상태 스냅샷 + 메타" 한 행을 추가한다.
+itsm_loop_transition_revision (
+  id                  VARCHAR(26) PK,      -- ULID
+  transition_id       VARCHAR(26) FK,      -- itsm_loop_transition(id) CASCADE
+  revision_no         INTEGER NOT NULL,    -- 전이별 1부터 단조증가
+  change_type         VARCHAR(16) NOT NULL, -- create | edit | delete | restore | revert
+  snapshot_note       TEXT NULL,           -- before-image note
+  snapshot_artifacts  JSONB NULL,          -- before-image artifacts
+  changed_by          INTEGER FK NULL,     -- users(id)
+  changed_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reason              TEXT NULL,           -- "오타 수정" 등 편집 사유
+  parent_revision_id  VARCHAR(26) NULL,    -- revert 시 원본 리비전 참조
+  UNIQUE (transition_id, revision_no)
+);
+-- 인덱스: ix_itsm_transition_rev_transition(transition_id, changed_at DESC)
 
 -- 4.1.3 SLA 정책 & 타이머
 itsm_sla_policy (
@@ -375,6 +402,55 @@ WHERE (t.service_type = 'on_premise' AND t.customer_id = 'C1')
 - **권한그룹 미소속 사용자**: 스코프 union 이 공집합 → 목록 빈 응답, 개별 조회 403. 정책: **명시적 거부가 기본**, SYSTEM_ADMIN 이 부여해야 함.
 - **`admin` scope_level 미도입**: 시스템관리자 판별은 `User.role` 로 수행하므로 scope 단에서 별도 관리자 레벨은 불필요.
 
+### 4.4 전이 편집 정책 (v0.3)
+
+Loop 전이 이력(`itsm_loop_transition`)은 더 이상 순수 append-only 가 아니라 **작성자 소유 + 리비전 보존 + 복원 가능** 한 편집 객체다. 상세 설계는 `LOOP_TRANSITION_EDITING_DESIGN.md` 참조.
+
+#### 4.4.1 편집 가능 범위
+
+- **편집 가능**: `note`, `artifacts`
+- **편집 불가 (영구 불변)**: `from_stage`, `to_stage`, `action`, `actor_id`, `transitioned_at`, `ticket_id`, `id`
+- 이유: 스테이지 이동은 FSM 무결성, action/actor 는 감사 무력화 방지.
+
+#### 4.4.2 권한 모델
+
+1. **작성자 본인** (`transition.actor_id == current_user.id`) 은 자신의 전이를 편집/삭제/복원 가능.
+2. **SYSTEM_ADMIN** 은 모든 전이에 대해 편집/삭제/복원 가능 + `?include_deleted=true` 로 숨김 이력 조회.
+3. 그 외 사용자는 편집 불가 (403). 읽기 접근은 §4.3 스코프 규칙에 따름.
+4. **편집 시간 창**: 환경변수 `ITSM_TRANSITION_EDIT_WINDOW_MINUTES` 로 제한(기본 `0` = 무제한, 양수면 해당 분 이내만, 음수면 전면 차단). SYSTEM_ADMIN 은 우회.
+
+#### 4.4.3 리비전 체인
+
+- 전이 생성 시 `revision_no=1, change_type='create', snapshot_*=현재값` 을 자동 기록.
+- 편집(`PATCH`) / 삭제(`DELETE`) / 복원(`POST /restore`) / 되돌리기(`POST /revisions/{no}/revert`) 는 각각 **편집 직전 상태의 before-image** 를 새 리비전으로 기록한 뒤 본체를 UPDATE.
+- 스모크 검증: 한 전이에 대해 create → edit → delete → restore → revert 5건 리비전이 단조 증가(1→2→3→4→5)로 누적됨을 확인.
+- Soft-delete 는 `deleted_at` 만 설정(삭제되지 않음). 복원은 `deleted_at = NULL` 복귀 + 별도 리비전 기록.
+- Revert 는 지정한 `revision_no` 의 `snapshot_note/artifacts` 를 본체에 적용하고 `change_type='revert'` 리비전을 `parent_revision_id` 로 원본을 가리킨 채 추가.
+
+#### 4.4.4 API 개요
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| PATCH | `/api/tickets/{tid}/transitions/{rid}` | note/artifacts 편집 (+ reason) |
+| DELETE | `/api/tickets/{tid}/transitions/{rid}` | soft-delete |
+| POST | `/api/tickets/{tid}/transitions/{rid}/restore` | 삭제 해제 |
+| GET | `/api/tickets/{tid}/transitions/{rid}/revisions` | 리비전 목록 |
+| POST | `/api/tickets/{tid}/transitions/{rid}/revisions/{no}/revert` | 해당 리비전으로 복원 |
+| GET | `/api/tickets/{tid}/transitions?include_deleted=true` | 숨김 포함 조회 (작성자/SYSTEM_ADMIN) |
+
+응답에는 서버 계산된 UI 플래그(`can_edit`, `can_delete`, `can_restore`)가 포함되어 프런트엔드는 추가 권한 계산 없이 버튼 표시를 결정한다.
+
+#### 4.4.5 CSRF 및 감사
+
+- 모든 쓰기 경로는 v-platform Double Submit Cookie CSRF 미들웨어 하에서 동작. 프런트는 `csrf_token` 쿠키를 `X-CSRF-Token` 헤더로 재전송.
+- 감사 이중 기록: 리비전 테이블(로컬) + v-platform `audit_log`(`action=transition.edit|delete|restore|revert`, `entity_type="itsm_loop_transition"`). 로컬은 UI 렌더용, audit 는 통합 감사 조회용.
+
+#### 4.4.6 프런트엔드 구성
+
+- `@v-platform/core` **Drawer** 컴포넌트(신규) 를 채택해 넓은 편집 영역 제공 (size md/lg/xl/full). 기존 Modal 은 유지, Drawer 는 추가 only.
+- 전이 이력 카드에 `편집 / 삭제 / 이력 / 복원` 버튼을 서버 플래그 기반으로 노출.
+- `TransitionEditDrawer` (Drawer + RichEditor), `TransitionRevisionsDialog` (Modal + MarkdownView) 컴포넌트를 v-itsm 전용으로 구현.
+
 ---
 
 ## 5. 5단계 루프 상세
@@ -474,12 +550,12 @@ v-itsm 의 SLA 는 **계약 수준의 티어** + **카테고리 예외 정책** 
 
 | 용도 | 채널 | 구현 |
 |---|---|---|
-| 내부 담당자 알림 | **Slack + Teams** | v-channel-bridge `BasePlatformProvider` 재사용 |
-| 고객 회신 | 접수 채널과 동일(Slack/Teams/Email) | v-channel-bridge 어댑터 |
+| 내부 담당자 알림 | **Slack + Teams** | v-itsm 내장 `BaseOutboundProvider` (Slack/Teams) |
+| 고객 회신 | 접수 채널과 동일(Slack/Teams/Email) | 동일 — Phase 2 접수 경로와 함께 확장 |
 | SLA 경고/에스컬레이션 | Slack + Teams (DM/채널) | 동일 |
 | 일일 요약 | Email | v-platform MailHog/실제 SMTP |
 
-> **주의**: PDF 원본 제안서에는 "Slack/Jandi"가 언급되었으나, **v-channel-bridge가 이미 Slack/Teams 어댑터를 공식 지원**하므로 본 설계에서는 **Jandi 대신 Teams를 채택**한다(중복 어댑터 개발 배제·기존 자산 재사용).
+> **주의**: PDF 원본 제안서에는 "Slack/Jandi"가 언급되었으나, Slack/Teams 어댑터 자산이 이미 v-channel-bridge 에 존재하므로 **Jandi 대신 Teams를 채택**한다. 다만 v0.5 이후 v-itsm 은 브리지의 HTTP 어댑터에 의존하지 않고 **provider 코드를 앱 내부로 포팅(embedded)** 하여 독립적으로 기동한다 (§7.3 참조).
 
 ### 7.2 이벤트 → 알림 매핑
 
@@ -490,6 +566,89 @@ v-itsm 의 SLA 는 **계약 수준의 티어** + **카테고리 예외 정책** 
 | SLA 80% | 담당자 + 팀 리드 | Slack/Teams 채널 + DM |
 | SLA 100% | 부서장 (+ CTO — Critical) | Slack/Teams 에스컬레이션 채널 |
 | 재오픈 | 최근 담당자 + 사업 분석자 | Slack/Teams DM |
+
+### 7.3 알림 전송 경로 (v0.5 — embedded provider, 구현 완료)
+
+**설계 원칙 전환** (v0.4 → v0.5): 앱 간 런타임 HTTP 의존을 제거한다. v-channel-bridge 가 정지해도 v-itsm 알림은 독립적으로 동작해야 한다. 코드 중복은 감수하고, bridge 에서 **outbound 경로만** 골라서 v-itsm 내부로 포팅했다. bridge 자체는 수정하지 않는다.
+
+**흐름**: `v-itsm (hook)` → `notification_service._dispatch_all()` → `provider_registry` → `SlackOutboundProvider.send_message()` / `TeamsOutboundProvider.send_message()` → Slack Web API / MS Graph (or Power Automate webhook fallback)
+
+**v-itsm 측 구성**:
+
+```
+apps/v-itsm/backend/app/
+├── schemas/common_message.py         ← bridge schemas/common_message.py 에서 포팅
+└── providers/
+    ├── base.py                       ← BaseOutboundProvider 추상 (connect/send_message/transform_from_common)
+    ├── registry.py                   ← _ProviderRegistry 싱글톤 + init_providers_from_env()
+    ├── slack_provider.py             ← slack_sdk AsyncWebClient (outbound chat_postMessage 만)
+    └── teams_provider.py             ← aiohttp + Graph OAuth client_credentials + Power Automate webhook 대체 경로
+```
+
+**포팅 매트릭스**:
+
+| 원본 (v-channel-bridge) | v-itsm 포팅 | 비고 |
+|---|---|---|
+| `providers/base.py::BasePlatformProvider` | `providers/base.py::BaseOutboundProvider` | 수신/대화 관리 메서드 삭제, outbound 전용으로 축약 |
+| `providers/slack_provider.py` | `providers/slack_provider.py` | slack_bolt/SocketMode 제거, `AsyncWebClient.chat_postMessage` 만 유지 |
+| `providers/teams_provider.py` | `providers/teams_provider.py` | Graph OAuth + webhook fallback 은 그대로. Activity Feed subscription 삭제 |
+| `schemas/common_message.py` | `schemas/common_message.py` | enum(Platform/MessageType/ChannelType), User, Channel, CommonMessage 그대로 |
+
+**서비스 배선**: `app/services/notification_service.py`
+- 공개 API 는 **sync** — `send_notification/notify_assignment/notify_transition/notify_sla_warning/notify_sla_breach`. 호출부(ticket_service, sla_timer) 기존 코드 변경 없음.
+- 내부적으로 `_fire_and_forget()` 가 FastAPI async 컨텍스트면 `asyncio.get_running_loop().create_task()`, APScheduler sync job 이면 `threading.Thread(target=asyncio.run, daemon=True)` 로 비동기 전송을 스케줄.
+- 실패는 **fail-open** — `try/except Exception` 으로 삼켜서 structlog WARN 만 남긴다. 티켓 트랜잭션/커밋에 영향 없음 (훅은 post-commit).
+
+**Provider 라이프사이클**: `app/main.py` lifespan
+- 시동: `await init_providers_from_env()` — `SLACK_BOT_TOKEN`/`TEAMS_TENANT_ID/APP_ID/APP_PASSWORD/TEAM_ID`/`TEAMS_NOTIFICATION_URL` 을 읽어 각 provider 인스턴스를 `connect()` 후 레지스트리 등록. env 누락은 fail-open (info 로그만, 해당 채널은 silently skip).
+- 종료: `await shutdown_providers()` — 각 provider `disconnect()` 호출 (Graph 토큰 세션 정리, Slack client 종료).
+
+**훅 지점 (3개, 변경 없음)**:
+- `ticket_service.update()` — `current_owner_id` 변경 시 `notify_assignment()`
+- `ticket_service.transition()` — Loop FSM 전이 후 `notify_transition()`
+- `sla_timer._notify_warning()` / `_notify_breach()` — SLA 80%/100% 감지 시
+
+**채널 해상**: `ITSM_DEFAULT_NOTIFY_CHANNELS` 환경변수 — comma-separated `platform:channel_id` 형식 (예: `slack:C0123,teams:19:xxx@thread.tacv2`). 장기적으로는 부서/담당자별 설정 테이블로 이관 (Phase 2).
+
+**환경변수 분리**:
+
+| 위치 | 변수 | 용도 |
+|---|---|---|
+| 루트 `.env` | `TEAMS_TENANT_ID`, `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD` | SSO 와 공용 Graph 자격증명 |
+| `apps/v-itsm/.env` | `SLACK_BOT_TOKEN` | Slack Bot OAuth (xoxb-…) |
+| `apps/v-itsm/.env` | `TEAMS_TEAM_ID` | Graph 발송 대상 팀 ID |
+| `apps/v-itsm/.env` | `TEAMS_NOTIFICATION_URL` | Power Automate webhook (Graph 미승인 환경용 fallback) |
+| `apps/v-itsm/.env` | `ITSM_DEFAULT_NOTIFY_CHANNELS` | 기본 채널 리스트 |
+
+docker-compose 에서 `apps/v-itsm/.env` 는 `env_file: - apps/v-itsm/.env` 로 주입. 루트 `.env` 는 compose `${VAR}` 치환 + 공용 변수 전용.
+
+**v-channel-bridge 측 변경 없음**: `POST /api/bridge/notify` 엔드포인트는 **도입되지 않았다**. bridge 코드는 v0.4 초안에서 제안된 변경을 원복한 상태로 유지된다.
+
+### 7.4 접수 경로 (Slack/Teams → v-itsm) — 설계 스텁 (Phase 1 후반)
+
+**목표**: 사용자가 Slack/Teams 에서 자연어 혹은 슬래시 커맨드로 요청을 올리면, 브리지가 v-itsm 접수 API 를 호출해 티켓을 자동 생성.
+
+**후보 안 A — 슬래시 커맨드 `/ticket`** (우선 채택):
+- 사용자가 `/ticket <제목> | <본문>` 형식 입력 → 브리지 `command_processor` 가 수신 → `POST /api/tickets/intake` 호출.
+- 본문 첨부(파일·링크)는 `source_ref` 에 원본 메시지 ts/id 저장 → v-itsm 에서 역링크 생성.
+- 요청자(user) 매핑: Slack user_id/Teams aad_id ↔ `users.external_ids` (플랫폼 공용 매핑 테이블. 없으면 요청자 미기록 + `notes` 에 원본 표시).
+
+**후보 안 B — 멘션 기반 자동 접수**:
+- 특정 채널에서 봇 멘션 시 본문 전체를 티켓 본문으로 승격. 담당자 자동 배정은 카테고리 분류 AI(§8.2) 이후 도입.
+- Phase 1 에서는 스팸·노이즈 위험으로 스코프 아웃, Phase 2 에서 AI 분류와 함께 활성화.
+
+**인증/신뢰 경계**:
+- 브리지 → v-itsm 호출은 **service-account JWT**(플랫폼 공용 발급 토큰) 또는 **`ITSM_INTAKE_WEBHOOK_SECRET` HMAC 헤더** 중 택일.
+  - JWT 쪽이 기존 `require_permission` 재사용 가능 → 우선 고려.
+  - HMAC 은 공용 IdP 없이 구성 가능하지만 v-itsm 이 전용 검증 미들웨어를 추가해야 함.
+- CORS/네트워크: 내부 Docker 네트워크 전용, 외부 노출 없음.
+
+**구현 위치(예정)**:
+- 브리지: `apps/v-channel-bridge/backend/app/services/command_processor.py` — `/ticket` 핸들러 등록
+- 브리지: `apps/v-channel-bridge/backend/app/services/itsm_client.py` (신규) — v-itsm HTTP 호출 래퍼
+- v-itsm: 기존 `POST /api/tickets/intake` 재사용. service-account 토큰 검증은 플랫폼 레벨에서 처리(앱 수정 불필요 예상).
+
+**본 설계 범위**: 본 섹션은 Phase 1 후반 착수를 위한 **설계 스텁**. 코드 변경은 다음 사이클에서 별도 PR 로 진행.
 
 ---
 
@@ -586,7 +745,7 @@ v-itsm 의 SLA 는 **계약 수준의 티어** + **카테고리 예외 정책** 
 | **감사로그** | v-platform `platform/audit` | 모든 전이·배정·AI 수락 감사 | `app_id='v-itsm'` 태깅 |
 | **조직도/부서** | v-platform `platform/org` | 담당자 추천, 부서별 KPI | Read-only 조회 |
 | **UI Kit** | `platform/ui` (65+ 컴포넌트) | Kanban, Form, Modal, Toast | 동일 디자인 토큰 |
-| **Provider Pattern** | v-channel-bridge `BasePlatformProvider` + Slack/Teams 어댑터 | 접수·알림·회신 | 어댑터 재사용, 라우팅 규칙만 신규 |
+| **Provider Pattern** | v-channel-bridge `BasePlatformProvider` + Slack/Teams 어댑터 | 접수·알림·회신 | **outbound 경로만 v-itsm 내부로 포팅(copy-not-import)** — 런타임 HTTP 의존 제거, bridge 정지와 무관하게 동작 |
 | **ChatPane + SSE** | v-ui-builder `components/builder/ChatPane.tsx`, `useChatStream` | AI 분류/초안/유사검색 UI | 공통 패키지 분리 또는 소스 복제 |
 | **BaseLLMProvider** | v-ui-builder `backend/llm/base.py` | 프롬프트 템플릿 교체 | 동일 SSE 인터페이스 |
 | **Notification/Event Broadcaster** | v-platform `platform/notifications` | 앱 내 실시간 브로드캐스트 | 이벤트 타입 `itsm.*` 추가 |
@@ -614,3 +773,6 @@ v-itsm 의 SLA 는 **계약 수준의 티어** + **카테고리 예외 정책** 
 |---|---|---|
 | 2026-04-21 | v0.1 | 초안 작성(5단계 루프, 재사용 자산 매트릭스, Phase 로드맵, Slack+Teams 알림 채택 — Jandi 대체) |
 | 2026-04-21 | v0.2 | 고객/제품/계약/SLA티어/ACL 확장: §4.1.8~§4.1.14 7개 테이블 추가, `itsm_ticket` 에 `service_type`/`customer_id`/`product_id`/`contract_id` 4 컬럼, §4.3 스코프 기반 ACL 신설, §6 SLA 2단 구조(티어+정책) 개편, §2.2 에서 계약 제외 해제. 증분 마이그레이션 a004 로 구현 |
+| 2026-04-22 | v0.3 | Loop 전이 이력 편집·삭제·복원·리비전 도입: `itsm_loop_transition` 에 6 컬럼 추가(`deleted_at`/`deleted_by`/`last_edited_at`/`last_edited_by`/`edit_count`/`head_revision_id`), `itsm_loop_transition_revision` 신규 테이블, §4.4 "전이 편집 정책" 신설. `@v-platform/core` Drawer 컴포넌트 승격(Modal 과 별도). 증분 마이그레이션 a010. 상세 설계: `LOOP_TRANSITION_EDITING_DESIGN.md` v1.0 |
+| 2026-04-22 | v0.4 | Slack/Teams 알림 경로 1차 시도 — HTTP 커플링. v-itsm `notification_service` → `POST /api/bridge/notify` → bridge Provider. 사용자 코스 코렉션으로 **전면 원복**: "v-channel-bridge 수정하지 말고, 필요 부분을 v-itsm 로 가져와서 독립 동작하게." bridge 변경분 `git checkout HEAD --` 되돌림. 본 항목은 기록만 유지하고 §7.3 의 "현재 구현"은 v0.5 에서 대체됨. |
+| 2026-04-22 | v0.5 | Slack/Teams 알림 경로 재구현 — **embedded provider 패턴**. bridge 의 `BasePlatformProvider`/`SlackProvider`/`TeamsProvider`/`CommonMessage` 에서 **outbound 경로만** `apps/v-itsm/backend/app/providers/` 와 `app/schemas/common_message.py` 로 포팅(slack_bolt/SocketMode·수신 대화 관리 제거). v-itsm lifespan 에서 `init_providers_from_env()` 로 연결, `notification_service` 는 sync 공개 API + `_fire_and_forget` 로 async bridging. 환경변수: `SLACK_BOT_TOKEN`/`TEAMS_TEAM_ID`/`TEAMS_NOTIFICATION_URL`/`ITSM_DEFAULT_NOTIFY_CHANNELS` 은 `apps/v-itsm/.env`, `TEAMS_TENANT_ID/APP_ID/APP_PASSWORD` 는 루트 `.env` 공용. 의존성: `slack-sdk>=3.27.0` 추가. bridge 완전 무변경. §7.1/§7.3/§12 업데이트. |

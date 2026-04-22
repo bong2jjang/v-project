@@ -15,8 +15,8 @@ import {
   CardBody,
   Input,
   Select,
-  Textarea,
 } from "../../components/ui";
+import { RichEditor } from "../../components/ui/RichEditor";
 import * as ticketApi from "../../lib/api/tickets";
 import * as customerApi from "../../lib/api/customers";
 import * as productApi from "../../lib/api/products";
@@ -215,14 +215,14 @@ export default function TicketNew() {
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
-              <Textarea
+              <RichEditor
                 label="설명"
-                rows={5}
-                placeholder="증상, 재현 방법, 영향 범위 등"
+                placeholder="증상, 재현 방법, 영향 범위 등 (이미지 붙여넣기·드래그 가능)"
                 value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
+                onChange={(markdown) =>
+                  setForm({ ...form, description: markdown })
                 }
+                minHeight={180}
               />
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

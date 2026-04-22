@@ -15,8 +15,10 @@ SELECT 문에 직접 WHERE 조건을 주입한다.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Iterable
 
+from fastapi import HTTPException, status
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
@@ -24,6 +26,7 @@ from v_platform.models.permission_group import UserGroupMembership
 from v_platform.models.user import User, UserRole
 
 from app.models.enums import ScopeLevel
+from app.models.loop import LoopTransition
 from app.models.scope_grant import ScopeGrant
 from app.models.ticket import Ticket
 
@@ -198,12 +201,63 @@ def summarize_scope(scope: UserScope) -> dict:
     }
 
 
+# ─── 전이 편집/삭제/복원 가드 ──────────────────────────────────
+def check_transition_edit_access(
+    user: User,
+    transition: LoopTransition,
+    *,
+    now: datetime | None = None,
+    edit_window_minutes: int = 0,
+    allow_when_deleted: bool = False,
+) -> None:
+    """전이 편집/삭제/복원 공통 가드 (작성자 본인 + 편집창 + 삭제 상태).
+
+    규칙:
+      - `User.role == SYSTEM_ADMIN` → 항상 허용.
+      - 그 외 → 작성자 본인만 허용(`transition.actor_id == user.id`).
+      - `transition.deleted_at` 이 있으면 기본적으로 차단. 복원 호출 시에만
+        `allow_when_deleted=True` 로 우회.
+      - `edit_window_minutes > 0` 이면 `now - transitioned_at` 이 창을 넘은 경우 차단.
+        `== 0` 이면 제한 없음(무기한), `< 0` 이면 편집 전면 금지 모드.
+
+    실패 시 `HTTPException` 을 던진다(403/409/423).
+    """
+    if user.role == UserRole.SYSTEM_ADMIN:
+        return
+
+    if transition.actor_id != user.id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "작성자 본인만 이 전이를 수정/삭제/복원할 수 있습니다."
+        )
+
+    if transition.deleted_at is not None and not allow_when_deleted:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "삭제된 이력은 먼저 복원한 뒤에 수정할 수 있습니다.",
+        )
+
+    if edit_window_minutes < 0:
+        raise HTTPException(
+            status.HTTP_423_LOCKED, "현재 편집이 전면 차단되어 있습니다."
+        )
+
+    if edit_window_minutes > 0:
+        current = now or datetime.now(timezone.utc)
+        age_min = (current - transition.transitioned_at).total_seconds() / 60.0
+        if age_min > edit_window_minutes:
+            raise HTTPException(
+                status.HTTP_423_LOCKED,
+                f"수정 가능 시간({edit_window_minutes}분)을 초과했습니다.",
+            )
+
+
 __all__ = [
     "GrantTuple",
     "UserScope",
     "get_user_scope",
     "check_ticket_access",
     "check_customer_product_access",
+    "check_transition_edit_access",
     "apply_scope_to_query",
     "summarize_scope",
     "get_user_group_ids",

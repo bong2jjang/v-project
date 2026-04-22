@@ -37,6 +37,7 @@ from v_platform.api import (
     websocket,
     persistent_notifications,
     uploads,
+    monitoring,
 )
 
 
@@ -119,6 +120,7 @@ class PlatformApp:
         self.fastapi.include_router(websocket.router, prefix="/api", tags=["websocket"])
         self.fastapi.include_router(persistent_notifications.router)
         self.fastapi.include_router(uploads.router)
+        self.fastapi.include_router(monitoring.router)
 
     def register_app_routers(self, *routers):
         """Register app-specific routers"""

@@ -4,7 +4,7 @@
 
 import { ExternalLink, BookOpen, Clock, Loader2 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import type { MonitoringService } from "@/types/monitoring";
+import type { MonitoringService } from "../../types/monitoring";
 
 interface MonitoringServiceCardProps {
   service: MonitoringService;

@@ -5,9 +5,9 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { monitoringApi } from "@/lib/api/monitoring";
-import { monitoringServices } from "@/data/monitoringServices";
-import type { MonitoringService } from "@/types/monitoring";
+import { monitoringApi } from "../api/monitoring";
+import { monitoringServices } from "../data/monitoringServices";
+import type { MonitoringService } from "../types/monitoring";
 
 interface UseMonitoringHealthReturn {
   services: MonitoringService[];
@@ -28,11 +28,9 @@ export function useMonitoringHealth(
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 진행 중인 체크를 취소할 수 있도록 ref 사용
   const abortRef = useRef<AbortController | null>(null);
 
   const checkHealth = useCallback(async () => {
-    // 이전 체크가 진행 중이면 취소
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -41,11 +39,9 @@ export function useMonitoringHealth(
 
     setError(null);
 
-    // 모든 서비스를 "checking" 상태로 설정
     const allIds = new Set(monitoringServices.map((s) => s.id));
     setCheckingIds(allIds);
 
-    // 서비스별 독립 체크 — 완료 순서대로 카드 업데이트
     const promises = monitoringServices.map(async (service) => {
       try {
         const health = await monitoringApi.checkServiceHealth(service.id);
@@ -92,7 +88,6 @@ export function useMonitoringHealth(
     }
   }, []);
 
-  // 초기 로드 및 자동 갱신
   useEffect(() => {
     checkHealth();
 

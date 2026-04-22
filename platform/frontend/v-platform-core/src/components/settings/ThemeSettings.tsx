@@ -23,6 +23,8 @@ export function ThemeSettings() {
     setPullToRefresh,
     showWideViewToggle,
     setShowWideViewToggle,
+    tintedSidebar,
+    setTintedSidebar,
   } = useTheme();
 
   return (
@@ -170,6 +172,12 @@ export function ThemeSettings() {
             onChange={setShowWideViewToggle}
             label="넓게보기 버튼 표시"
             sublabel="메인 콘텐츠 우측 상단의 넓게보기/기본보기 전환 버튼 노출 여부"
+          />
+          <ToggleRow
+            checked={tintedSidebar}
+            onChange={setTintedSidebar}
+            label="사이드바에 테마색 적용"
+            sublabel="왼쪽 사이드바 배경을 현재 브랜드 색상으로 칠합니다. 끄면 기본(중립) 배경을 유지합니다."
           />
         </div>
       </section>

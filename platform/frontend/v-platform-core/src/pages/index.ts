@@ -22,6 +22,7 @@ export { default as UserManagementPage } from './UserManagement';
 export { default as AuditLogsPage } from './AuditLogs';
 export { default as SettingsPage } from './Settings';
 export { default as CustomIframePage } from './CustomIframe';
+export { default as MonitoringPage } from './Monitoring';
 
 // Admin management pages
 export { default as MenuManagementPage } from './admin/MenuManagement';

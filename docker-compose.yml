@@ -572,13 +572,13 @@ services:
       - FRONTEND_URL=http://${PUBLIC_HOST:-127.0.0.1}:5182
       - BACKEND_URL=${ITSM_BACKEND_URL:-http://${PUBLIC_HOST:-127.0.0.1}:8005}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://${PUBLIC_HOST:-127.0.0.1}:5173,http://${PUBLIC_HOST:-127.0.0.1}:5174,http://${PUBLIC_HOST:-127.0.0.1}:5180,http://${PUBLIC_HOST:-127.0.0.1}:5182}
-      # SSO (공용: Teams 자격증명 재사용)
+      # SSO + Teams outbound provider (공용: Graph app-only 자격증명 재사용)
       - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
       - TEAMS_APP_ID=${TEAMS_APP_ID}
       - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
-      # 앱 간 연동: v-channel-bridge 알림 HTTP 경로
-      - BRIDGE_BACKEND_URL=${BRIDGE_BACKEND_URL:-http://v-channel-bridge-backend:8000}
-      # 앱 전용 변수(SLA_*, ITSM_*, LLM_*)는 apps/v-itsm/.env 에서 env_file 로 주입됨
+      # Slack/Teams outbound provider 는 app/providers 로 내장 — v-channel-bridge HTTP 의존 제거됨.
+      # 앱 전용 변수(SLA_*, ITSM_*, LLM_*, SLACK_BOT_TOKEN, TEAMS_TEAM_ID, TEAMS_NOTIFICATION_URL)는
+      # apps/v-itsm/.env 에서 env_file 로 주입됨
     depends_on:
       postgres:
         condition: service_healthy

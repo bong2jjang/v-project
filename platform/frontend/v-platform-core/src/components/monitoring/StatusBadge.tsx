@@ -2,7 +2,7 @@
  * 모니터링 서비스 상태 배지 컴포넌트
  */
 
-import type { ServiceStatus } from "@/types/monitoring";
+import type { ServiceStatus } from "../../types/monitoring";
 
 interface StatusBadgeProps {
   status: ServiceStatus;

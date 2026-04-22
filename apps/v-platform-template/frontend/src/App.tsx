@@ -20,6 +20,7 @@ import {
   PasswordChangePage,
   UserManagementPage,
   AuditLogsPage,
+  MonitoringPage,
   SettingsPage,
   CustomIframePage,
   MenuManagementPage,
@@ -98,6 +99,7 @@ function App() {
           <Route path="/password-change" element={<ProtectedRoute><Layout><PasswordChangePage /></Layout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute permissionKey="users"><Layout><UserManagementPage /></Layout></ProtectedRoute>} />
           <Route path="/audit-logs" element={<ProtectedRoute permissionKey="audit_logs"><Layout><AuditLogsPage /></Layout></ProtectedRoute>} />
+          <Route path="/monitoring" element={<ProtectedRoute permissionKey="monitoring"><Layout><MonitoringPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/menus" element={<ProtectedRoute permissionKey="menu_management"><Layout><MenuManagementPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/permissions" element={<ProtectedRoute permissionKey="permission_management"><Layout><PermissionMatrixPage /></Layout></ProtectedRoute>} />
           <Route path="/admin/permission-groups" element={<ProtectedRoute permissionKey="permission_groups"><Layout><PermissionGroupsPage /></Layout></ProtectedRoute>} />

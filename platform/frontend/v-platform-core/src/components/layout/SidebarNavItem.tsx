@@ -35,6 +35,7 @@ export function SidebarNavItem({
     <Link
       to={path}
       data-tour={dataTourId}
+      data-active={isActive ? "true" : undefined}
       className={`
         flex items-center gap-3 rounded-button
         transition-all duration-normal

@@ -32,13 +32,22 @@ import v_platform.services.event_broadcaster as broadcaster_module
 
 from app.api import contracts as contracts_router
 from app.api import customers as customers_router
+from app.api import integrations as integrations_router
 from app.api import kpi as kpi_router
+from app.api import me_notification_pref as me_notification_pref_router
+from app.api import notification_logs as notification_logs_router
 from app.api import products as products_router
+from app.api import scheduler as scheduler_router
 from app.api import scope_grants as scope_grants_router
+from app.api import sla_notification_policies as sla_notification_policies_router
+from app.api import sla_policies as sla_policies_router
 from app.api import sla_tiers as sla_tiers_router
 from app.api import sla_timers as sla_timers_router
 from app.api import tickets as tickets_router
-from app.services import sla_timer
+from app.api import transitions as transitions_router
+from app.providers import init_providers_from_env, shutdown_providers
+from app.services import sla_timer  # noqa: F401 — JobSpec 을 레지스트리에 등록하는 side-effect
+from app.services.scheduler_registry import scheduler_registry
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-8s %(name)s %(message)s")
 logger = structlog.get_logger()
@@ -63,14 +72,19 @@ async def lifespan(fastapi_app):
     broadcaster_module.broadcaster = broadcaster
     await broadcaster.start()
 
-    # SLA 타이머 스케줄러 — 1분 주기 스캔
-    sla_timer.start_scheduler()
+    # Slack/Teams outbound provider 초기화 — env 누락은 fail-open (로그만)
+    await init_providers_from_env()
+
+    # 스케줄러 레지스트리 — SLA 스캔 등 모든 잡을 단일 AsyncIOScheduler 로 기동
+    # (itsm_scheduler_override 에 오버라이드가 있으면 반영)
+    scheduler_registry.start()
 
     logger.info("v-itsm ready")
 
     yield
 
-    sla_timer.stop_scheduler()
+    scheduler_registry.stop()
+    await shutdown_providers()
     if broadcaster_module.broadcaster:
         await broadcaster_module.broadcaster.stop()
     logger.info("v-itsm stopped")
@@ -87,12 +101,19 @@ platform = PlatformApp(
 # ── 앱 전용 라우터 등록 ──
 platform.register_app_routers(
     tickets_router.router,
+    transitions_router.router,
     customers_router.router,
     products_router.router,
     contracts_router.router,
     sla_tiers_router.router,
+    sla_policies_router.router,
+    sla_notification_policies_router.router,
     sla_timers_router.router,
     scope_grants_router.router,
+    scheduler_router.router,
+    integrations_router.router,
+    notification_logs_router.router,
+    me_notification_pref_router.router,
     kpi_router.router,
 )
 

@@ -24,7 +24,7 @@ from app.schemas.ticket import (
     TicketTransitionRequest,
     TicketUpdateRequest,
 )
-from app.services import access_control, loop_fsm, sla_timer
+from app.services import access_control, loop_fsm, notification_service, sla_timer
 
 
 def _new_ulid() -> str:
@@ -215,6 +215,8 @@ def update(
             contract_id=data.get("contract_id", ticket.contract_id),
         )
 
+    prev_owner_id = ticket.current_owner_id
+
     for field, value in data.items():
         if field == "priority" and value is not None:
             setattr(ticket, field, value.value)
@@ -224,6 +226,14 @@ def update(
             setattr(ticket, field, value)
     db.commit()
     db.refresh(ticket)
+
+    if "current_owner_id" in data and ticket.current_owner_id != prev_owner_id:
+        notification_service.notify_assignment(
+            ticket,
+            old_owner_id=prev_owner_id,
+            new_owner_id=ticket.current_owner_id,
+        )
+
     return ticket
 
 
@@ -266,6 +276,16 @@ def transition(
     db.commit()
     db.refresh(ticket)
     db.refresh(lt)
+
+    notification_service.notify_transition(
+        ticket,
+        from_stage=from_stage,
+        to_stage=next_stage.value,
+        action=payload.action.value,
+        actor_id=actor_id,
+        note=payload.note,
+    )
+
     return ticket, lt
 
 

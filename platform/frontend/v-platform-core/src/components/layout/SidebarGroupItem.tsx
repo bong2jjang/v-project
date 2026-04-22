@@ -93,6 +93,7 @@ export function SidebarGroupItem({
           ref={buttonRef}
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
+          data-active={isAnyChildActive ? "true" : undefined}
           className={`
             relative w-full flex items-center justify-center p-2 rounded-button
             transition-all duration-normal

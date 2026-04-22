@@ -31,7 +31,11 @@ from app.schemas.ticket import (
     TicketTransitionRequest,
     TicketUpdateRequest,
 )
-from app.services import loop_fsm, ticket_service
+from app.schemas.transition import (
+    LoopTransitionDetailOut,
+    LoopTransitionRevisionOut,
+)
+from app.services import loop_fsm, ticket_service, transition_service
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
@@ -128,14 +132,46 @@ async def transition_ticket(
     return LoopTransitionOut.model_validate(lt)
 
 
-@router.get("/{ticket_id}/transitions", response_model=list[LoopTransitionOut])
+@router.get(
+    "/{ticket_id}/transitions",
+    response_model=list[LoopTransitionDetailOut],
+)
 async def get_transitions(
     ticket_id: str,
+    include_deleted: bool = Query(False),
+    with_latest_revision: bool = Query(False),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
-) -> list[LoopTransitionOut]:
-    items = ticket_service.list_transitions(db, ticket_id, current_user=current_user)
-    return [LoopTransitionOut.model_validate(lt) for lt in items]
+) -> list[LoopTransitionDetailOut]:
+    """전이 이력.
+
+    - `include_deleted=true` 면 소프트 삭제된 이력도 반환(복원 UI 용).
+    - `with_latest_revision=true` 면 각 전이의 최신 리비전 요약 포함.
+    - 응답은 편집 버튼 활성화 플래그(can_edit/delete/restore)를 서버가 계산.
+    """
+    # 티켓 read 권한은 ticket_service.get 이 담당
+    ticket = ticket_service.get(db, ticket_id, current_user=current_user)
+    if ticket is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "ticket not found")
+
+    items = transition_service.list_transitions_with_meta(
+        db,
+        ticket_id=ticket_id,
+        include_deleted=include_deleted,
+        current_user=current_user,
+    )
+    results: list[LoopTransitionDetailOut] = []
+    for lt in items:
+        detail = LoopTransitionDetailOut.model_validate(lt)
+        detail.can_edit = transition_service.compute_can_edit(current_user, lt)
+        detail.can_delete = detail.can_edit and lt.deleted_at is None
+        detail.can_restore = transition_service.compute_can_restore(current_user, lt)
+        if with_latest_revision:
+            rev = transition_service.get_latest_revision(db, lt.id)
+            if rev is not None:
+                detail.latest_revision = LoopTransitionRevisionOut.model_validate(rev)
+        results.append(detail)
+    return results
 
 
 @router.get("/{ticket_id}/allowed-actions", response_model=AllowedActionsOut)

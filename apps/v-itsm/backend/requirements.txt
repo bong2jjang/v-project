@@ -23,3 +23,7 @@ aiohttp>=3.9.0
 # App-specific dependencies (add here)
 python-ulid>=2.2.0
 apscheduler>=3.10.4
+
+# Slack/Teams outbound providers (embedded — no runtime HTTP to v-channel-bridge)
+slack-sdk>=3.27.0
+# aiohttp already pinned above (used by Teams Graph/webhook provider)

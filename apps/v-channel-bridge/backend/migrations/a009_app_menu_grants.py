@@ -2,8 +2,7 @@
 
 플랫폼 demo seed에서 분리된 앱 전용 데이터:
   - channels, messages, statistics, integrations: section='basic'
-  - monitoring: section='admin'
-  - 데모그룹-운영 → 앱 메뉴 write/read 권한
+  - 데모그룹-운영 → 앱 메뉴 write 권한
 """
 
 import logging
@@ -17,7 +16,6 @@ APP_MENU_SECTIONS = [
     ("messages", "basic"),
     ("statistics", "basic"),
     ("integrations", "basic"),
-    ("monitoring", "admin"),
 ]
 
 # 데모그룹-운영에 부여할 앱 전용 메뉴 권한
@@ -27,7 +25,6 @@ DEMO_GROUP_GRANTS = {
         "messages": "write",
         "statistics": "write",
         "integrations": "write",
-        "monitoring": "read",
     },
 }
 

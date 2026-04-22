@@ -27,7 +27,6 @@ from app.api import (
     bridge,
     teams_webhook,
     teams_notifications,
-    monitoring,
 )
 from app.services.websocket_bridge import WebSocketBridge, set_bridge, get_bridge
 from app.services.route_manager import RouteManager
@@ -320,7 +319,6 @@ platform = PlatformApp(
         "messages",
         "statistics",
         "integrations",
-        "monitoring",
     ],
 )
 
@@ -332,7 +330,6 @@ platform.register_app_routers(
     accounts_test.router,
     teams_webhook.router,
     teams_notifications.router,
-    monitoring.router,
 )
 
 # ASGI app for uvicorn

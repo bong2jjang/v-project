@@ -25,6 +25,7 @@ class LoopAction(str, Enum):
     RESUME = "resume"
     ROLLBACK = "rollback"
     REOPEN = "reopen"
+    NOTE = "note"
 
 
 class Priority(str, Enum):
