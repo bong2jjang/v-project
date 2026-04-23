@@ -93,28 +93,24 @@ export function SidebarGroupItem({
           ref={buttonRef}
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          data-active={isAnyChildActive ? "true" : undefined}
+          data-active={isAnyChildActive || isOpen ? "true" : undefined}
           className={`
             relative w-full flex items-center justify-center p-2 rounded-button
             transition-all duration-normal
             ${
-              isOpen
+              isAnyChildActive || isOpen
                 ? variant === "admin"
-                  ? "bg-status-warning-light text-status-warning"
-                  : "bg-brand-600/10 text-brand-600"
-                : isAnyChildActive
-                  ? variant === "admin"
-                    ? "bg-status-warning-light text-status-warning border-l-2 border-status-warning-border"
-                    : "bg-brand-600/10 text-brand-600 border-l-2 border-brand-600"
-                  : variant === "admin"
-                    ? "text-status-warning-dark hover:bg-status-warning-light/50 hover:text-status-warning"
-                    : "text-content-secondary hover:bg-surface-raised hover:text-content-primary"
+                  ? "bg-surface-raised text-status-warning border-l-2 border-status-warning-border"
+                  : "bg-surface-raised text-brand-600 border-l-2 border-brand-600"
+                : variant === "admin"
+                  ? "text-content-secondary hover:bg-surface-raised hover:text-status-warning"
+                  : "text-content-secondary hover:bg-surface-raised hover:text-content-primary"
             }
           `}
         >
           <Icon active={isAnyChildActive || isOpen} />
-          {/* 접힘/열림 인디케이터 */}
-          <span className="absolute bottom-0.5 right-0.5 opacity-60">
+          {/* 접힘/열림 인디케이터 — 기본/관리자 변형 공통으로 표시 */}
+          <span className="absolute bottom-0.5 right-0.5 text-content-tertiary opacity-80">
             {isOpen ? (
               <ChevronDown className="w-2.5 h-2.5" />
             ) : (

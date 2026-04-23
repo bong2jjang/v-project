@@ -45,16 +45,17 @@ export function MobileSidebarGroupItem({
       <button
         type="button"
         onClick={() => setIsExpanded((prev) => !prev)}
+        data-active={isAnyChildActive || isExpanded ? "true" : undefined}
         className={`
           w-full flex items-center gap-3 px-3 py-2 rounded-button
           transition-all duration-normal
           ${
-            isAnyChildActive
+            isAnyChildActive || isExpanded
               ? variant === "admin"
-                ? "bg-status-warning-light text-status-warning"
-                : "bg-brand-600/10 text-brand-600"
+                ? "bg-surface-raised text-status-warning border-l-2 border-status-warning-border"
+                : "bg-surface-raised text-brand-600 border-l-2 border-brand-600"
               : variant === "admin"
-                ? "text-status-warning-dark hover:bg-status-warning-light/50 hover:text-status-warning"
+                ? "text-content-secondary hover:bg-surface-raised hover:text-status-warning"
                 : "text-content-secondary hover:bg-surface-raised hover:text-content-primary"
           }
         `}
@@ -63,7 +64,7 @@ export function MobileSidebarGroupItem({
         <span className="text-body-base font-medium flex-1 text-left">
           {item.label}
         </span>
-        <Chevron className="w-4 h-4 flex-shrink-0 opacity-50" />
+        <Chevron className="w-4 h-4 flex-shrink-0 text-content-tertiary opacity-80" />
       </button>
 
       {/* Children — 아코디언 펼침 */}
