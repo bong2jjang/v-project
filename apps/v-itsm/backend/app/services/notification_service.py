@@ -111,7 +111,7 @@ def _log_pending(
             )
             return row.id
     except Exception as e:  # noqa: BLE001
-        logger.warning("notify.log_pending_error", error=str(e), event=event_type)
+        logger.warning("notify.log_pending_error", error=str(e), notify_event=event_type)
         return None
 
 
@@ -157,13 +157,13 @@ async def _dispatch_one(
     provider = provider_registry.get(platform)
     if provider is None:
         logger.debug(
-            "notify.provider_missing", platform=platform.value, event=event
+            "notify.provider_missing", platform=platform.value, notify_event=event
         )
         _log_result(log_id, ok=False, error="provider_missing")
         return False
     if not provider.is_connected:
         logger.debug(
-            "notify.provider_disconnected", platform=platform.value, event=event
+            "notify.provider_disconnected", platform=platform.value, notify_event=event
         )
         _log_result(log_id, ok=False, error="provider_disconnected")
         return False
@@ -191,7 +191,7 @@ async def _dispatch_one(
         logger.warning(
             "notify.provider_exception",
             platform=platform.value,
-            event=event,
+            notify_event=event,
             error=str(e),
         )
         _log_result(log_id, ok=False, error=str(e))
@@ -211,7 +211,7 @@ async def _dispatch_all(
         platform = _resolve_platform(t["platform"])
         if platform is None:
             logger.debug(
-                "notify.unknown_platform", platform=t["platform"], event=event
+                "notify.unknown_platform", platform=t["platform"], notify_event=event
             )
             continue
         tasks.append(
@@ -231,7 +231,7 @@ async def _dispatch_all(
     results = await asyncio.gather(*tasks, return_exceptions=True)
     sent = sum(1 for r in results if r is True)
     logger.info(
-        "notify.dispatched", event=event, sent=sent, total=len(tasks)
+        "notify.dispatched", notify_event=event, sent=sent, total=len(tasks)
     )
 
 
@@ -272,7 +272,7 @@ def send_notification(
     """
     targets = channels if channels is not None else _default_channels()
     if not targets:
-        logger.debug("notify.no_channels", event=event)
+        logger.debug("notify.no_channels", notify_event=event)
         return
     _fire_and_forget(
         _dispatch_all(text, targets, blocks, event, ticket_id=ticket_id)

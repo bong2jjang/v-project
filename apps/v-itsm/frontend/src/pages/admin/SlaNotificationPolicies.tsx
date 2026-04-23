@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { ContentHeader } from "../../components/Layout";
 import {
   Alert,
@@ -14,10 +14,10 @@ import {
   Button,
   Card,
   CardBody,
+  Drawer,
+  DrawerFooter,
   EmptyState,
   Input,
-  Modal,
-  ModalFooter,
   Select,
   Skeleton,
   Table,
@@ -139,6 +139,8 @@ function parseAddressList(text: string): string[] | null {
   return items.length ? items : null;
 }
 
+const PAGE_SIZE = 20;
+
 export default function SlaNotificationPolicies() {
   const [items, setItems] = useState<SlaNotificationPolicy[]>([]);
   const [total, setTotal] = useState(0);
@@ -148,26 +150,33 @@ export default function SlaNotificationPolicies() {
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<SlaNotificationPolicy | null>(null);
   const [form, setForm] = useState<PolicyForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  async function fetchList() {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  async function fetchList(targetPage: number = page) {
     setLoading(true);
     setError(null);
     try {
-      const params: api.SlaNotificationPolicyListParams = { page: 1, page_size: 200 };
+      const params: api.SlaNotificationPolicyListParams = {
+        page: targetPage,
+        page_size: PAGE_SIZE,
+      };
       if (triggerFilter) params.trigger_event = triggerFilter as TriggerEvent;
       if (priorityFilter) params.priority = priorityFilter as Priority;
       if (serviceTypeFilter)
         params.service_type = serviceTypeFilter as RequestServiceType;
       if (activeFilter === "true") params.active_only = true;
-      if (search.trim()) params.search = search.trim();
+      if (searchQuery.trim()) params.search = searchQuery.trim();
       const res = await api.listSlaNotificationPolicies(params);
       setItems(res.items);
       setTotal(res.total);
@@ -180,14 +189,24 @@ export default function SlaNotificationPolicies() {
   }
 
   useEffect(() => {
-    void fetchList();
+    setPage(1);
+    void fetchList(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [triggerFilter, priorityFilter, serviceTypeFilter, activeFilter, searchQuery]);
+
+  useEffect(() => {
+    void fetchList(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  function applySearch() {
+    setSearchQuery(search);
+  }
 
   function openCreate() {
     setEditing(null);
     setForm(EMPTY_FORM);
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   function openEdit(item: SlaNotificationPolicy) {
@@ -209,7 +228,7 @@ export default function SlaNotificationPolicies() {
       template_key: item.template_key ?? "",
       active: item.active,
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   function toggleChannel(ch: string) {
@@ -257,7 +276,7 @@ export default function SlaNotificationPolicies() {
         await api.createSlaNotificationPolicy(payload);
         setSuccess("알림 정책이 등록되었습니다.");
       }
-      setModalOpen(false);
+      setDrawerOpen(false);
       await fetchList();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -343,15 +362,15 @@ export default function SlaNotificationPolicies() {
               <div className="flex-1 min-w-48">
                 <Input
                   label="검색"
-                  placeholder="이름 검색"
+                  placeholder="이름 검색 (Enter)"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") void fetchList();
+                    if (e.key === "Enter") applySearch();
                   }}
                 />
               </div>
-              <Button variant="secondary" onClick={() => void fetchList()}>
+              <Button variant="secondary" onClick={applySearch}>
                 조회
               </Button>
             </div>
@@ -452,18 +471,44 @@ export default function SlaNotificationPolicies() {
                 </TableBody>
               </Table>
             )}
+            {!loading && items.length > 0 && (
+              <div className="flex items-center justify-between mt-4 text-sm text-content-secondary">
+                <span>
+                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} / 총 {total}건
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />이전
+                  </Button>
+                  <span className="px-2 tabular-nums">{page} / {totalPages}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    다음<ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardBody>
         </Card>
       </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         title={editing ? "알림 정책 수정" : "알림 정책 등록"}
         size="lg"
         footer={
-          <ModalFooter
-            onCancel={() => setModalOpen(false)}
+          <DrawerFooter
+            onCancel={() => setDrawerOpen(false)}
             onConfirm={() => void handleSubmit()}
             confirmText={editing ? "수정" : "등록"}
             loading={saving}
@@ -584,7 +629,7 @@ export default function SlaNotificationPolicies() {
             />
           </div>
         </div>
-      </Modal>
+      </Drawer>
     </>
   );
 }
