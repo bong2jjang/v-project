@@ -101,7 +101,7 @@ export function SidebarGroupItem({
               isAnyChildActive || isOpen
                 ? variant === "admin"
                   ? "bg-surface-raised text-status-warning border-l-2 border-status-warning-border"
-                  : "bg-surface-raised text-brand-600 border-l-2 border-brand-600"
+                  : "bg-surface-raised text-brand-600 border-l-2 border-brand-600 dark:text-content-primary dark:border-content-tertiary"
                 : variant === "admin"
                   ? "text-content-secondary hover:bg-surface-raised hover:text-status-warning"
                   : "text-content-secondary hover:bg-surface-raised hover:text-content-primary"
@@ -148,7 +148,7 @@ export function SidebarGroupItem({
                     flex items-center gap-2 px-3 py-2 text-sm transition-colors
                     ${
                       isActive
-                        ? "bg-brand-600/10 text-brand-600"
+                        ? "bg-brand-600/10 text-brand-600 dark:bg-surface-raised dark:text-content-primary"
                         : "text-content-secondary hover:bg-surface-raised hover:text-content-primary"
                     }
                   `}

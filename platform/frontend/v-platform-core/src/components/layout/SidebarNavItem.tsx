@@ -44,7 +44,7 @@ export function SidebarNavItem({
           isActive
             ? variant === "admin"
               ? "bg-status-warning-light text-status-warning border-l-2 border-status-warning-border"
-              : "bg-brand-600/10 text-brand-600 border-l-2 border-brand-600"
+              : "bg-brand-600/10 text-brand-600 border-l-2 border-brand-600 dark:bg-surface-raised dark:text-content-primary dark:border-content-tertiary"
             : variant === "admin"
               ? "text-status-warning-dark hover:bg-status-warning-light/50 hover:text-status-warning"
               : "text-content-secondary hover:bg-surface-raised hover:text-content-primary"

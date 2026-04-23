@@ -161,70 +161,70 @@ function ensureSidebarTintStyle() {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-html.sidebar-tinted aside[data-tour="sidebar"] {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] {
   background-color: var(--color-brand-600);
   border-right-color: transparent;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .border-line,
-html.sidebar-tinted aside[data-tour="sidebar"] .border-t {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .border-line,
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .border-t {
   border-color: rgba(255, 255, 255, 0.14);
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .text-content-primary,
-html.sidebar-tinted aside[data-tour="sidebar"] .text-content-secondary,
-html.sidebar-tinted aside[data-tour="sidebar"] .text-content-tertiary {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .text-content-primary,
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .text-content-secondary,
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .text-content-tertiary {
   color: rgba(255, 255, 255, 0.92);
 }
-html.sidebar-tinted aside[data-tour="sidebar"] a:hover,
-html.sidebar-tinted aside[data-tour="sidebar"] button:hover {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] a:hover,
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] button:hover {
   background-color: rgba(255, 255, 255, 0.12) !important;
   color: #ffffff !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-raised {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-raised {
   background-color: rgba(255, 255, 255, 0.18) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-gradient-to-t {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-gradient-to-t {
   background-image: linear-gradient(to top, var(--color-brand-600), transparent) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] [data-active="true"] {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] [data-active="true"] {
   background-color: rgba(255, 255, 255, 0.22) !important;
   color: #ffffff !important;
   border-color: rgba(255, 255, 255, 0.9) !important;
   box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.95);
 }
-html.sidebar-tinted aside[data-tour="sidebar"] [data-active="true"]:hover {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] [data-active="true"]:hover {
   background-color: rgba(255, 255, 255, 0.3) !important;
   color: #ffffff !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] [data-active="true"] svg {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] [data-active="true"] svg {
   color: #ffffff !important;
 }
 /* UserMenu 드롭다운 등 bg-surface-card 내부는 틴트 예외 처리 (흰 배경 위 흰 글씨 방지) */
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card {
   background-color: var(--color-surface-card) !important;
   color: var(--color-content-primary) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-primary {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-primary {
   color: var(--color-content-primary) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-secondary {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-secondary {
   color: var(--color-content-secondary) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-tertiary {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-content-tertiary {
   color: var(--color-content-tertiary) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-status-danger {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .text-status-danger {
   color: var(--color-status-danger) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .border-line,
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .border-t {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .border-line,
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card .border-t {
   border-color: var(--color-line) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card a:hover,
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card button:hover {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card a:hover,
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card button:hover {
   background-color: var(--color-surface-raised) !important;
   color: var(--color-content-primary) !important;
 }
-html.sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card button.text-status-danger:hover {
+html:not(.dark).sidebar-tinted aside[data-tour="sidebar"] .bg-surface-card button.text-status-danger:hover {
   background-color: var(--color-status-danger-light) !important;
   color: var(--color-status-danger) !important;
 }
