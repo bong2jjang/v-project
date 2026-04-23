@@ -2,12 +2,26 @@
  * v-itsm Loop 칸반 보드.
  *
  * 각 Loop Stage(intake → analyze → execute → verify → answer)별 컬럼.
- * 카드 클릭 시 상세 페이지로 이동, 실제 단계 전이는 상세에서 FSM 가드를 통해 수행.
+ * 드래그로 인접 단계 advance / rollback 전이(FSM 허용 시).
+ * 클릭은 상세 페이지로 이동(5px 이하 이동은 클릭으로 간주).
  * closed 단계는 별도 영역으로 분리 표시.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { ApiClientError } from "@v-platform/core/api/client";
 import { ContentHeader } from "../components/Layout";
 import {
   Alert,
@@ -25,6 +39,7 @@ import { getKpiSummary } from "../lib/api/kpi";
 import type {
   Customer,
   KpiSummary,
+  LoopAction,
   LoopStage,
   Priority,
   Product,
@@ -68,6 +83,39 @@ const STAGE_ACCENT: Record<LoopStage, string> = {
   verify: "border-l-4 border-l-cyan-500",
   answer: "border-l-4 border-l-emerald-500",
   closed: "border-l-4 border-l-neutral-400",
+};
+
+// 드래그 전이 규칙: (fromStage, toStage) → LoopAction (null = 불가)
+function resolveDragAction(
+  from: LoopStage,
+  to: LoopStage,
+): LoopAction | null {
+  if (from === to) return null;
+  // advance: 순방향 인접 단계
+  const forward: Partial<Record<LoopStage, LoopStage>> = {
+    intake: "analyze",
+    analyze: "execute",
+    execute: "verify",
+    verify: "answer",
+  };
+  if (forward[from] === to) return "advance";
+  // rollback: 역방향 인접 단계 (execute→analyze, verify→execute)
+  const backward: Partial<Record<LoopStage, LoopStage>> = {
+    execute: "analyze",
+    verify: "execute",
+  };
+  if (backward[from] === to) return "rollback";
+  return null;
+}
+
+const ACTION_LABEL: Record<LoopAction, string> = {
+  advance: "진행",
+  reject: "반려",
+  on_hold: "보류",
+  resume: "재개",
+  rollback: "롤백",
+  reopen: "재개",
+  note: "메모",
 };
 
 const PRIORITY_OPTIONS = [
@@ -130,6 +178,123 @@ function MiniKpiCard({
   );
 }
 
+function DroppableColumn({
+  stage,
+  isInvalid,
+  isDragging,
+  children,
+}: {
+  stage: LoopStage;
+  isInvalid: boolean;
+  isDragging: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `col:${stage}` });
+  // 드롭 불가 컬럼: 드래그 내내 흐림 처리 → 호버 시 강한 붉은 링 + 배지로 명시
+  const ring =
+    isOver && isInvalid
+      ? "ring-2 ring-status-danger"
+      : isOver
+        ? "ring-2 ring-brand-500"
+        : "";
+  const dim = isDragging && isInvalid && !isOver ? "opacity-60" : "";
+  return (
+    <div
+      ref={setNodeRef}
+      className={`relative bg-surface-muted rounded-md border border-line flex flex-col min-h-[300px] transition-all ${ring} ${dim}`}
+    >
+      {isOver && isInvalid && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none rounded-md bg-status-danger-light/70">
+          <span className="px-3 py-1 rounded-md bg-status-danger text-white text-xs font-semibold shadow-md">
+            이동 불가
+          </span>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function DraggableCard({
+  ticket,
+  stage,
+  children,
+  onClick,
+}: {
+  ticket: Ticket;
+  stage: LoopStage;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `card:${ticket.id}`,
+      data: { fromStage: stage },
+    });
+  // 드래그 중이면 원본은 자리만 유지(투명) — DragOverlay 가 상단에서 실제 카드를 렌더링
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      onClick={onClick}
+      className={`w-full text-left bg-surface rounded-md ${STAGE_ACCENT[stage]} p-3 shadow-sm hover:shadow-md transition-shadow select-none`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function OverlayCard({
+  ticket,
+  customerCode,
+  productCode,
+}: {
+  ticket: Ticket;
+  customerCode: string | null;
+  productCode: string | null;
+}) {
+  return (
+    <div
+      className={`bg-surface rounded-md ${STAGE_ACCENT[ticket.current_stage]} p-3 shadow-2xl ring-2 ring-brand-500 cursor-grabbing select-none`}
+      style={{ transform: "rotate(-2deg)" }}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-mono text-muted-foreground">
+          {ticket.ticket_no}
+        </span>
+        <Badge variant={PRIORITY_BADGE[ticket.priority]}>
+          {PRIORITY_LABELS[ticket.priority]}
+        </Badge>
+      </div>
+      <div className="text-sm font-medium line-clamp-2 mb-2">
+        {ticket.title}
+      </div>
+      <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+        <span>{SERVICE_TYPE_LABELS[ticket.service_type]}</span>
+        {customerCode && (
+          <>
+            <span>·</span>
+            <span>{customerCode}</span>
+          </>
+        )}
+        {productCode && (
+          <>
+            <span>·</span>
+            <span>{productCode}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function formatRelative(iso: string): string {
   try {
     const then = new Date(iso).getTime();
@@ -153,6 +318,20 @@ export default function Kanban() {
   const [products, setProducts] = useState<Map<string, Product>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [draggingFrom, setDraggingFrom] = useState<LoopStage | null>(null);
+  const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
+
+  // 마지막 성공 전이 — Undo 버튼 렌더 용. 10초 후 자동 소멸.
+  const [lastTransition, setLastTransition] = useState<{
+    ticketId: string;
+    ticketNo: string;
+    from: LoopStage;
+    to: LoopStage;
+    action: LoopAction;
+  } | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [priorityFilter, setPriorityFilter] = useState<string>("");
   const [serviceFilter, setServiceFilter] = useState<string>("");
@@ -160,6 +339,38 @@ export default function Kanban() {
   const [productFilter, setProductFilter] = useState<string>("");
 
   const [kpi, setKpi] = useState<KpiSummary | null>(null);
+
+  // 클릭과 드래그 구분: 5px 이상 이동해야 드래그 시작
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  // 언마운트 시 Undo 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+      }
+    };
+  }, []);
+
+  function scheduleUndoExpiry() {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+    }
+    undoTimerRef.current = setTimeout(() => {
+      setLastTransition(null);
+      undoTimerRef.current = null;
+    }, 10_000);
+  }
+
+  function clearUndo() {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setLastTransition(null);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -273,11 +484,148 @@ export default function Kanban() {
 
   const closedTickets = grouped.get("closed") ?? [];
 
+  function handleDragStart(ev: DragStartEvent) {
+    const from = (ev.active.data.current as
+      | { fromStage?: LoopStage }
+      | undefined)?.fromStage;
+    setDraggingFrom(from ?? null);
+    setActiveTicketId(String(ev.active.id).replace(/^card:/, ""));
+    // 새 드래그 시작 시 이전 Undo 후보는 소멸 (UX 단순화)
+    clearUndo();
+  }
+
+  function handleDragCancel() {
+    setDraggingFrom(null);
+    setActiveTicketId(null);
+  }
+
+  async function handleDragEnd(ev: DragEndEvent) {
+    const fromStage = draggingFrom;
+    setDraggingFrom(null);
+    setActiveTicketId(null);
+    const { active, over } = ev;
+    if (!over) return;
+    const ticketId = String(active.id).replace(/^card:/, "");
+    const toStage = String(over.id).replace(/^col:/, "") as LoopStage;
+    const ticket = tickets.find((t) => t.id === ticketId);
+    if (!ticket) return;
+    const from = fromStage ?? ticket.current_stage;
+    if (from === toStage) return;
+    const action = resolveDragAction(from, toStage);
+    if (!action) {
+      setError(
+        `허용되지 않는 전이입니다: ${ticket.ticket_no} · ${LOOP_STAGE_LABELS[from]} → ${LOOP_STAGE_LABELS[toStage]}`,
+      );
+      return;
+    }
+    // optimistic 업데이트
+    const prev = tickets;
+    setTickets((cur) =>
+      cur.map((t) => (t.id === ticketId ? { ...t, current_stage: toStage } : t)),
+    );
+    try {
+      await ticketApi.transitionTicket(ticketId, { action });
+      setInfo(null);
+      setLastTransition({
+        ticketId,
+        ticketNo: ticket.ticket_no,
+        from,
+        to: toStage,
+        action,
+      });
+      scheduleUndoExpiry();
+      // 서버 재계산 결과(SLA/정책)만 해당 티켓 기준으로 병합 — 전체 refetch 는 Skeleton 깜박임을 유발해 회피
+      try {
+        const refreshed = await ticketApi.getTicket(ticketId);
+        setTickets((cur) =>
+          cur.map((t) => (t.id === ticketId ? refreshed : t)),
+        );
+      } catch {
+        // 단일 조회 실패는 치명적이지 않음 — optimistic 상태 유지
+      }
+    } catch (e: unknown) {
+      // 실패 시 원복 + 사용자에게 상태 코드 포함 명시 오류 표시
+      setTickets(prev);
+      let status = "";
+      let detail = "";
+      if (e instanceof ApiClientError) {
+        status = `[HTTP ${e.status}] `;
+        detail = e.message;
+      } else if (e instanceof Error) {
+        detail = e.message;
+      } else {
+        detail = String(e);
+      }
+      setError(
+        `전이 실패 ${status}· ${ticket.ticket_no} ${LOOP_STAGE_LABELS[from]} → ${LOOP_STAGE_LABELS[toStage]} (${ACTION_LABEL[action]}): ${detail}`,
+      );
+    }
+  }
+
+  async function handleUndo() {
+    if (!lastTransition || undoing) return;
+    const { ticketId, ticketNo, from, to, action } = lastTransition;
+    // 역방향 전이 action 재계산: to → from 이 FSM 상 허용되는지 확인
+    const reverseAction = resolveDragAction(to, from);
+    if (!reverseAction) {
+      setError(
+        `되돌리기 불가 · ${ticketNo} ${LOOP_STAGE_LABELS[to]} → ${LOOP_STAGE_LABELS[from]} (${ACTION_LABEL[action]} 역방향 미허용)`,
+      );
+      clearUndo();
+      return;
+    }
+    setUndoing(true);
+    // optimistic revert
+    const snapshot = tickets;
+    setTickets((cur) =>
+      cur.map((t) => (t.id === ticketId ? { ...t, current_stage: from } : t)),
+    );
+    try {
+      await ticketApi.transitionTicket(ticketId, {
+        action: reverseAction,
+        note: "Kanban UI 되돌리기",
+      });
+      setInfo(
+        `되돌리기 완료 · ${ticketNo} ${LOOP_STAGE_LABELS[to]} → ${LOOP_STAGE_LABELS[from]} (${ACTION_LABEL[reverseAction]})`,
+      );
+      clearUndo();
+      try {
+        const refreshed = await ticketApi.getTicket(ticketId);
+        setTickets((cur) =>
+          cur.map((t) => (t.id === ticketId ? refreshed : t)),
+        );
+      } catch {
+        // best-effort merge
+      }
+    } catch (e: unknown) {
+      setTickets(snapshot);
+      let status = "";
+      let detail = "";
+      if (e instanceof ApiClientError) {
+        status = `[HTTP ${e.status}] `;
+        detail = e.message;
+      } else if (e instanceof Error) {
+        detail = e.message;
+      } else {
+        detail = String(e);
+      }
+      setError(
+        `되돌리기 실패 ${status}· ${ticketNo} ${LOOP_STAGE_LABELS[to]} → ${LOOP_STAGE_LABELS[from]} (${ACTION_LABEL[reverseAction]}): ${detail}`,
+      );
+    } finally {
+      setUndoing(false);
+    }
+  }
+
+  const activeTicket = activeTicketId
+    ? tickets.find((t) => t.id === activeTicketId) ?? null
+    : null;
+
   return (
     <>
       <ContentHeader
         title="Loop 칸반"
-        description="Loop 단계별 티켓 흐름을 한눈에 확인합니다."
+        description="Loop 단계별 티켓 흐름을 한눈에 확인합니다. 카드를 인접 단계로 드래그하여 전이할 수 있습니다."
         actions={
           <Button variant="secondary" onClick={() => void loadTickets()}>
             새로고침
@@ -290,6 +638,32 @@ export default function Kanban() {
           <Alert variant="error" onClose={() => setError(null)}>
             {error}
           </Alert>
+        )}
+        {lastTransition ? (
+          <Alert variant="success" onClose={clearUndo}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <span>
+                {lastTransition.ticketNo}{" "}
+                {LOOP_STAGE_LABELS[lastTransition.from]} →{" "}
+                {LOOP_STAGE_LABELS[lastTransition.to]} (
+                {ACTION_LABEL[lastTransition.action]})
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={undoing}
+                onClick={() => void handleUndo()}
+              >
+                {undoing ? "되돌리는 중…" : "실행취소"}
+              </Button>
+            </div>
+          </Alert>
+        ) : (
+          info && (
+            <Alert variant="success" onClose={() => setInfo(null)}>
+              {info}
+            </Alert>
+          )
         )}
 
         {kpi && (
@@ -354,14 +728,25 @@ export default function Kanban() {
             ))}
           </div>
         ) : (
-          <>
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragCancel={handleDragCancel}
+            onDragEnd={(ev) => void handleDragEnd(ev)}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
               {ACTIVE_STAGES.map((stage) => {
                 const items = grouped.get(stage) ?? [];
+                const isInvalid =
+                  draggingFrom !== null &&
+                  draggingFrom !== stage &&
+                  resolveDragAction(draggingFrom, stage) === null;
                 return (
-                  <div
+                  <DroppableColumn
                     key={stage}
-                    className="bg-surface-muted rounded-md border border-line flex flex-col min-h-[300px]"
+                    stage={stage}
+                    isInvalid={isInvalid}
+                    isDragging={draggingFrom !== null}
                   >
                     <div className="px-3 py-2 border-b border-line flex items-center justify-between">
                       <div className="text-sm font-semibold">
@@ -376,11 +761,11 @@ export default function Kanban() {
                         </div>
                       ) : (
                         items.map((t) => (
-                          <button
+                          <DraggableCard
                             key={t.id}
-                            type="button"
+                            ticket={t}
+                            stage={stage}
                             onClick={() => navigate(`/tickets/${t.id}`)}
-                            className={`w-full text-left bg-surface rounded-md ${STAGE_ACCENT[stage]} p-3 shadow-sm hover:shadow-md transition-shadow`}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-mono text-muted-foreground">
@@ -417,11 +802,11 @@ export default function Kanban() {
                             <div className="mt-2 text-xs text-muted-foreground">
                               접수 {formatRelative(t.opened_at)}
                             </div>
-                          </button>
+                          </DraggableCard>
                         ))
                       )}
                     </div>
-                  </div>
+                  </DroppableColumn>
                 );
               })}
             </div>
@@ -466,7 +851,25 @@ export default function Kanban() {
                 </CardBody>
               </Card>
             )}
-          </>
+
+            <DragOverlay dropAnimation={null}>
+              {activeTicket && (
+                <OverlayCard
+                  ticket={activeTicket}
+                  customerCode={
+                    activeTicket.customer_id
+                      ? customers.get(activeTicket.customer_id)?.code ?? null
+                      : null
+                  }
+                  productCode={
+                    activeTicket.product_id
+                      ? products.get(activeTicket.product_id)?.code ?? null
+                      : null
+                  }
+                />
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
     </>
