@@ -15,8 +15,8 @@ import {
   CardBody,
   EmptyState,
   Input,
-  Modal,
-  ModalFooter,
+  Drawer,
+  DrawerFooter,
   Select,
   Skeleton,
   Table,
@@ -123,7 +123,7 @@ export default function SlaTiers() {
   const [activeFilter, setActiveFilter] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<SlaTier | null>(null);
   const [form, setForm] = useState<SlaTierForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -157,7 +157,7 @@ export default function SlaTiers() {
       ...EMPTY_FORM,
       matrix: JSON.parse(JSON.stringify(EMPTY_MATRIX)) as MatrixForm,
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   function openEdit(item: SlaTier) {
@@ -169,7 +169,7 @@ export default function SlaTiers() {
       active: item.active,
       matrix: matrixToForm(item.priority_matrix),
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   async function handleSubmit() {
@@ -204,7 +204,7 @@ export default function SlaTiers() {
         });
         setSuccess("SLA 티어가 등록되었습니다.");
       }
-      setModalOpen(false);
+      setDrawerOpen(false);
       await fetchList();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -351,14 +351,14 @@ export default function SlaTiers() {
         </Card>
       </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         title={editing ? "SLA 티어 수정" : "SLA 티어 등록"}
         size="lg"
         footer={
-          <ModalFooter
-            onCancel={() => setModalOpen(false)}
+          <DrawerFooter
+            onCancel={() => setDrawerOpen(false)}
             onConfirm={() => void handleSubmit()}
             confirmText={editing ? "수정" : "등록"}
             loading={saving}
@@ -455,7 +455,7 @@ export default function SlaTiers() {
             </div>
           </div>
         </div>
-      </Modal>
+      </Drawer>
     </>
   );
 }

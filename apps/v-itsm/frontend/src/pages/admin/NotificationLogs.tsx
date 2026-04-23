@@ -15,7 +15,7 @@ import {
   CardBody,
   EmptyState,
   Input,
-  Modal,
+  Drawer,
   Select,
   Skeleton,
   Table,
@@ -405,7 +405,7 @@ export default function NotificationLogs() {
         </Card>
       </div>
 
-      <Modal
+      <Drawer
         isOpen={detail !== null}
         onClose={() => setDetail(null)}
         title="알림 로그 상세"
@@ -486,7 +486,7 @@ export default function NotificationLogs() {
             </div>
           </div>
         )}
-      </Modal>
+      </Drawer>
     </>
   );
 }

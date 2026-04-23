@@ -16,8 +16,8 @@ import {
   CardBody,
   EmptyState,
   InfoBox,
-  Modal,
-  ModalFooter,
+  Drawer,
+  DrawerFooter,
   Select,
   Skeleton,
   Table,
@@ -82,7 +82,7 @@ export default function ScopeGrants() {
   const [productFilter, setProductFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<GrantForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -128,7 +128,7 @@ export default function ScopeGrants() {
 
   function openCreate() {
     setForm(EMPTY_FORM);
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   async function handleSubmit() {
@@ -147,7 +147,7 @@ export default function ScopeGrants() {
         scope_level: form.scope_level,
       });
       setSuccess("스코프가 부여되었습니다.");
-      setModalOpen(false);
+      setDrawerOpen(false);
       await fetchList();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -352,14 +352,14 @@ export default function ScopeGrants() {
         </Card>
       </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         title="스코프 권한 부여"
         size="md"
         footer={
-          <ModalFooter
-            onCancel={() => setModalOpen(false)}
+          <DrawerFooter
+            onCancel={() => setDrawerOpen(false)}
             onConfirm={() => void handleSubmit()}
             confirmText="부여"
             loading={saving}
@@ -404,7 +404,7 @@ export default function ScopeGrants() {
             helperText="read = 조회만 / write = 접수/수정/전이"
           />
         </div>
-      </Modal>
+      </Drawer>
     </>
   );
 }

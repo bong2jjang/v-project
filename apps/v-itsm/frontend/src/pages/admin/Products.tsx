@@ -15,8 +15,8 @@ import {
   CardBody,
   EmptyState,
   Input,
-  Modal,
-  ModalFooter,
+  Drawer,
+  DrawerFooter,
   Select,
   Skeleton,
   Table,
@@ -63,7 +63,7 @@ export default function Products() {
   const [activeFilter, setActiveFilter] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -94,7 +94,7 @@ export default function Products() {
   function openCreate() {
     setEditing(null);
     setForm(EMPTY_FORM);
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   function openEdit(item: Product) {
@@ -105,7 +105,7 @@ export default function Products() {
       description: item.description ?? "",
       active: item.active,
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   async function handleSubmit() {
@@ -133,7 +133,7 @@ export default function Products() {
         });
         setSuccess("제품이 등록되었습니다.");
       }
-      setModalOpen(false);
+      setDrawerOpen(false);
       await fetchList();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -272,14 +272,14 @@ export default function Products() {
         </Card>
       </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         title={editing ? "제품 수정" : "제품 등록"}
         size="md"
         footer={
-          <ModalFooter
-            onCancel={() => setModalOpen(false)}
+          <DrawerFooter
+            onCancel={() => setDrawerOpen(false)}
             onConfirm={() => void handleSubmit()}
             confirmText={editing ? "수정" : "등록"}
             loading={saving}
@@ -313,7 +313,7 @@ export default function Products() {
             options={ACTIVE_FORM_OPTIONS}
           />
         </div>
-      </Modal>
+      </Drawer>
     </>
   );
 }

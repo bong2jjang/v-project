@@ -15,8 +15,8 @@ import {
   CardBody,
   EmptyState,
   Input,
-  Modal,
-  ModalFooter,
+  Drawer,
+  DrawerFooter,
   Select,
   Skeleton,
   Table,
@@ -95,7 +95,7 @@ export default function Customers() {
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState<CustomerForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -135,7 +135,7 @@ export default function Customers() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
-    setModalOpen(true);
+    setDrawerOpen(true);
   };
 
   const openEdit = (c: Customer) => {
@@ -148,7 +148,7 @@ export default function Customers() {
       status: c.status,
       notes: c.notes ?? "",
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -180,7 +180,7 @@ export default function Customers() {
         });
         setSuccess("고객사를 등록했습니다.");
       }
-      setModalOpen(false);
+      setDrawerOpen(false);
       await fetchList();
     } catch (e) {
       setError(e instanceof Error ? e.message : "저장에 실패했습니다.");
@@ -410,14 +410,14 @@ export default function Customers() {
         </Card>
       </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         title={editing ? "고객사 수정" : "고객사 등록"}
         size="lg"
         footer={
-          <ModalFooter
-            onCancel={() => setModalOpen(false)}
+          <DrawerFooter
+            onCancel={() => setDrawerOpen(false)}
             onConfirm={handleSubmit}
             loading={saving}
             confirmText={editing ? "수정" : "등록"}
@@ -468,9 +468,9 @@ export default function Customers() {
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
         </div>
-      </Modal>
+      </Drawer>
 
-      <Modal
+      <Drawer
         isOpen={!!contactCustomer}
         onClose={() => setContactCustomer(null)}
         title={`담당자 관리${contactCustomer ? ` — ${contactCustomer.name}` : ""}`}
@@ -584,7 +584,7 @@ export default function Customers() {
             </Table>
           )}
         </div>
-      </Modal>
+      </Drawer>
     </>
   );
 }

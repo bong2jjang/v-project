@@ -15,8 +15,8 @@ import {
   CardBody,
   EmptyState,
   Input,
-  Modal,
-  ModalFooter,
+  Drawer,
+  DrawerFooter,
   Select,
   Skeleton,
   Table,
@@ -95,7 +95,7 @@ export default function Contracts() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Contract | null>(null);
   const [form, setForm] = useState<ContractForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -144,7 +144,7 @@ export default function Contracts() {
   function openCreate() {
     setEditing(null);
     setForm(EMPTY_FORM);
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   function openEdit(item: Contract) {
@@ -160,7 +160,7 @@ export default function Contracts() {
       notes: item.notes ?? "",
       product_ids: [...item.product_ids],
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   async function handleSubmit() {
@@ -201,7 +201,7 @@ export default function Contracts() {
         });
         setSuccess("계약이 등록되었습니다.");
       }
-      setModalOpen(false);
+      setDrawerOpen(false);
       await fetchList();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -409,14 +409,14 @@ export default function Contracts() {
         </Card>
       </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         title={editing ? "계약 수정" : "계약 등록"}
         size="lg"
         footer={
-          <ModalFooter
-            onCancel={() => setModalOpen(false)}
+          <DrawerFooter
+            onCancel={() => setDrawerOpen(false)}
             onConfirm={() => void handleSubmit()}
             confirmText={editing ? "수정" : "등록"}
             loading={saving}
@@ -511,7 +511,7 @@ export default function Contracts() {
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
         </div>
-      </Modal>
+      </Drawer>
     </>
   );
 }
