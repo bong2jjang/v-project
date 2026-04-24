@@ -14,9 +14,12 @@ def _new_ulid() -> str:
     return str(ULID())
 
 
-def create_product(db: Session, payload: ProductCreate) -> Product:
+def create_product(
+    db: Session, payload: ProductCreate, *, workspace_id: str
+) -> Product:
     row = Product(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         code=payload.code,
         name=payload.name,
         description=payload.description,
@@ -35,13 +38,15 @@ def get_product(db: Session, product_id: str) -> Product | None:
 def list_products(
     db: Session,
     *,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 20,
     active: bool | None = None,
     search: str | None = None,
 ) -> tuple[list[Product], int]:
-    stmt = select(Product).order_by(Product.name.asc())
-    count_stmt = select(func.count()).select_from(Product)
+    base = Product.workspace_id == workspace_id
+    stmt = select(Product).where(base).order_by(Product.name.asc())
+    count_stmt = select(func.count()).select_from(Product).where(base)
     if active is not None:
         stmt = stmt.where(Product.active.is_(active))
         count_stmt = count_stmt.where(Product.active.is_(active))

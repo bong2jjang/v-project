@@ -30,29 +30,29 @@ function toQuery(params: Record<string, unknown>): string {
 export async function listSlaPolicies(
   params: SlaPolicyListParams = {},
 ): Promise<SlaPolicyListResponse> {
-  return get<SlaPolicyListResponse>(`/api/admin/sla-policies${toQuery(params)}`);
+  return get<SlaPolicyListResponse>(`/api/sla-policies${toQuery(params)}`);
 }
 
 export async function getSlaPolicy(id: string): Promise<SlaPolicy> {
-  return get<SlaPolicy>(`/api/admin/sla-policies/${id}`);
+  return get<SlaPolicy>(`/api/sla-policies/${id}`);
 }
 
 export async function createSlaPolicy(data: SlaPolicyCreateInput): Promise<SlaPolicy> {
-  return post<SlaPolicy>(`/api/admin/sla-policies`, data);
+  return post<SlaPolicy>(`/api/sla-policies`, data);
 }
 
 export async function updateSlaPolicy(
   id: string,
   data: SlaPolicyUpdateInput,
 ): Promise<SlaPolicy> {
-  const response = await apiClient.patch<SlaPolicy>(`/api/admin/sla-policies/${id}`, data);
+  const response = await apiClient.patch<SlaPolicy>(`/api/sla-policies/${id}`, data);
   return response.data;
 }
 
 export async function deleteSlaPolicy(id: string): Promise<void> {
-  await del<void>(`/api/admin/sla-policies/${id}`);
+  await del<void>(`/api/sla-policies/${id}`);
 }
 
 export async function recalculateSlaPolicy(id: string): Promise<SlaRecalcResult> {
-  return post<SlaRecalcResult>(`/api/admin/sla-policies/${id}/recalculate`, {});
+  return post<SlaRecalcResult>(`/api/sla-policies/${id}/recalculate`, {});
 }

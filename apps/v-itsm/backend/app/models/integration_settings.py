@@ -45,6 +45,11 @@ class IntegrationSettings(Base):
     )
 
     id = Column(Integer, primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
 
     # Slack
     slack_bot_token_enc = Column(Text, nullable=True)

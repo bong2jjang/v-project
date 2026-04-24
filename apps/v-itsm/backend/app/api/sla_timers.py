@@ -25,9 +25,11 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
 from app.models.enums import Priority, ScopeLevel
 from app.models.sla import SLATimer
 from app.models.ticket import Ticket
+from app.models.workspace import Workspace
 from app.schemas.sla_timer import (
     SLASummaryOut,
     SLATimerListResponse,
@@ -35,7 +37,7 @@ from app.schemas.sla_timer import (
 )
 from app.services import access_control
 
-router = APIRouter(prefix="/api/sla-timers", tags=["sla-timers"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/sla-timers", tags=["sla-timers"])
 
 
 def _derive_status(t: SLATimer) -> str:
@@ -107,6 +109,7 @@ async def list_timers(
     priority: Priority | None = Query(None),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLATimerListResponse:
     scope = access_control.get_user_scope(db, current_user)
 
@@ -114,12 +117,14 @@ async def list_timers(
     stmt = (
         select(SLATimer, Ticket)
         .join(Ticket, Ticket.id == SLATimer.ticket_id)
+        .where(Ticket.workspace_id == workspace.id)
         .order_by(SLATimer.due_at.asc())
     )
     count_stmt = (
         select(func.count())
         .select_from(SLATimer)
         .join(Ticket, Ticket.id == SLATimer.ticket_id)
+        .where(Ticket.workspace_id == workspace.id)
     )
 
     # 스코프 WHERE 주입 (Ticket 기준)
@@ -155,6 +160,7 @@ async def list_timers(
 async def sla_summary(
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLASummaryOut:
     scope = access_control.get_user_scope(db, current_user)
 
@@ -162,6 +168,7 @@ async def sla_summary(
         select(SLATimer.id)
         .select_from(SLATimer)
         .join(Ticket, Ticket.id == SLATimer.ticket_id)
+        .where(Ticket.workspace_id == workspace.id)
     )
     base = access_control.apply_scope_to_query(base, scope, required=ScopeLevel.READ)
 

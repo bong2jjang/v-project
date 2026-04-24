@@ -17,6 +17,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.schemas.scope_grant import (
     ScopeGrantCreate,
     ScopeGrantListResponse,
@@ -26,7 +28,7 @@ from app.schemas.scope_grant import (
 )
 from app.services import access_control, scope_grant_service
 
-router = APIRouter(prefix="/api/scope-grants", tags=["scope-grants"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/scope-grants", tags=["scope-grants"])
 
 
 def _require_admin(user: User) -> None:
@@ -39,6 +41,7 @@ def _require_admin(user: User) -> None:
 async def my_scope(
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> UserScopeSummaryOut:
     scope = access_control.get_user_scope(db, current_user)
     return UserScopeSummaryOut.model_validate(access_control.summarize_scope(scope))
@@ -54,10 +57,12 @@ async def list_grants(
     product_id: str | None = Query(None),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ScopeGrantListResponse:
     _require_admin(current_user)
     items, total = scope_grant_service.list_grants(
         db,
+        workspace_id=workspace.id,
         page=page,
         page_size=page_size,
         permission_group_id=permission_group_id,
@@ -75,9 +80,12 @@ async def create_grant(
     payload: ScopeGrantCreate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ScopeGrantOut:
     _require_admin(current_user)
-    grant = scope_grant_service.create_grant(db, payload, granted_by=current_user.id)
+    grant = scope_grant_service.create_grant(
+        db, payload, granted_by=current_user.id, workspace_id=workspace.id
+    )
     return ScopeGrantOut.model_validate(grant)
 
 
@@ -86,6 +94,7 @@ async def get_grant(
     grant_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ScopeGrantOut:
     _require_admin(current_user)
     grant = scope_grant_service.get_grant(db, grant_id)
@@ -100,6 +109,7 @@ async def update_grant(
     payload: ScopeGrantUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ScopeGrantOut:
     _require_admin(current_user)
     grant = scope_grant_service.get_grant(db, grant_id)
@@ -114,6 +124,7 @@ async def delete_grant(
     grant_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> None:
     _require_admin(current_user)
     grant = scope_grant_service.get_grant(db, grant_id)

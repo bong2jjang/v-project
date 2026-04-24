@@ -8,6 +8,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    ForeignKey,
     String,
     Text,
 )
@@ -19,6 +20,11 @@ class SLATier(Base):
     __tablename__ = "itsm_sla_tier"
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     code = Column(String(30), unique=True, nullable=False)
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)

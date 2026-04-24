@@ -15,10 +15,15 @@ def _new_ulid() -> str:
 
 
 def create_grant(
-    db: Session, payload: ScopeGrantCreate, granted_by: int | None = None
+    db: Session,
+    payload: ScopeGrantCreate,
+    *,
+    workspace_id: str,
+    granted_by: int | None = None,
 ) -> ScopeGrant:
     row = ScopeGrant(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         permission_group_id=payload.permission_group_id,
         service_type=payload.service_type.value if payload.service_type else None,
         customer_id=payload.customer_id,
@@ -39,14 +44,16 @@ def get_grant(db: Session, grant_id: str) -> ScopeGrant | None:
 def list_grants(
     db: Session,
     *,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 50,
     permission_group_id: int | None = None,
     customer_id: str | None = None,
     product_id: str | None = None,
 ) -> tuple[list[ScopeGrant], int]:
-    stmt = select(ScopeGrant).order_by(ScopeGrant.created_at.desc())
-    count_stmt = select(func.count()).select_from(ScopeGrant)
+    base = ScopeGrant.workspace_id == workspace_id
+    stmt = select(ScopeGrant).where(base).order_by(ScopeGrant.created_at.desc())
+    count_stmt = select(func.count()).select_from(ScopeGrant).where(base)
     if permission_group_id is not None:
         stmt = stmt.where(ScopeGrant.permission_group_id == permission_group_id)
         count_stmt = count_stmt.where(

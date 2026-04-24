@@ -19,6 +19,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.schemas.transition import (
     LoopTransitionDetailOut,
     LoopTransitionRevisionOut,
@@ -29,7 +31,7 @@ from app.schemas.transition import (
 )
 from app.services import transition_service
 
-router = APIRouter(prefix="/api/tickets/{ticket_id}/transitions", tags=["transitions"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/tickets/{ticket_id}/transitions", tags=["transitions"])
 
 
 def _to_detail(transition, user: User) -> LoopTransitionDetailOut:
@@ -48,6 +50,7 @@ async def edit_transition(
     payload: TransitionEditRequest,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> LoopTransitionDetailOut:
     transition = transition_service.edit_transition(
         db,
@@ -68,6 +71,7 @@ async def delete_transition(
     payload: TransitionDeleteRequest | None = None,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> LoopTransitionDetailOut:
     reason = payload.reason if payload is not None else None
     transition = transition_service.soft_delete_transition(
@@ -91,6 +95,7 @@ async def restore_transition(
     payload: TransitionRestoreRequest | None = None,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> LoopTransitionDetailOut:
     reason = payload.reason if payload is not None else None
     transition = transition_service.restore_transition(
@@ -112,6 +117,7 @@ async def list_revisions(
     transition_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> list[LoopTransitionRevisionOut]:
     items = transition_service.list_revisions(
         db, ticket_id, transition_id, current_user
@@ -130,6 +136,7 @@ async def revert_to_revision(
     payload: TransitionRevertRequest | None = None,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> LoopTransitionDetailOut:
     reason = payload.reason if payload is not None else None
     transition = transition_service.revert_to_revision(

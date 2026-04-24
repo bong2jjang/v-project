@@ -1,13 +1,13 @@
 """v-itsm 티켓 CRUD + Loop FSM 전이 API.
 
 엔드포인트:
-  POST   /api/tickets/intake            - 채널/웹폼 최초 접수
-  GET    /api/tickets                   - 목록 (stage/owner/service_type/customer/product 필터)
-  GET    /api/tickets/{id}              - 단건 조회
-  PATCH  /api/tickets/{id}              - 필드 갱신 (전이 제외)
-  POST   /api/tickets/{id}/transition   - Loop FSM 전이
-  GET    /api/tickets/{id}/transitions  - 전이 이력
-  GET    /api/tickets/{id}/allowed-actions - 현재 단계에서 가능한 액션
+  POST   /api/ws/{wid}/tickets/intake            - 채널/웹폼 최초 접수
+  GET    /api/ws/{wid}/tickets                   - 목록 (stage/owner/service_type/customer/product 필터)
+  GET    /api/ws/{wid}/tickets/{id}              - 단건 조회
+  PATCH  /api/ws/{wid}/tickets/{id}              - 필드 갱신 (전이 제외)
+  POST   /api/ws/{wid}/tickets/{id}/transition   - Loop FSM 전이
+  GET    /api/ws/{wid}/tickets/{id}/transitions  - 전이 이력
+  GET    /api/ws/{wid}/tickets/{id}/allowed-actions - 현재 단계에서 가능한 액션
 
 모든 엔드포인트는 `access_control` 의 스코프 가드를 통과한 사용자만 접근 가능.
 SYSTEM_ADMIN 은 전권, 그 외는 권한그룹 경유 `itsm_scope_grant` 에 매칭되어야 함.
@@ -21,7 +21,9 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
 from app.models.enums import LoopStage, RequestServiceType
+from app.models.workspace import Workspace
 from app.schemas.ticket import (
     AllowedActionsOut,
     LoopTransitionOut,
@@ -37,7 +39,7 @@ from app.schemas.transition import (
 )
 from app.services import loop_fsm, ticket_service, transition_service
 
-router = APIRouter(prefix="/api/tickets", tags=["tickets"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/tickets", tags=["tickets"])
 
 
 @router.post(
@@ -49,10 +51,13 @@ async def intake_ticket(
     payload: TicketIntakeRequest,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> TicketOut:
     if payload.requester_id is None:
         payload.requester_id = current_user.id
-    ticket = ticket_service.create_from_intake(db, payload, current_user=current_user)
+    ticket = ticket_service.create_from_intake(
+        db, payload, current_user=current_user, workspace_id=workspace.id
+    )
     return TicketOut.model_validate(ticket)
 
 
@@ -67,10 +72,12 @@ async def list_tickets(
     product_id: str | None = Query(None),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> TicketListResponse:
     items, total = ticket_service.list_tickets(
         db,
         current_user=current_user,
+        workspace_id=workspace.id,
         page=page,
         page_size=page_size,
         stage=stage,
@@ -92,8 +99,9 @@ async def get_ticket(
     ticket_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> TicketOut:
-    ticket = ticket_service.get(db, ticket_id, current_user=current_user)
+    ticket = ticket_service.get(db, ticket_id, current_user, workspace_id=workspace.id)
     if not ticket:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ticket not found")
     return TicketOut.model_validate(ticket)
@@ -105,8 +113,9 @@ async def update_ticket(
     payload: TicketUpdateRequest,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> TicketOut:
-    ticket = ticket_service.get(db, ticket_id, current_user=current_user)
+    ticket = ticket_service.get(db, ticket_id, current_user, workspace_id=workspace.id)
     if not ticket:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ticket not found")
     updated = ticket_service.update(db, ticket, payload, current_user=current_user)
@@ -119,8 +128,9 @@ async def transition_ticket(
     payload: TicketTransitionRequest,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> LoopTransitionOut:
-    ticket = ticket_service.get(db, ticket_id, current_user=current_user)
+    ticket = ticket_service.get(db, ticket_id, current_user, workspace_id=workspace.id)
     if not ticket:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ticket not found")
     try:
@@ -142,6 +152,7 @@ async def get_transitions(
     with_latest_revision: bool = Query(False),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> list[LoopTransitionDetailOut]:
     """전이 이력.
 
@@ -149,8 +160,7 @@ async def get_transitions(
     - `with_latest_revision=true` 면 각 전이의 최신 리비전 요약 포함.
     - 응답은 편집 버튼 활성화 플래그(can_edit/delete/restore)를 서버가 계산.
     """
-    # 티켓 read 권한은 ticket_service.get 이 담당
-    ticket = ticket_service.get(db, ticket_id, current_user=current_user)
+    ticket = ticket_service.get(db, ticket_id, current_user, workspace_id=workspace.id)
     if ticket is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ticket not found")
 
@@ -179,8 +189,9 @@ async def get_allowed_actions(
     ticket_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> AllowedActionsOut:
-    ticket = ticket_service.get(db, ticket_id, current_user=current_user)
+    ticket = ticket_service.get(db, ticket_id, current_user, workspace_id=workspace.id)
     if not ticket:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ticket not found")
     current = LoopStage(ticket.current_stage)

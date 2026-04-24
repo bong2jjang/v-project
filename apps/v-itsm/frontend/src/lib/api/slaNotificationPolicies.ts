@@ -33,20 +33,20 @@ export async function listSlaNotificationPolicies(
   params: SlaNotificationPolicyListParams = {},
 ): Promise<SlaNotificationPolicyListResponse> {
   return get<SlaNotificationPolicyListResponse>(
-    `/api/admin/sla-notification-policies${toQuery(params)}`,
+    `/api/sla-notification-policies${toQuery(params)}`,
   );
 }
 
 export async function getSlaNotificationPolicy(
   id: string,
 ): Promise<SlaNotificationPolicy> {
-  return get<SlaNotificationPolicy>(`/api/admin/sla-notification-policies/${id}`);
+  return get<SlaNotificationPolicy>(`/api/sla-notification-policies/${id}`);
 }
 
 export async function createSlaNotificationPolicy(
   data: SlaNotificationPolicyCreateInput,
 ): Promise<SlaNotificationPolicy> {
-  return post<SlaNotificationPolicy>(`/api/admin/sla-notification-policies`, data);
+  return post<SlaNotificationPolicy>(`/api/sla-notification-policies`, data);
 }
 
 export async function updateSlaNotificationPolicy(
@@ -54,12 +54,12 @@ export async function updateSlaNotificationPolicy(
   data: SlaNotificationPolicyUpdateInput,
 ): Promise<SlaNotificationPolicy> {
   const response = await apiClient.patch<SlaNotificationPolicy>(
-    `/api/admin/sla-notification-policies/${id}`,
+    `/api/sla-notification-policies/${id}`,
     data,
   );
   return response.data;
 }
 
 export async function deleteSlaNotificationPolicy(id: string): Promise<void> {
-  await del<void>(`/api/admin/sla-notification-policies/${id}`);
+  await del<void>(`/api/sla-notification-policies/${id}`);
 }

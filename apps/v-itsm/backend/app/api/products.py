@@ -1,11 +1,11 @@
 """v-itsm 제품 카탈로그 API — 설계 §4.1.10.
 
 엔드포인트:
-  GET    /api/products        - 목록 (active/search 필터)
-  POST   /api/products        - 생성 (SYSTEM_ADMIN)
-  GET    /api/products/{id}   - 단건
-  PATCH  /api/products/{id}   - 수정 (SYSTEM_ADMIN)
-  DELETE /api/products/{id}   - 삭제 (SYSTEM_ADMIN)
+  GET    /api/ws/{wid}/products        - 목록 (active/search 필터)
+  POST   /api/ws/{wid}/products        - 생성 (SYSTEM_ADMIN)
+  GET    /api/ws/{wid}/products/{id}   - 단건
+  PATCH  /api/ws/{wid}/products/{id}   - 수정 (SYSTEM_ADMIN)
+  DELETE /api/ws/{wid}/products/{id}   - 삭제 (SYSTEM_ADMIN)
 """
 
 from __future__ import annotations
@@ -16,6 +16,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.schemas.product import (
     ProductCreate,
     ProductListResponse,
@@ -24,7 +26,7 @@ from app.schemas.product import (
 )
 from app.services import product_service
 
-router = APIRouter(prefix="/api/products", tags=["products"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/products", tags=["products"])
 
 
 def _require_admin(user: User) -> None:
@@ -40,9 +42,10 @@ async def list_products(
     search: str | None = Query(None),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ProductListResponse:
     items, total = product_service.list_products(
-        db, page=page, page_size=page_size, active=active, search=search
+        db, workspace_id=workspace.id, page=page, page_size=page_size, active=active, search=search
     )
     return ProductListResponse(
         items=[ProductOut.model_validate(p) for p in items],
@@ -57,9 +60,10 @@ async def create_product(
     payload: ProductCreate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ProductOut:
     _require_admin(current_user)
-    product = product_service.create_product(db, payload)
+    product = product_service.create_product(db, payload, workspace_id=workspace.id)
     return ProductOut.model_validate(product)
 
 
@@ -68,6 +72,7 @@ async def get_product(
     product_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ProductOut:
     product = product_service.get_product(db, product_id)
     if not product:
@@ -81,6 +86,7 @@ async def update_product(
     payload: ProductUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ProductOut:
     _require_admin(current_user)
     product = product_service.get_product(db, product_id)
@@ -95,6 +101,7 @@ async def delete_product(
     product_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> None:
     _require_admin(current_user)
     product = product_service.get_product(db, product_id)

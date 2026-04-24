@@ -18,6 +18,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.providers import provider_registry, reload_providers
 from app.schemas.common_message import Platform
 from app.schemas.integration_settings import (
@@ -27,7 +29,7 @@ from app.schemas.integration_settings import (
 )
 from app.services import integration_settings_service
 
-router = APIRouter(prefix="/api/admin/integrations", tags=["admin-integrations"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/integrations", tags=["integrations"])
 
 _CHANNEL_TO_PLATFORM = {
     "slack": Platform.SLACK,
@@ -44,9 +46,10 @@ def _require_admin(user: User) -> None:
 async def get_integrations(
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> IntegrationSettingsOut:
     _require_admin(current_user)
-    row = integration_settings_service.get_settings(db)
+    row = integration_settings_service.get_settings(db, workspace_id=workspace.id)
     return integration_settings_service.to_out(row)
 
 
@@ -55,10 +58,11 @@ async def update_integrations(
     payload: IntegrationSettingsUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> IntegrationSettingsOut:
     _require_admin(current_user)
     row = integration_settings_service.update_settings(
-        db, payload, actor_id=current_user.id
+        db, payload, actor_id=current_user.id, workspace_id=workspace.id
     )
     # provider 재초기화 — 실패해도 설정 변경은 유지 (fail-open)
     try:
@@ -73,6 +77,7 @@ async def test_integration(
     channel: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> IntegrationTestResult:
     _require_admin(current_user)
     if channel == "email":
@@ -93,7 +98,7 @@ async def test_integration(
 
     try:
         integration_settings_service.record_test_result(
-            db, channel, ok=ok, message=message
+            db, channel, ok=ok, message=message, workspace_id=workspace.id
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e

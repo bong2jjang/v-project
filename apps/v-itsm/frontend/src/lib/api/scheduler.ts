@@ -6,7 +6,7 @@ import type {
 } from "./itsmTypes";
 
 export async function listSchedulerJobs(): Promise<SchedulerJobListResponse> {
-  return get<SchedulerJobListResponse>(`/api/admin/scheduler/jobs`);
+  return get<SchedulerJobListResponse>(`/api/scheduler/jobs`);
 }
 
 export async function rescheduleJob(
@@ -14,7 +14,7 @@ export async function rescheduleJob(
   data: SchedulerRescheduleInput,
 ): Promise<SchedulerJob> {
   const response = await apiClient.patch<SchedulerJob>(
-    `/api/admin/scheduler/jobs/${jobId}`,
+    `/api/scheduler/jobs/${jobId}`,
     data,
   );
   return response.data;

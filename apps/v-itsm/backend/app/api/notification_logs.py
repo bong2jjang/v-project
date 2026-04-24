@@ -18,6 +18,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.providers import provider_registry
 from app.schemas.common_message import (
     Channel,
@@ -36,8 +38,8 @@ from app.schemas.notification_log import (
 from app.services import notification_log_service
 
 router = APIRouter(
-    prefix="/api/admin/notification-logs",
-    tags=["admin-notification-logs"],
+    prefix="/api/ws/{workspace_id}/notification-logs",
+    tags=["notification-logs"],
 )
 
 logger = structlog.get_logger(__name__)
@@ -60,9 +62,12 @@ async def list_notification_logs(
     filt: NotificationLogFilter = Depends(),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> NotificationLogListResponse:
     _require_admin(current_user)
-    items, total = notification_log_service.list_logs(db, filt)
+    items, total = notification_log_service.list_logs(
+        db, filt, workspace_id=workspace.id
+    )
     return NotificationLogListResponse(
         items=[NotificationLogOut.model_validate(r) for r in items],
         total=total,
@@ -76,6 +81,7 @@ async def get_notification_log(
     log_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> NotificationLogOut:
     _require_admin(current_user)
     row = notification_log_service.get_log(db, log_id)
@@ -91,6 +97,7 @@ async def retry_notification_log(
     log_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> NotificationLogRetryResult:
     _require_admin(current_user)
     row = notification_log_service.get_log(db, log_id)

@@ -28,6 +28,11 @@ class KPISnapshot(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
 

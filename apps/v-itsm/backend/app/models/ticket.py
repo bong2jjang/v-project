@@ -29,6 +29,11 @@ class Ticket(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     ticket_no = Column(String(32), unique=True, nullable=False, index=True)
 
     title = Column(String(200), nullable=False)

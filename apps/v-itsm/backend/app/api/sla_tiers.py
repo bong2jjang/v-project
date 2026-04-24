@@ -1,11 +1,11 @@
 """v-itsm SLA 티어 API — 설계 §4.1.11·§6.
 
 엔드포인트:
-  GET    /api/sla-tiers         - 목록 (active_only 옵션)
-  POST   /api/sla-tiers         - 생성 (SYSTEM_ADMIN)
-  GET    /api/sla-tiers/{id}    - 단건
-  PATCH  /api/sla-tiers/{id}    - 수정 (SYSTEM_ADMIN)
-  DELETE /api/sla-tiers/{id}    - 삭제 (SYSTEM_ADMIN)
+  GET    /api/ws/{wid}/sla-tiers         - 목록 (active_only 옵션)
+  POST   /api/ws/{wid}/sla-tiers         - 생성 (SYSTEM_ADMIN)
+  GET    /api/ws/{wid}/sla-tiers/{id}    - 단건
+  PATCH  /api/ws/{wid}/sla-tiers/{id}    - 수정 (SYSTEM_ADMIN)
+  DELETE /api/ws/{wid}/sla-tiers/{id}    - 삭제 (SYSTEM_ADMIN)
 """
 
 from __future__ import annotations
@@ -16,6 +16,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.schemas.sla_tier import (
     SLATierCreate,
     SLATierListResponse,
@@ -24,7 +26,7 @@ from app.schemas.sla_tier import (
 )
 from app.services import sla_tier_service
 
-router = APIRouter(prefix="/api/sla-tiers", tags=["sla-tiers"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/sla-tiers", tags=["sla-tiers"])
 
 
 def _require_admin(user: User) -> None:
@@ -37,8 +39,9 @@ async def list_tiers(
     active_only: bool = Query(False),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLATierListResponse:
-    items = sla_tier_service.list_tiers(db, active_only=active_only)
+    items = sla_tier_service.list_tiers(db, workspace_id=workspace.id, active_only=active_only)
     return SLATierListResponse(
         items=[SLATierOut.model_validate(t) for t in items],
         total=len(items),
@@ -50,9 +53,10 @@ async def create_tier(
     payload: SLATierCreate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLATierOut:
     _require_admin(current_user)
-    tier = sla_tier_service.create_tier(db, payload)
+    tier = sla_tier_service.create_tier(db, payload, workspace_id=workspace.id)
     return SLATierOut.model_validate(tier)
 
 
@@ -61,6 +65,7 @@ async def get_tier(
     tier_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLATierOut:
     tier = sla_tier_service.get_tier(db, tier_id)
     if not tier:
@@ -74,6 +79,7 @@ async def update_tier(
     payload: SLATierUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLATierOut:
     _require_admin(current_user)
     tier = sla_tier_service.get_tier(db, tier_id)
@@ -88,6 +94,7 @@ async def delete_tier(
     tier_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> None:
     _require_admin(current_user)
     tier = sla_tier_service.get_tier(db, tier_id)

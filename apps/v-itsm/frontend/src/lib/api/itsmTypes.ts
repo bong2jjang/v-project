@@ -347,6 +347,9 @@ export interface Ticket {
   reopened_count: number;
   created_at: string;
   updated_at: string;
+
+  workspace_id?: string | null;
+  workspace_name?: string | null;
 }
 
 export interface TicketIntakeInput {

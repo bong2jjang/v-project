@@ -14,9 +14,10 @@ def _new_ulid() -> str:
     return str(ULID())
 
 
-def create_tier(db: Session, payload: SLATierCreate) -> SLATier:
+def create_tier(db: Session, payload: SLATierCreate, *, workspace_id: str) -> SLATier:
     row = SLATier(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         code=payload.code,
         name=payload.name,
         description=payload.description,
@@ -34,13 +35,19 @@ def get_tier(db: Session, tier_id: str) -> SLATier | None:
     return db.get(SLATier, tier_id)
 
 
-def get_tier_by_code(db: Session, code: str) -> SLATier | None:
-    stmt = select(SLATier).where(SLATier.code == code)
+def get_tier_by_code(db: Session, code: str, *, workspace_id: str) -> SLATier | None:
+    stmt = select(SLATier).where(
+        SLATier.code == code, SLATier.workspace_id == workspace_id
+    )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def list_tiers(db: Session, *, active_only: bool = False) -> list[SLATier]:
-    stmt = select(SLATier).order_by(SLATier.code.asc())
+def list_tiers(
+    db: Session, *, workspace_id: str, active_only: bool = False
+) -> list[SLATier]:
+    stmt = select(SLATier).where(SLATier.workspace_id == workspace_id).order_by(
+        SLATier.code.asc()
+    )
     if active_only:
         stmt = stmt.where(SLATier.active.is_(True))
     return list(db.execute(stmt).scalars().all())

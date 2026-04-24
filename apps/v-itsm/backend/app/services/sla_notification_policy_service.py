@@ -23,10 +23,11 @@ def _new_ulid() -> str:
 
 
 def create_policy(
-    db: Session, payload: SLANotificationPolicyCreate
+    db: Session, payload: SLANotificationPolicyCreate, *, workspace_id: str
 ) -> SLANotificationPolicy:
     row = SLANotificationPolicy(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         name=payload.name,
         trigger_event=payload.trigger_event,
         applies_priority=payload.applies_priority.value
@@ -56,6 +57,7 @@ def get_policy(db: Session, policy_id: str) -> SLANotificationPolicy | None:
 def list_policies(
     db: Session,
     *,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 50,
     trigger_event: str | None = None,
@@ -64,8 +66,9 @@ def list_policies(
     active_only: bool = False,
     search: str | None = None,
 ) -> tuple[list[SLANotificationPolicy], int]:
-    stmt = select(SLANotificationPolicy)
-    count_stmt = select(func.count()).select_from(SLANotificationPolicy)
+    base = SLANotificationPolicy.workspace_id == workspace_id
+    stmt = select(SLANotificationPolicy).where(base)
+    count_stmt = select(func.count()).select_from(SLANotificationPolicy).where(base)
     if trigger_event is not None:
         stmt = stmt.where(SLANotificationPolicy.trigger_event == trigger_event)
         count_stmt = count_stmt.where(
@@ -130,6 +133,7 @@ def delete_policy(db: Session, policy: SLANotificationPolicy) -> None:
 def resolve_for_event(
     db: Session,
     *,
+    workspace_id: str,
     trigger_event: str,
     priority: str | None,
     service_type: str | None,
@@ -140,6 +144,7 @@ def resolve_for_event(
     notification_service 는 여기서 반환된 정책들의 채널/대상을 union 해서 발송한다.
     """
     stmt = select(SLANotificationPolicy).where(
+        SLANotificationPolicy.workspace_id == workspace_id,
         SLANotificationPolicy.active.is_(True),
         SLANotificationPolicy.trigger_event == trigger_event,
         or_(

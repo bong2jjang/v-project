@@ -20,9 +20,12 @@ def _new_ulid() -> str:
 
 
 # ─── Customer ────────────────────────────────────────────────
-def create_customer(db: Session, payload: CustomerCreate) -> Customer:
+def create_customer(
+    db: Session, payload: CustomerCreate, *, workspace_id: str
+) -> Customer:
     row = Customer(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         code=payload.code,
         name=payload.name,
         service_type=payload.service_type.value,
@@ -43,14 +46,16 @@ def get_customer(db: Session, customer_id: str) -> Customer | None:
 def list_customers(
     db: Session,
     *,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 20,
     service_type: str | None = None,
     status: str | None = None,
     search: str | None = None,
 ) -> tuple[list[Customer], int]:
-    stmt = select(Customer).order_by(Customer.name.asc())
-    count_stmt = select(func.count()).select_from(Customer)
+    base = Customer.workspace_id == workspace_id
+    stmt = select(Customer).where(base).order_by(Customer.name.asc())
+    count_stmt = select(func.count()).select_from(Customer).where(base)
     if service_type:
         stmt = stmt.where(Customer.service_type == service_type)
         count_stmt = count_stmt.where(Customer.service_type == service_type)

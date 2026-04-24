@@ -25,6 +25,11 @@ class Contract(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     contract_no = Column(String(50), unique=True, nullable=False)
     customer_id = Column(
         String(26),

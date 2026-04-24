@@ -24,6 +24,11 @@ class Customer(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     code = Column(String(50), unique=True, nullable=False)
     name = Column(String(200), nullable=False)
     service_type = Column(String(20), nullable=False)

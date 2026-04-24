@@ -34,6 +34,11 @@ class LoopTransition(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     ticket_id = Column(
         String(26),
         ForeignKey("itsm_ticket.id", ondelete="CASCADE"),
@@ -91,6 +96,11 @@ class LoopTransitionRevision(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     transition_id = Column(
         String(26),
         ForeignKey("itsm_loop_transition.id", ondelete="CASCADE"),

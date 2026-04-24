@@ -25,6 +25,11 @@ class SLAPolicy(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     name = Column(String(100), nullable=False)
     priority = Column(String(20), nullable=False)
     category = Column(String(100), nullable=True)
@@ -56,6 +61,11 @@ class SLATimer(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     ticket_id = Column(
         String(26),
         ForeignKey("itsm_ticket.id", ondelete="CASCADE"),

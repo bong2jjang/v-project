@@ -35,6 +35,7 @@ from app.api import customers as customers_router
 from app.api import integrations as integrations_router
 from app.api import kpi as kpi_router
 from app.api import me_notification_pref as me_notification_pref_router
+from app.api import my_work as my_work_router
 from app.api import notification_logs as notification_logs_router
 from app.api import products as products_router
 from app.api import scheduler as scheduler_router
@@ -45,6 +46,10 @@ from app.api import sla_tiers as sla_tiers_router
 from app.api import sla_timers as sla_timers_router
 from app.api import tickets as tickets_router
 from app.api import transitions as transitions_router
+from app.api import workspaces as workspaces_router
+from app.api.admin import all_work as admin_all_work_router
+from app.api.admin import workspaces as admin_workspaces_router
+from app.middleware.legacy_redirect import LegacyRedirectMiddleware
 from app.providers import init_providers_from_env, shutdown_providers
 from app.services import sla_timer  # noqa: F401 — JobSpec 을 레지스트리에 등록하는 side-effect
 from app.services.scheduler_registry import scheduler_registry
@@ -114,8 +119,16 @@ platform.register_app_routers(
     integrations_router.router,
     notification_logs_router.router,
     me_notification_pref_router.router,
+    me_notification_pref_router.default_router,
     kpi_router.router,
+    workspaces_router.router,
+    my_work_router.router,
+    admin_workspaces_router.router,
+    admin_all_work_router.router,
 )
+
+# ── 레거시 경로 307 리다이렉트 (v0.2~v0.3 호환 기간) ──
+platform.fastapi.add_middleware(LegacyRedirectMiddleware)
 
 # ── ASGI app ──
 app = platform.fastapi

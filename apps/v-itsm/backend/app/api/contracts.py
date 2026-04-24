@@ -1,11 +1,11 @@
 """v-itsm 계약 API — 설계 §4.1.12·§4.1.13.
 
 엔드포인트:
-  GET    /api/contracts        - 목록 (customer/status/search)
-  POST   /api/contracts        - 생성 (SYSTEM_ADMIN) + product_ids 연계
-  GET    /api/contracts/{id}   - 단건 (product_ids 포함)
-  PATCH  /api/contracts/{id}   - 수정 (SYSTEM_ADMIN)
-  DELETE /api/contracts/{id}   - 삭제 (SYSTEM_ADMIN)
+  GET    /api/ws/{wid}/contracts        - 목록 (customer/status/search)
+  POST   /api/ws/{wid}/contracts        - 생성 (SYSTEM_ADMIN) + product_ids 연계
+  GET    /api/ws/{wid}/contracts/{id}   - 단건 (product_ids 포함)
+  PATCH  /api/ws/{wid}/contracts/{id}   - 수정 (SYSTEM_ADMIN)
+  DELETE /api/ws/{wid}/contracts/{id}   - 삭제 (SYSTEM_ADMIN)
 """
 
 from __future__ import annotations
@@ -16,7 +16,9 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
 from app.models.contract import Contract
+from app.models.workspace import Workspace
 from app.schemas.contract import (
     ContractCreate,
     ContractListResponse,
@@ -25,7 +27,7 @@ from app.schemas.contract import (
 )
 from app.services import contract_service
 
-router = APIRouter(prefix="/api/contracts", tags=["contracts"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/contracts", tags=["contracts"])
 
 
 def _require_admin(user: User) -> None:
@@ -62,9 +64,11 @@ async def list_contracts(
     search: str | None = Query(None),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ContractListResponse:
     items, total = contract_service.list_contracts(
         db,
+        workspace_id=workspace.id,
         page=page,
         page_size=page_size,
         customer_id=customer_id,
@@ -84,9 +88,10 @@ async def create_contract(
     payload: ContractCreate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ContractOut:
     _require_admin(current_user)
-    contract = contract_service.create_contract(db, payload)
+    contract = contract_service.create_contract(db, payload, workspace_id=workspace.id)
     return _to_out(db, contract)
 
 
@@ -95,6 +100,7 @@ async def get_contract(
     contract_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ContractOut:
     contract = contract_service.get_contract(db, contract_id)
     if not contract:
@@ -108,6 +114,7 @@ async def update_contract(
     payload: ContractUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> ContractOut:
     _require_admin(current_user)
     contract = contract_service.get_contract(db, contract_id)
@@ -122,6 +129,7 @@ async def delete_contract(
     contract_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> None:
     _require_admin(current_user)
     contract = contract_service.get_contract(db, contract_id)

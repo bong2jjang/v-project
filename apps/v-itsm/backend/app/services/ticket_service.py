@@ -19,6 +19,7 @@ from app.models.enums import LoopAction, LoopStage, RequestServiceType, ScopeLev
 from app.models.loop import LoopTransition
 from app.models.product import Product
 from app.models.ticket import Ticket
+from app.models.workspace import Workspace
 from app.schemas.ticket import (
     TicketIntakeRequest,
     TicketTransitionRequest,
@@ -64,6 +65,8 @@ def create_from_intake(
     db: Session,
     payload: TicketIntakeRequest,
     current_user: User,
+    *,
+    workspace_id: str,
 ) -> Ticket:
     scope = access_control.get_user_scope(db, current_user)
     if not access_control.check_customer_product_access(
@@ -84,6 +87,7 @@ def create_from_intake(
 
     ticket = Ticket(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         ticket_no=_issue_ticket_no(db),
         title=payload.title,
         description=payload.description,
@@ -125,9 +129,11 @@ def get(
     db: Session,
     ticket_id: str,
     current_user: User,
+    *,
+    workspace_id: str,
 ) -> Ticket | None:
     ticket = db.get(Ticket, ticket_id)
-    if ticket is None:
+    if ticket is None or ticket.workspace_id != workspace_id:
         return None
     scope = access_control.get_user_scope(db, current_user)
     if not access_control.check_ticket_access(scope, ticket, ScopeLevel.READ):
@@ -139,6 +145,7 @@ def list_tickets(
     db: Session,
     *,
     current_user: User,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 20,
     stage: LoopStage | None = None,
@@ -148,8 +155,8 @@ def list_tickets(
     product_id: str | None = None,
 ) -> tuple[list[Ticket], int]:
     scope = access_control.get_user_scope(db, current_user)
-    stmt = select(Ticket).order_by(Ticket.opened_at.desc())
-    count_stmt = select(func.count()).select_from(Ticket)
+    stmt = select(Ticket).where(Ticket.workspace_id == workspace_id).order_by(Ticket.opened_at.desc())
+    count_stmt = select(func.count()).select_from(Ticket).where(Ticket.workspace_id == workspace_id)
 
     stmt = access_control.apply_scope_to_query(stmt, scope, required=ScopeLevel.READ)
     count_stmt = access_control.apply_scope_to_query(count_stmt, scope, required=ScopeLevel.READ)
@@ -174,6 +181,61 @@ def list_tickets(
     offset = max(0, (page - 1) * page_size)
     items = db.execute(stmt.offset(offset).limit(page_size)).scalars().all()
     return list(items), int(total)
+
+
+def list_tickets_cross_workspace(
+    db: Session,
+    *,
+    current_user: User,
+    page: int = 1,
+    page_size: int = 20,
+    stage: LoopStage | None = None,
+    owner_id: int | None = None,
+    service_type: RequestServiceType | None = None,
+    customer_id: str | None = None,
+    product_id: str | None = None,
+    workspace_id: str | None = None,
+) -> tuple[list[tuple[Ticket, str | None]], int]:
+    """전 워크스페이스 대상 티켓 조회 (/my-work, /admin/all-work).
+
+    - workspace_id 필터를 강제하지 않고, 필요 시 선택적으로 받음.
+    - ScopeGrant 기반 ACL 은 기존 list_tickets 와 동일하게 적용 (SYSTEM_ADMIN 은 전권).
+    - 응답에 WS 이름을 붙이기 위해 Workspace 를 LEFT JOIN 하여 (Ticket, ws_name) 을 반환.
+    """
+    scope = access_control.get_user_scope(db, current_user)
+    stmt = (
+        select(Ticket, Workspace.name)
+        .outerjoin(Workspace, Workspace.id == Ticket.workspace_id)
+        .order_by(Ticket.opened_at.desc())
+    )
+    count_stmt = select(func.count()).select_from(Ticket)
+
+    stmt = access_control.apply_scope_to_query(stmt, scope, required=ScopeLevel.READ)
+    count_stmt = access_control.apply_scope_to_query(count_stmt, scope, required=ScopeLevel.READ)
+
+    if workspace_id is not None:
+        stmt = stmt.where(Ticket.workspace_id == workspace_id)
+        count_stmt = count_stmt.where(Ticket.workspace_id == workspace_id)
+    if stage is not None:
+        stmt = stmt.where(Ticket.current_stage == stage.value)
+        count_stmt = count_stmt.where(Ticket.current_stage == stage.value)
+    if owner_id is not None:
+        stmt = stmt.where(Ticket.current_owner_id == owner_id)
+        count_stmt = count_stmt.where(Ticket.current_owner_id == owner_id)
+    if service_type is not None:
+        stmt = stmt.where(Ticket.service_type == service_type.value)
+        count_stmt = count_stmt.where(Ticket.service_type == service_type.value)
+    if customer_id is not None:
+        stmt = stmt.where(Ticket.customer_id == customer_id)
+        count_stmt = count_stmt.where(Ticket.customer_id == customer_id)
+    if product_id is not None:
+        stmt = stmt.where(Ticket.product_id == product_id)
+        count_stmt = count_stmt.where(Ticket.product_id == product_id)
+
+    total = db.execute(count_stmt).scalar_one()
+    offset = max(0, (page - 1) * page_size)
+    rows = db.execute(stmt.offset(offset).limit(page_size)).all()
+    return [(t, name) for t, name in rows], int(total)
 
 
 def update(

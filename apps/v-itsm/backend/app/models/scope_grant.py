@@ -20,11 +20,12 @@ class ScopeGrant(Base):
     __tablename__ = "itsm_scope_grant"
     __table_args__ = (
         UniqueConstraint(
+            "workspace_id",
             "permission_group_id",
             "service_type",
             "customer_id",
             "product_id",
-            name="uq_itsm_scope_grant_tuple",
+            name="uq_itsm_scope_grant_ws_tuple",
         ),
         Index("ix_itsm_scope_grant_group", "permission_group_id"),
         Index("ix_itsm_scope_grant_customer", "customer_id"),
@@ -32,6 +33,11 @@ class ScopeGrant(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     permission_group_id = Column(
         Integer,
         ForeignKey("permission_groups.id", ondelete="CASCADE"),

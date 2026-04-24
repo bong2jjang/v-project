@@ -8,6 +8,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    ForeignKey,
     Index,
     String,
 )
@@ -26,6 +27,11 @@ class SLANotificationPolicy(Base):
     )
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     name = Column(String(100), nullable=False)
     trigger_event = Column(String(20), nullable=False)  # warning | breach
     applies_priority = Column(String(20), nullable=True)

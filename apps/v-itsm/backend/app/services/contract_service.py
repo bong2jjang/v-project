@@ -35,9 +35,12 @@ def get_product_ids(db: Session, contract_id: str) -> list[str]:
     return [row for row in db.execute(stmt).scalars().all()]
 
 
-def create_contract(db: Session, payload: ContractCreate) -> Contract:
+def create_contract(
+    db: Session, payload: ContractCreate, *, workspace_id: str
+) -> Contract:
     row = Contract(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         contract_no=payload.contract_no,
         customer_id=payload.customer_id,
         name=payload.name,
@@ -63,14 +66,16 @@ def get_contract(db: Session, contract_id: str) -> Contract | None:
 def list_contracts(
     db: Session,
     *,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 20,
     customer_id: str | None = None,
     status: str | None = None,
     search: str | None = None,
 ) -> tuple[list[Contract], int]:
-    stmt = select(Contract).order_by(Contract.created_at.desc())
-    count_stmt = select(func.count()).select_from(Contract)
+    base = Contract.workspace_id == workspace_id
+    stmt = select(Contract).where(base).order_by(Contract.created_at.desc())
+    count_stmt = select(func.count()).select_from(Contract).where(base)
     if customer_id:
         stmt = stmt.where(Contract.customer_id == customer_id)
         count_stmt = count_stmt.where(Contract.customer_id == customer_id)

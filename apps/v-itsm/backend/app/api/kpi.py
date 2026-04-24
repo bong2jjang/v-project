@@ -18,9 +18,11 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
 from app.models.enums import ScopeLevel
 from app.models.sla import SLATimer
 from app.models.ticket import Ticket
+from app.models.workspace import Workspace
 from app.schemas.kpi import (
     KPISummaryOut,
     PriorityCount,
@@ -29,13 +31,14 @@ from app.schemas.kpi import (
 )
 from app.services import access_control
 
-router = APIRouter(prefix="/api/kpi", tags=["kpi"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/kpi", tags=["kpi"])
 
 
 @router.get("/summary", response_model=KPISummaryOut)
 async def kpi_summary(
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> KPISummaryOut:
     scope = access_control.get_user_scope(db, current_user)
     now = datetime.now(timezone.utc)
@@ -43,7 +46,11 @@ async def kpi_summary(
 
     # ── 스코프 적용 공용 WHERE (Ticket 에 직접 붙음) ──
     def scoped_ticket_select(*cols):
-        stmt = select(*cols).select_from(Ticket)
+        stmt = (
+            select(*cols)
+            .select_from(Ticket)
+            .where(Ticket.workspace_id == workspace.id)
+        )
         return access_control.apply_scope_to_query(
             stmt, scope, required=ScopeLevel.READ
         )
@@ -139,6 +146,7 @@ async def kpi_summary(
         )
         .select_from(SLATimer)
         .join(Ticket, Ticket.id == SLATimer.ticket_id)
+        .where(Ticket.workspace_id == workspace.id)
     )
     sla_base_cte = access_control.apply_scope_to_query(
         sla_base_cte, scope, required=ScopeLevel.READ

@@ -1,4 +1,4 @@
-"""Integration Settings service — 싱글턴(id=1) get/update + 연결 테스트 기록.
+"""Integration Settings service — workspace별 싱글턴 get/update + 연결 테스트 기록.
 
 설계 §4.2·§7.3. 민감값은 모델의 `*_decrypted`/`*_enc` 프로퍼티 세터를 통해서만
 저장(자동 Fernet 암호화). 응답 DTO 는 `*_set: bool` 로만 노출.
@@ -6,8 +6,7 @@
 운영상 주의
   * `update_settings` 에서 빈 문자열("")은 **삭제 의미** 로 해석해 컬럼을 NULL 처리.
   * `None` (또는 DTO 에서 `exclude_unset`) 은 **변경 없음** 의미.
-  * 초기 싱글턴 row 는 a011 마이그레이션 의 `INSERT ... ON CONFLICT DO NOTHING` 로
-    보장되지만, 부재 시에는 `ensure_row` 가 lazy-create.
+  * 워크스페이스별 row 는 lazy-create (`ensure_row`) 로 보장.
 """
 
 from __future__ import annotations
@@ -16,6 +15,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from ulid import ULID
 
 from app.models.integration_settings import IntegrationSettings
 from app.schemas.integration_settings import (
@@ -23,8 +23,6 @@ from app.schemas.integration_settings import (
     IntegrationSettingsUpdate,
     IntegrationTestResult,
 )
-
-_SINGLETON_ID = 1
 
 # 평문/암호화 모두 프로퍼티 세터로 쓰기 — 직접 `*_enc` 접근 금지
 _SECRET_FIELDS = (
@@ -49,28 +47,33 @@ _PLAIN_FIELDS = (
 )
 
 
-def ensure_row(db: Session) -> IntegrationSettings:
-    """싱글턴 row 보장. 없으면 id=1 로 생성."""
-    row = db.get(IntegrationSettings, _SINGLETON_ID)
+def ensure_row(db: Session, workspace_id: str) -> IntegrationSettings:
+    """워크스페이스별 singleton row 보장. 없으면 신규 생성."""
+    row = db.execute(
+        select(IntegrationSettings).where(
+            IntegrationSettings.workspace_id == workspace_id
+        )
+    ).scalar_one_or_none()
     if row is None:
-        row = IntegrationSettings(id=_SINGLETON_ID)
+        row = IntegrationSettings(workspace_id=workspace_id)
         db.add(row)
         db.commit()
         db.refresh(row)
     return row
 
 
-def get_settings(db: Session) -> IntegrationSettings:
-    return ensure_row(db)
+def get_settings(db: Session, *, workspace_id: str) -> IntegrationSettings:
+    return ensure_row(db, workspace_id)
 
 
 def update_settings(
     db: Session,
     payload: IntegrationSettingsUpdate,
     *,
+    workspace_id: str,
     actor_id: int | None,
 ) -> IntegrationSettings:
-    row = ensure_row(db)
+    row = ensure_row(db, workspace_id)
     data = payload.model_dump(exclude_unset=True)
 
     for field in _SECRET_FIELDS:
@@ -103,11 +106,12 @@ def record_test_result(
     db: Session,
     channel: str,
     *,
+    workspace_id: str,
     ok: bool,
     message: str,
 ) -> IntegrationSettings:
     """연결 테스트 결과를 저장(채널별 last_test_*). channel: slack|teams|email."""
-    row = ensure_row(db)
+    row = ensure_row(db, workspace_id)
     now = datetime.now(timezone.utc)
     if channel == "slack":
         row.slack_last_test_at = now
@@ -172,10 +176,12 @@ def to_out(row: IntegrationSettings) -> IntegrationSettingsOut:
     )
 
 
-def get_slack_plaintext(db: Session) -> dict[str, str | None]:
+def get_slack_plaintext(db: Session, *, workspace_id: str) -> dict[str, str | None]:
     """Provider 초기화용 평문 Slack 구성 반환 (없으면 값 None)."""
     row = db.execute(
-        select(IntegrationSettings).where(IntegrationSettings.id == _SINGLETON_ID)
+        select(IntegrationSettings).where(
+            IntegrationSettings.workspace_id == workspace_id
+        )
     ).scalar_one_or_none()
     if row is None:
         return {"bot_token": None, "app_token": None, "signing_secret": None}
@@ -187,9 +193,11 @@ def get_slack_plaintext(db: Session) -> dict[str, str | None]:
     }
 
 
-def get_teams_plaintext(db: Session) -> dict[str, str | None]:
+def get_teams_plaintext(db: Session, *, workspace_id: str) -> dict[str, str | None]:
     row = db.execute(
-        select(IntegrationSettings).where(IntegrationSettings.id == _SINGLETON_ID)
+        select(IntegrationSettings).where(
+            IntegrationSettings.workspace_id == workspace_id
+        )
     ).scalar_one_or_none()
     if row is None:
         return {
@@ -210,9 +218,13 @@ def get_teams_plaintext(db: Session) -> dict[str, str | None]:
     }
 
 
-def get_email_plaintext(db: Session) -> dict[str, str | int | None]:
+def get_email_plaintext(
+    db: Session, *, workspace_id: str
+) -> dict[str, str | int | None]:
     row = db.execute(
-        select(IntegrationSettings).where(IntegrationSettings.id == _SINGLETON_ID)
+        select(IntegrationSettings).where(
+            IntegrationSettings.workspace_id == workspace_id
+        )
     ).scalar_one_or_none()
     if row is None:
         return {

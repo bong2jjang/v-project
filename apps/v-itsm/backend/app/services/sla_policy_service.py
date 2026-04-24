@@ -21,9 +21,12 @@ def _new_ulid() -> str:
     return str(ULID())
 
 
-def create_policy(db: Session, payload: SLAPolicyCreate) -> SLAPolicy:
+def create_policy(
+    db: Session, payload: SLAPolicyCreate, *, workspace_id: str
+) -> SLAPolicy:
     row = SLAPolicy(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         name=payload.name,
         priority=payload.priority.value,
         category=payload.category,
@@ -45,6 +48,7 @@ def get_policy(db: Session, policy_id: str) -> SLAPolicy | None:
 def list_policies(
     db: Session,
     *,
+    workspace_id: str,
     page: int = 1,
     page_size: int = 50,
     priority: Priority | None = None,
@@ -52,8 +56,9 @@ def list_policies(
     active_only: bool = False,
     search: str | None = None,
 ) -> tuple[list[SLAPolicy], int]:
-    stmt = select(SLAPolicy)
-    count_stmt = select(func.count()).select_from(SLAPolicy)
+    base = SLAPolicy.workspace_id == workspace_id
+    stmt = select(SLAPolicy).where(base)
+    count_stmt = select(func.count()).select_from(SLAPolicy).where(base)
     if priority is not None:
         stmt = stmt.where(SLAPolicy.priority == priority.value)
         count_stmt = count_stmt.where(SLAPolicy.priority == priority.value)

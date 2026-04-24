@@ -87,6 +87,10 @@ class TicketOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    # Cross-workspace 조회 시 응답에 WS 컨텍스트를 포함 (v0.6 /my-work, /admin/all-work).
+    workspace_id: str | None = None
+    workspace_name: str | None = None
+
 
 class TicketListResponse(BaseModel):
     items: list[TicketOut]

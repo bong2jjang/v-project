@@ -7,14 +7,14 @@ import type {
 } from "./itsmTypes";
 
 export async function getIntegrationSettings(): Promise<IntegrationSettings> {
-  return get<IntegrationSettings>(`/api/admin/integrations`);
+  return get<IntegrationSettings>(`/api/integrations`);
 }
 
 export async function updateIntegrationSettings(
   data: IntegrationSettingsUpdateInput,
 ): Promise<IntegrationSettings> {
   const response = await apiClient.patch<IntegrationSettings>(
-    `/api/admin/integrations`,
+    `/api/integrations`,
     data,
   );
   return response.data;
@@ -23,5 +23,5 @@ export async function updateIntegrationSettings(
 export async function testIntegration(
   channel: IntegrationChannel,
 ): Promise<IntegrationTestResult> {
-  return post<IntegrationTestResult>(`/api/admin/integrations/test/${channel}`, {});
+  return post<IntegrationTestResult>(`/api/integrations/test/${channel}`, {});
 }

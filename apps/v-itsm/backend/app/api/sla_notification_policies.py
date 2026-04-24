@@ -12,7 +12,9 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
 from app.models.enums import Priority, RequestServiceType
+from app.models.workspace import Workspace
 from app.schemas.sla_notification_policy import (
     SLANotificationPolicyCreate,
     SLANotificationPolicyListResponse,
@@ -22,8 +24,8 @@ from app.schemas.sla_notification_policy import (
 from app.services import sla_notification_policy_service
 
 router = APIRouter(
-    prefix="/api/admin/sla-notification-policies",
-    tags=["admin-sla-notification-policies"],
+    prefix="/api/ws/{workspace_id}/sla-notification-policies",
+    tags=["sla-notification-policies"],
 )
 
 
@@ -43,10 +45,12 @@ async def list_policies(
     search: str | None = Query(None),
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLANotificationPolicyListResponse:
     _require_admin(current_user)
     items, total = sla_notification_policy_service.list_policies(
         db,
+        workspace_id=workspace.id,
         page=page,
         page_size=page_size,
         trigger_event=trigger_event,
@@ -70,9 +74,12 @@ async def create_policy(
     payload: SLANotificationPolicyCreate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLANotificationPolicyOut:
     _require_admin(current_user)
-    policy = sla_notification_policy_service.create_policy(db, payload)
+    policy = sla_notification_policy_service.create_policy(
+        db, payload, workspace_id=workspace.id
+    )
     return SLANotificationPolicyOut.model_validate(policy)
 
 
@@ -81,6 +88,7 @@ async def get_policy(
     policy_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLANotificationPolicyOut:
     _require_admin(current_user)
     policy = sla_notification_policy_service.get_policy(db, policy_id)
@@ -97,6 +105,7 @@ async def update_policy(
     payload: SLANotificationPolicyUpdate,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SLANotificationPolicyOut:
     _require_admin(current_user)
     policy = sla_notification_policy_service.get_policy(db, policy_id)
@@ -113,6 +122,7 @@ async def delete_policy(
     policy_id: str,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> None:
     _require_admin(current_user)
     policy = sla_notification_policy_service.get_policy(db, policy_id)

@@ -22,6 +22,11 @@ class SchedulerOverride(Base):
     __tablename__ = "itsm_scheduler_override"
 
     job_id = Column(String(50), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     interval_seconds = Column(Integer, nullable=False)
     paused = Column(Boolean, nullable=False, default=False)
 

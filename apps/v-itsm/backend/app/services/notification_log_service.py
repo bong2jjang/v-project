@@ -27,6 +27,7 @@ def _new_ulid() -> str:
 def create_pending(
     db: Session,
     *,
+    workspace_id: str,
     ticket_id: str | None,
     event_type: str,
     channel: str,
@@ -36,6 +37,7 @@ def create_pending(
 ) -> NotificationLog:
     row = NotificationLog(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         ticket_id=ticket_id,
         event_type=event_type,
         channel=channel,
@@ -83,9 +85,9 @@ def get_log(db: Session, log_id: str) -> NotificationLog | None:
 
 
 def list_logs(
-    db: Session, filt: NotificationLogFilter
+    db: Session, filt: NotificationLogFilter, *, workspace_id: str
 ) -> tuple[list[NotificationLog], int]:
-    conds = []
+    conds = [NotificationLog.workspace_id == workspace_id]
     if filt.status:
         conds.append(NotificationLog.status == filt.status)
     if filt.channel:
@@ -109,12 +111,13 @@ def list_logs(
             )
         )
 
-    where = and_(*conds) if conds else None
-    total_stmt = select(func.count(NotificationLog.id))
-    list_stmt = select(NotificationLog).order_by(NotificationLog.created_at.desc())
-    if where is not None:
-        total_stmt = total_stmt.where(where)
-        list_stmt = list_stmt.where(where)
+    where = and_(*conds)
+    total_stmt = select(func.count(NotificationLog.id)).where(where)
+    list_stmt = (
+        select(NotificationLog)
+        .where(where)
+        .order_by(NotificationLog.created_at.desc())
+    )
 
     total = int(db.execute(total_stmt).scalar_one())
     offset = (filt.page - 1) * filt.page_size

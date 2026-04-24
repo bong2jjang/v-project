@@ -13,6 +13,8 @@ from v_platform.core.database import get_db_session
 from v_platform.models.user import User, UserRole
 from v_platform.utils.auth import get_current_user
 
+from app.deps.workspace import get_current_workspace
+from app.models.workspace import Workspace
 from app.schemas.scheduler import (
     SchedulerJobListResponse,
     SchedulerJobOut,
@@ -20,7 +22,7 @@ from app.schemas.scheduler import (
 )
 from app.services.scheduler_registry import scheduler_registry
 
-router = APIRouter(prefix="/api/admin/scheduler", tags=["admin-scheduler"])
+router = APIRouter(prefix="/api/ws/{workspace_id}/scheduler", tags=["scheduler"])
 
 
 def _require_admin(user: User) -> None:
@@ -32,6 +34,7 @@ def _require_admin(user: User) -> None:
 async def list_jobs(
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SchedulerJobListResponse:
     _require_admin(current_user)
     items = scheduler_registry.snapshot(db)
@@ -47,6 +50,7 @@ async def reschedule_job(
     payload: SchedulerRescheduleIn,
     db: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
+    workspace: Workspace = Depends(get_current_workspace),
 ) -> SchedulerJobOut:
     _require_admin(current_user)
     try:

@@ -20,19 +20,19 @@ export async function listNotificationLogs(
   filter: NotificationLogFilter = {},
 ): Promise<NotificationLogListResponse> {
   return get<NotificationLogListResponse>(
-    `/api/admin/notification-logs${toQuery(filter)}`,
+    `/api/notification-logs${toQuery(filter)}`,
   );
 }
 
 export async function getNotificationLog(id: string): Promise<NotificationLog> {
-  return get<NotificationLog>(`/api/admin/notification-logs/${id}`);
+  return get<NotificationLog>(`/api/notification-logs/${id}`);
 }
 
 export async function retryNotificationLog(
   id: string,
 ): Promise<NotificationLogRetryResult> {
   return post<NotificationLogRetryResult>(
-    `/api/admin/notification-logs/${id}/retry`,
+    `/api/notification-logs/${id}/retry`,
     {},
   );
 }

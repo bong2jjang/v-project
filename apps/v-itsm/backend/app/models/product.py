@@ -8,6 +8,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    ForeignKey,
     String,
     Text,
 )
@@ -18,6 +19,11 @@ class Product(Base):
     __tablename__ = "itsm_product"
 
     id = Column(String(26), primary_key=True)
+    workspace_id = Column(
+        String(26),
+        ForeignKey("itsm_workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     code = Column(String(50), unique=True, nullable=False)
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)

@@ -1,7 +1,7 @@
 """User Notification Preference service.
 
-user_id UNIQUE 이므로 본인 upsert(`get_or_create_my` + `update_my`) 패턴과
-관리자용 단건 조회/삭제만 노출. 라우터에서는 `/api/me/notification-pref` 로
+user_id + workspace_id 복합 UNIQUE 이므로 본인 upsert(`get_or_create` + `update`) 패턴과
+관리자용 단건 조회/삭제만 노출. 라우터에서는 `/api/ws/{wid}/me/notification-pref` 로
 연결한다.
 """
 
@@ -19,19 +19,25 @@ def _new_ulid() -> str:
     return str(ULID())
 
 
-def get_by_user(db: Session, user_id: int) -> UserNotificationPref | None:
+def get_by_user(
+    db: Session, user_id: int, *, workspace_id: str
+) -> UserNotificationPref | None:
     stmt = select(UserNotificationPref).where(
-        UserNotificationPref.user_id == user_id
+        UserNotificationPref.user_id == user_id,
+        UserNotificationPref.workspace_id == workspace_id,
     )
     return db.execute(stmt).scalar_one_or_none()
 
 
-def get_or_create(db: Session, user_id: int) -> UserNotificationPref:
-    row = get_by_user(db, user_id)
+def get_or_create(
+    db: Session, user_id: int, *, workspace_id: str
+) -> UserNotificationPref:
+    row = get_by_user(db, user_id, workspace_id=workspace_id)
     if row is not None:
         return row
     row = UserNotificationPref(
         id=_new_ulid(),
+        workspace_id=workspace_id,
         user_id=user_id,
         channels=["email"],
         enabled=True,
@@ -55,8 +61,8 @@ def update(
     return pref
 
 
-def delete_by_user(db: Session, user_id: int) -> bool:
-    row = get_by_user(db, user_id)
+def delete_by_user(db: Session, user_id: int, *, workspace_id: str) -> bool:
+    row = get_by_user(db, user_id, workspace_id=workspace_id)
     if row is None:
         return False
     db.delete(row)
