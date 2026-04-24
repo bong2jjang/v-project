@@ -1,4 +1,15 @@
-"""Demo seed — 현재 운영 중인 DB 스냅샷을 재현하는 시드.
+"""Demo seed (legacy CLI-only path) — 수작업으로 구성한 플랫폼 데모 데이터.
+
+⚠️ 프로덕션/자동화된 데모 환경에서는 스냅샷 기반 마이그레이션 경로를 사용하세요:
+    - `platform/backend/v_platform/migrations/p002_demo.py`
+    - `apps/{app}/backend/migrations/a002_demo.py`
+  이 경로는 `SEED_DEMO_DATA=1` 환경변수가 설정된 경우 컨테이너 시작 시
+  자동 실행되며, 플랫폼 + 전 앱의 현재 DB 스냅샷(baseline/*.sql)을
+  멱등으로 적용합니다. 스냅샷은 `monitoring/scripts/dump_demo_data.py`로 재생성.
+
+본 모듈은 다음 경우에만 사용됩니다:
+  - 개발자가 수동으로 `python -m v_platform.seeds --level demo` 실행할 때
+  - 스냅샷이 아직 없는 신규 환경에서 플랫폼 기본 조직/권한을 부트스트랩할 때
 
 base seed 위에 추가로:
   - 회사 브랜딩 (VMS / VMS-KR)

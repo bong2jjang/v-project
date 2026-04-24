@@ -23,7 +23,7 @@
     {
       "title": "← 앱 시스템 개요",
       "type": "link",
-      "url": "/d/v-project-v-channel-bridge-overview",
+      "url": "/d/v-project-v-platform-template-overview",
       "icon": "dashboard",
       "tags": []
     }
@@ -41,7 +41,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "## v-channel-bridge — Slack ↔ Teams 브리지 — 로그\n\n**컨테이너**: `v-project-bridge-.*` · **레이블**: `level`, `event`, `service`, `container`\n\n상단 카드는 로그 볼륨·에러율, 중간은 레벨 분포, 하단은 필터 가능한 로그 스트림. 템플릿 변수 `level`과 `search`로 실시간 필터 가능."
+        "content": "## v-platform-template — 앱 스캐폴딩 템플릿 — 로그\n\n**컨테이너**: `v-project-template-.*` · **레이블**: `level`, `event`, `service`, `container`\n\n상단 카드는 로그 볼륨·에러율, 중간은 레벨 분포, 하단은 필터 가능한 로그 스트림. 템플릿 변수 `level`과 `search`로 실시간 필터 가능."
       }
     },
     {
@@ -89,7 +89,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate({container=~\"v-project-bridge-.*\"}[5m]))",
+          "expr": "sum(rate({container=~\"v-project-template-.*\"}[5m]))",
           "refId": "A"
         }
       ]
@@ -147,7 +147,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate({container=~\"v-project-bridge-.*\"} | json | level=\"error\" [5m])) / sum(rate({container=~\"v-project-bridge-.*\"} | json [5m])) * 100",
+          "expr": "sum(rate({container=~\"v-project-template-.*\"} | json | level=\"error\" [5m])) / sum(rate({container=~\"v-project-template-.*\"} | json [5m])) * 100",
           "refId": "A"
         }
       ]
@@ -205,7 +205,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate({container=~\"v-project-bridge-.*\"} | json | level=\"warning\" [5m])) / sum(rate({container=~\"v-project-bridge-.*\"} | json [5m])) * 100",
+          "expr": "sum(rate({container=~\"v-project-template-.*\"} | json | level=\"warning\" [5m])) / sum(rate({container=~\"v-project-template-.*\"} | json [5m])) * 100",
           "refId": "A"
         }
       ]
@@ -259,7 +259,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (level) (rate({container=~\"v-project-bridge-.*\"} | json [5m]))",
+          "expr": "sum by (level) (rate({container=~\"v-project-template-.*\"} | json [5m]))",
           "legendFormat": "{{level}}",
           "refId": "A"
         }
@@ -292,7 +292,7 @@
       },
       "targets": [
         {
-          "expr": "{container=~\"v-project-bridge-.*\"} | json | level=~\"$level\" |~ \"$search\" | line_format \"[{{.level}}] {{.event}} {{.message}}\"",
+          "expr": "{container=~\"v-project-template-.*\"} | json | level=~\"$level\" |~ \"$search\" | line_format \"[{{.level}}] {{.event}} {{.message}}\"",
           "refId": "A"
         }
       ]
@@ -303,7 +303,7 @@
   "style": "dark",
   "tags": [
     "v-project",
-    "v-channel-bridge",
+    "v-platform-template",
     "logs"
   ],
   "templating": {
@@ -367,8 +367,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "v-channel-bridge — 로그",
-  "uid": "v-project-v-channel-bridge-logs",
+  "title": "v-platform-template — 로그",
+  "uid": "v-project-v-platform-template-logs",
   "version": 2,
   "weekStart": ""
 }

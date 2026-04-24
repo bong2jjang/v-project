@@ -1,7 +1,11 @@
-"""Seed runner — base/demo 레벨에 따라 시드 데이터를 로드한다.
+"""Seed runner (legacy CLI) — base/demo 레벨에 따라 수작업 시드 데이터를 로드한다.
 
 base: fresh install 최소 데이터 (관리자 계정, 기본 회사, 권한그룹-사용자 매핑)
 demo: base + 테스트 사용자, 부서, 커스텀 권한그룹, 샘플 데이터
+
+⚠️ 프로덕션 데모 환경은 스냅샷 기반 `p002_demo.py`/`a002_demo.py`가 담당합니다.
+  본 모듈은 수동 CLI(`python -m v_platform.seeds --level demo`) 전용입니다.
+  자세한 내용은 `v_platform.seeds.demo` 모듈 docstring 참조.
 """
 
 import logging

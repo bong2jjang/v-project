@@ -41,7 +41,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "## v-channel-bridge — Slack ↔ Teams 브리지\n\n**대상 앱**: `app=\"v-channel-bridge\"` · **컨테이너**: `v-project-bridge-.*`\n\n상단 4개 카드는 SLO 핵심(생사/처리량/에러율/지연), 그 아래는 트래픽·도메인 엔드포인트·컨테이너 리소스, 최하단은 최근 에러/경고 로그. 본격 로그 분석은 `{app}-logs` 대시보드 사용."
+        "content": "## v-ui-builder — AI UI 빌더\n\n**대상 앱**: `app=\"v-ui-builder\"` · **컨테이너**: `v-ui-builder-.*`\n\n상단 4개 카드는 SLO 핵심(생사/처리량/에러율/지연), 그 아래는 트래픽·도메인 엔드포인트·컨테이너 리소스, 최하단은 최근 에러/경고 로그. 본격 로그 분석은 `{app}-logs` 대시보드 사용."
       }
     },
     {
@@ -54,7 +54,7 @@
         "h": 5
       },
       "title": "백엔드 상태",
-      "description": "Prometheus가 v-channel-bridge /metrics 엔드포인트에 도달 가능한지. 1=UP, 0=DOWN. DOWN 상태 1분 지속 시 PlatformAppDown 알림.",
+      "description": "Prometheus가 v-ui-builder /metrics 엔드포인트에 도달 가능한지. 1=UP, 0=DOWN. DOWN 상태 1분 지속 시 PlatformAppDown 알림.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -110,7 +110,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"v-platform-apps\",app=\"v-channel-bridge\"}",
+          "expr": "up{job=\"v-platform-apps\",app=\"v-ui-builder\"}",
           "instant": true,
           "refId": "A"
         }
@@ -164,7 +164,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[1m]))",
+          "expr": "sum(rate(http_requests_total{job=\"v-platform-apps\",app=\"v-ui-builder\"}[1m]))",
           "instant": true,
           "refId": "A"
         }
@@ -226,7 +226,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"v-platform-apps\",app=\"v-channel-bridge\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m])) * 100",
+          "expr": "sum(rate(http_requests_total{job=\"v-platform-apps\",app=\"v-ui-builder\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m])) * 100",
           "instant": true,
           "refId": "A"
         }
@@ -288,7 +288,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m]))) * 1000",
           "instant": true,
           "refId": "A"
         }
@@ -304,7 +304,7 @@
         "h": 8
       },
       "title": "HTTP 요청 처리량 (상위 엔드포인트)",
-      "description": "v-channel-bridge의 엔드포인트별 초당 요청 수(상위 10개). 특정 엔드포인트 트래픽 쏠림이나 급감을 확인.",
+      "description": "v-ui-builder의 엔드포인트별 초당 요청 수(상위 10개). 특정 엔드포인트 트래픽 쏠림이나 급감을 확인.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -349,7 +349,7 @@
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (endpoint) (rate(http_requests_total{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m])))",
+          "expr": "topk(10, sum by (endpoint) (rate(http_requests_total{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m])))",
           "legendFormat": "{{endpoint}}",
           "refId": "A"
         }
@@ -414,7 +414,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (status) (rate(http_requests_total{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m]))",
+          "expr": "sum by (status) (rate(http_requests_total{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m]))",
           "legendFormat": "HTTP {{status}}",
           "refId": "A"
         }
@@ -429,8 +429,8 @@
         "w": 12,
         "h": 8
       },
-      "title": "브리지 메시지·라우팅 API",
-      "description": "앱 주요 도메인 엔드포인트(/api/(messages|bridge|routes|channels).*) 별 처리량. 핵심 비즈니스 호출의 건강 상태.",
+      "title": "AI Chat·UI 생성 API",
+      "description": "앱 주요 도메인 엔드포인트(/api/(chat|generate|llm|canvas).*) 별 처리량. 핵심 비즈니스 호출의 건강 상태.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -475,7 +475,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (endpoint, status) (rate(http_requests_total{job=\"v-platform-apps\",app=\"v-channel-bridge\",endpoint=~\"/api/(messages|bridge|routes|channels).*\"}[5m]))",
+          "expr": "sum by (endpoint, status) (rate(http_requests_total{job=\"v-platform-apps\",app=\"v-ui-builder\",endpoint=~\"/api/(chat|generate|llm|canvas).*\"}[5m]))",
           "legendFormat": "{{endpoint}} [{{status}}]",
           "refId": "A"
         }
@@ -536,17 +536,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m]))) * 1000",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m]))) * 1000",
           "legendFormat": "P95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-channel-bridge\"}[5m]))) * 1000",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"v-platform-apps\",app=\"v-ui-builder\"}[5m]))) * 1000",
           "legendFormat": "P99",
           "refId": "C"
         }
@@ -562,7 +562,7 @@
         "h": 8
       },
       "title": "컨테이너 CPU (%)",
-      "description": "v-channel-bridge 관련 컨테이너(v-project-bridge-.*)의 CPU 사용률. 지속 80% 초과 시 ContainerHighCPU 알림.",
+      "description": "v-ui-builder 관련 컨테이너(v-ui-builder-.*)의 CPU 사용률. 지속 80% 초과 시 ContainerHighCPU 알림.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -615,7 +615,7 @@
       },
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\"v-project-bridge-.*\"}[5m]) * 100",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\"v-ui-builder-.*\"}[5m]) * 100",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -631,7 +631,7 @@
         "h": 8
       },
       "title": "컨테이너 메모리",
-      "description": "v-channel-bridge 컨테이너 RSS 메모리. 지속 증가 패턴은 메모리 누수 의심.",
+      "description": "v-ui-builder 컨테이너 RSS 메모리. 지속 증가 패턴은 메모리 누수 의심.",
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -684,7 +684,7 @@
       },
       "targets": [
         {
-          "expr": "container_memory_usage_bytes{name=~\"v-project-bridge-.*\"}",
+          "expr": "container_memory_usage_bytes{name=~\"v-ui-builder-.*\"}",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -700,7 +700,7 @@
         "h": 10
       },
       "title": "최근 에러·경고 로그",
-      "description": "v-channel-bridge 컨테이너의 error/warning 로그. 본격 조사는 'v-channel-bridge — 로그' 대시보드에서.",
+      "description": "v-ui-builder 컨테이너의 error/warning 로그. 본격 조사는 'v-ui-builder — 로그' 대시보드에서.",
       "datasource": {
         "type": "loki",
         "uid": "Loki"
@@ -717,7 +717,7 @@
       },
       "targets": [
         {
-          "expr": "{container=~\"v-project-bridge-.*\"} | json | level=~\"error|warning\" | line_format \"[{{.level}}] {{.event}} {{.message}}\"",
+          "expr": "{container=~\"v-ui-builder-.*\"} | json | level=~\"error|warning\" | line_format \"[{{.level}}] {{.event}} {{.message}}\"",
           "refId": "A"
         }
       ]
@@ -728,7 +728,7 @@
   "style": "dark",
   "tags": [
     "v-project",
-    "v-channel-bridge",
+    "v-ui-builder",
     "overview"
   ],
   "templating": {
@@ -740,8 +740,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "v-channel-bridge — 시스템 개요",
-  "uid": "v-project-v-channel-bridge-overview",
+  "title": "v-ui-builder — 시스템 개요",
+  "uid": "v-project-v-ui-builder-overview",
   "version": 2,
   "weekStart": ""
 }
